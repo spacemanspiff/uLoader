@@ -876,13 +876,13 @@ int n_sectors;
 
 					partition_type[num_partitions].len=read_le32_unaligned(temp_data+0x1CA);
 					partition_type[num_partitions].lba=part_lba2;
+					partition_type[num_partitions].type=(1<<8) | temp_data[0x1C2];
 
 					ret = USBStorage2_ReadSectors(part_lba2, 1, temp_data);
 					if(ret<0)
 						return -2;
 
-					partition_type[num_partitions].type=(1<<8) | temp_data[0x1C2];
-
+					
 					if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S')
 						partition_type[num_partitions].type=(3<<8) | temp_data[0x1C2];
 				
