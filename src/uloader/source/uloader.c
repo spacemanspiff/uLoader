@@ -548,7 +548,7 @@ int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
         u8 discid[7];
 
-		int ret;
+		int ret;//,ret2;
 		u32 cnt, len;
 		struct discHdr *buffer = NULL;
 		int frames=0,frames2=0;
@@ -574,16 +574,31 @@ int main(int argc, char **argv) {
 		SYS_SetPowerCallback(power_call); // esto para apagar con power
 		
         discid[6]=0;
+	
+		//ret2=-1;
 
-		cios=222;
-        ret=IOS_ReloadIOS(cios);
-
-		if(ret!=0)
+		for(n=0;n<16;n++)
 			{
-			force_ios249=1;
-			cios=249;
-			ret=IOS_ReloadIOS(cios);
+
+			if(cios!=249)
+				ret=IOS_ReloadIOS(cios);
+			else ret=-1;
+
+			if(ret!=0)
+				{
+				force_ios249=1;
+				cios=249;
+				ret=IOS_ReloadIOS(cios);
+				}
+			if(ret!=0) break;
+
+			//ret2 = WBFS_Init(); // si inicio esto, peta libfat al detectar dispositivo USB la particion WBFS
+			//if(!ret2) break;
+			
 			}
+
+		
+
 
 		if(CONF_Init()==0)
 		{
@@ -599,6 +614,7 @@ int main(int argc, char **argv) {
 
 		fatInit(8, true);
 
+		
 		
 		InitScreen();  // Inicialización del Vídeo
 		
@@ -632,9 +648,9 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.0");
+			s_printf("v1.0B");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.0");
+			s_printf("v1.0B");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -701,6 +717,7 @@ int main(int argc, char **argv) {
 			Screen_flip();
 			goto error;
 			}
+	
 
 		letter_size(16,32);
 
@@ -1087,7 +1104,9 @@ int main(int argc, char **argv) {
 						
 						if(insert_favorite)
 							{
+
 							SetTexture(&text_move_chan);
+
 							DrawRoundFillBox(px-148/2, py-108/2, 148, 108, 0, 0x8060af60);
 							
 							}
@@ -1176,7 +1195,13 @@ int main(int argc, char **argv) {
 									insert_favorite=game_datas[temp_sel].ind+1;
 
 									mem_move_chan=NULL;
-									memcpy(&text_move_chan, &game_datas[temp_sel].texture, sizeof(GXTexObj));
+
+									if(game_datas[temp_sel].png_bmp) 
+										memcpy(&text_move_chan, &game_datas[temp_sel].texture, sizeof(GXTexObj));
+									else
+									memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
+
+									
 									}
 								}
 							else
@@ -1270,7 +1295,11 @@ int main(int argc, char **argv) {
 													select_game_bar=0;is_favorite=1;insert_favorite=game_datas[game_mode-1].ind+1;
 
 													mem_move_chan=game_datas[game_mode-1].png_bmp;game_datas[game_mode-1].png_bmp=NULL;
-													memcpy(&text_move_chan, &game_datas[game_mode-1].texture, sizeof(GXTexObj));
+
+													if(game_datas[game_mode-1].png_bmp) 
+														memcpy(&text_move_chan, &game_datas[game_mode-1].texture, sizeof(GXTexObj));
+													else
+														memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
 													
 													game_mode=0;
 													
@@ -1333,6 +1362,9 @@ int main(int argc, char **argv) {
 							}
 						
 						}
+
+					if(new_pad & WPAD_BUTTON_HOME) // reset or return to hbc
+							exit_by_reset=return_reset;
 
 					if(new_pad & WPAD_BUTTON_B)
 						{
