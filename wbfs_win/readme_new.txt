@@ -8,6 +8,8 @@ NEW:
 
 The new support add/extract in .ciso format (Compact ISO) and one new command to add a .png file (<200KB) to use on the uLoader application.
 
+Added one option to delete CONF and PNG of uLoader (use this before to create WAD from Loadstructor)
+
 
 
 === Usage ===

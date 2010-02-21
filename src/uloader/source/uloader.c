@@ -2459,13 +2459,34 @@ int main(int argc, char **argv) {
 		int force_ingame_ios=0;
 		int game_locked_cfg=0;
 
-		
+		int direct_launch=0;
+
 		int parental_mode=0;
 		char parental_str[4]={0,0,0,0};
 
         return_reset=1;
 
 		if(argc<1) return_reset=2;
+
+		else 
+			if(*((char *) argv[0])=='s') return_reset=2;
+
+		current_partition=0;
+
+        if(argc>1)
+			if(argv[1])
+				{
+				char *t=argv[1];
+				if(t[0]=='#')
+					{
+					t++;
+					direct_launch=1;
+					memcpy(discid,t,6);
+					t+=6;
+					if(t[0]=='-') current_partition=t[1]-48;
+					current_partition&=3;
+					}
+				}
 
         SYS_SetResetCallback(reset_call); // esto es para que puedas salir al pulsar boton de RESET
 		SYS_SetPowerCallback(power_call); // esto para apagar con power
@@ -2493,7 +2514,7 @@ int main(int argc, char **argv) {
 
 		load_ehc_module();
         
-		
+	
 
         // sound pattern generator
 		for(n=0;n<2;n++)
@@ -2592,14 +2613,14 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.7");
+			s_printf("v1.8");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.7");
+			s_printf("v1.8");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
 
-		sleep(3);
+		if(!direct_launch) sleep(3);
 	   
 	   
 
@@ -2722,7 +2743,7 @@ int main(int argc, char **argv) {
 			MODPlay_Start (&mod_track); // Play the MOD
 			}
 		#endif
-		current_partition=0;
+		
 		
 
 get_games:
@@ -2741,7 +2762,7 @@ get_games:
 		last_game=-1;
 		test_favorite=0;
 
-	
+	    
 
 		SetTexture(&text_background);
 		DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
@@ -2751,6 +2772,7 @@ get_games:
 		bkcolor=0;
 		autocenter=1;
 		SetTexture(NULL);
+
 
 		///current_partition=0;
 		
@@ -2880,11 +2902,39 @@ get_games:
 		gameCnt  = cnt;
 
 		load_cfg();
+
+		
 		#endif
 
 	autocenter=0;
 	
+    if(direct_launch)
+		{
+		
+		for(n=0;n<gameCnt;n++)
+			{
+			struct discHdr *header = &gameList[n];
+			if(!strncmp((void *) discid, (void *) header->id,6))
+				{
+				game_datas[0].ind=n;
+				
+				memcpy(discid,header->id,6); discid[6]=0;
+				memset(temp_data,0,256*1024);
+				WBFS_GetProfileDatas(discid, temp_data);
+				create_game_png_texture(0);
+				if(WBFS_GameSize(header->id, &f_size)) f_size=0.0f;
+				game_mode=1;
+				if(config_file.parental[0]==0 && config_file.parental[1]==0 && config_file.parental[2]==0 && config_file.parental[3]==0) parental_control_on=0;
 
+				if(parental_control_on)
+					if((game_datas[game_mode-1].config & (1<<30))!=0) parental_mode=1024+game_mode;
+
+				break;
+				}
+			}
+		
+		if(n==gameCnt) direct_launch=0;
+		}
 
 	guitar_pos_x=SCR_WIDTH/2-32;guitar_pos_y=SCR_HEIGHT/2-32;
 
@@ -2896,6 +2946,8 @@ get_games:
 	int temp_sel=-1;
 	int test_gfx_page=0;
 	int go_home=0;
+
+	if(config_file.parental[0]==0 && config_file.parental[1]==0 && config_file.parental[2]==0 && config_file.parental[3]==0) parental_control_on=0;
 
 	WPAD_ScanPads(); // esto lee todos los wiimotes
 
@@ -3571,6 +3623,7 @@ get_games:
 			}
 		////////////////////////////
 		} 
+	
 
 	load_png=0;
 	frames2++;
@@ -3710,16 +3763,18 @@ get_games:
 											snd_fx_yes();
 											if(parental_mode>=1024) game_mode=parental_mode-1024;
 											else go_home=1;
+
+											parental_mode=0;
 											}
 										  else
 											{
 											for(n=0;n<4;n++) parental_str[n]=0;
 											parental_control_on++;
 											snd_fx_no();
+											if(game_mode==0) parental_mode=0;
 											if(parental_control_on>=5) {sleep(3);exit_by_reset=3; goto exit_ok;}
-											}
+											}		  
 										  
-										  parental_mode=0;
 										  }
 								select_game_bar=0;
 								}

@@ -1,7 +1,7 @@
-uLoader v1.7 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.8 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
-ATENCION: ejecuta primero cios_installer.dol
+ATENCION: ejecuta primero cios_installer.dol (1.7)
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
 para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii
@@ -12,7 +12,7 @@ Caracteristicas:
 - Añadido control Parental. Por defecto la contraseña es 00000 (el ultimo cero es el 'ENTER'. Puedes programar una nueva contraseña como XXXX0).
   Puedes cambiar la contraseña desde el menu especial, pulsando HOME y salir de la caja que pide contraseña pulsando B.  Desde el menu de control
   parental se listan los ultimos 8 juegos lanzados con fecha y hora, se habilita la petición de contraseña solo con entrar o se puede cambiar la 
-  contraseña por otra.
+  contraseña por otra (desde 1.8 la contraseña 00000 deshabilita el control parental)
 
 - Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe 
   que adjunto (ver mas abajo "Notas sobre wbfs_win").

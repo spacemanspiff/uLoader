@@ -458,6 +458,26 @@ void wbfs_applet_png(wbfs_t *p, char *argv, char *png)
 	}
 }
 
+void wbfs_applet_remove_cfg(wbfs_t *p, char *argv)
+{
+	wbfs_disc_t *d;
+
+
+	d = wbfs_open_disc(p, (u8 *)argv);
+	
+	if (d)
+	{
+		
+		wbfs_remove_cfg(d);
+			
+		wbfs_close_disc(d);
+	}
+	else
+	{
+		fprintf(stderr, "%s not in disc in disc...\n", argv);
+	}
+}
+
 void wbfs_applet_extract(wbfs_t *p, char *argv)
 {
 	wbfs_disc_t *d;
@@ -667,7 +687,7 @@ int main(int argc, char *argv[])
 
 	printf("\nUse ARROWS to Select and press key:\n\n");
     
-	printf(" 1-> Add 2-> Add PNG 3-> Extract 4-> ISO Extract 5-> Remove\n 8->Integrity Check 0-> Format\n");
+	printf(" 1-> Add 2-> Add PNG 3-> Extract 4-> ISO Extract 5-> Remove\n 6->Remove CFG 8->Integrity Check 0-> Format\n");
 
 	k=getch();
 
@@ -775,6 +795,23 @@ int main(int argc, char *argv[])
 			printf("Are you sure? (y/n):\n");
             if(Ask_Yes_no())
 				wbfs_applet_remove(p, string_id);
+
+			printf("\nPress Any Key\n");
+			while(1) {if(!kbhit()) break; getch();}
+			getch();
+
+		}
+
+	// remove game cfg
+	if(k=='6' && pos_list>=0  && string_id[0]!=0)
+		{   
+			
+			system("cls");
+			chdir(current_directory);
+			printf("!!! Warning it remove game CFG for %s!!!\n\n", string_id);
+			printf("Are you sure? (y/n):\n");
+            if(Ask_Yes_no())
+				wbfs_applet_remove_cfg(p, string_id);
 
 			printf("\nPress Any Key\n");
 			while(1) {if(!kbhit()) break; getch();}

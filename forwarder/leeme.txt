@@ -1,0 +1,30 @@
+uLoader forwarder
+-----------------
+
+- Usalo para crear un canal que lance uLoader
+
+- Copia forwarder.dol en la carpeta "loader" de loadstructor y reemplaza loaders.ini
+para crear canales personalizados para juegos.
+
+http://www.elotrolado.net/hilo_loadstructor-v1-4-construye-tus-canales-wii-en-segundos_1232742
+
+NOTA:
+
+Loadstructor es original de aquí:
+
+http://clusterrr.com/Loadstructor.html
+
+
+Necesitas la aplicacion uLoader en la ruta apps/uloader/boot.dol en la SD
+
+Canales con Loadstructor y uLoader desde WBFS
+---------------------------------------------
+
+uLoader guarda la configuración del juego y el icono en un espacio relleno de ceros en la partición
+WBFS, corrompiendo con ello el opening.bnr necesario para crear el WAD desde una particion WBFS con loadstructor 
+
+Para solucionarlo, usa el nuevo wbfs_win.exe (directamente, sin parametros) que incluyo y borra la 
+configuracion del juego con la opcion 6 (Remove CFG). Esto borrará el icono y la configuración con ceros, restableciendo
+el opening.bnr
+
+Usa entonces loadstructor seleccionando "uLoader forwarder" como opcion para crear el canal

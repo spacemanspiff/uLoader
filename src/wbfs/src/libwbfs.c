@@ -291,7 +291,7 @@ for(i=0;i<p->max_disc;i++)
 								printf("Error! Crossed LBA %u in Disc %s and Disc %s\n", iwlba, id1, id2);
 								if(flag==2 && keyinput)
 									{// 2
-									char c;
+									unsigned char c;
 									printf("\nThe begin of this disc is bad (LBA's Crossed)");
 									printf("\nDelete Disc %s ? (y/n)\n\n",id1);
 
@@ -717,7 +717,7 @@ u32 wbfs_add_cfg
 {
 	int i, discn;
 	u32 tot, cur;
-	u32 wii_sec_per_wbfs_sect = 1 << (p->wbfs_sec_sz_s-p->wii_sec_sz_s);
+
 	wiidisc_t *d = 0;
 	u8 *used = 0;
 	wbfs_disc_info_t *info = 0;
@@ -985,32 +985,7 @@ u32 wbfs_add_png(wbfs_disc_t*d, char *png)
 					printf(".png inserted\n");
 					break;
 					}
-                /*u64 off64=i*dst_wbs_nlb*32768ULL;
-					
-				if(off64<0x04E020ULL)
-					{
-					if((off64+((u64)src_wbs_nlb*512))>=0x04E01FULL)
-						{
-						u32 off;
-						int n;
-						off=(u32) (0x04E000ULL-off64);
-						
-               
-                        p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
-
-						if(copy_buffer[off+3]!=0x2)
-							{
-							printf("Patching...\n");
-							copy_buffer[off+3]=0x2;
-							for(n=0;n<10;n++) copy_buffer[off+10+n]= pal_patch[n];
-							p->write_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
-							}
-						else printf("Is a PAL disc\n");
-                        
-						}
-					}
-				
-				*/
+                
                 }
 	
 				
@@ -1022,6 +997,57 @@ u32 wbfs_add_png(wbfs_disc_t*d, char *png)
 error:
         return 1;
 }
+
+
+u32 wbfs_remove_cfg(wbfs_disc_t*d)
+{
+        wbfs_t *p = d->p;
+        u8* copy_buffer = 0;
+        int i;
+	
+        int src_wbs_nlb=p->wbfs_sec_sz/p->hd_sec_sz;
+        int dst_wbs_nlb=p->wbfs_sec_sz/p->wii_sec_sz;
+
+	
+
+        copy_buffer = wbfs_ioalloc(p->wbfs_sec_sz);
+        if(!copy_buffer)
+				{
+                ERR("alloc memory");
+				}
+
+        for( i=0; i< p->n_wbfs_sec_per_disc; i++)
+        {
+                u32 iwlba = wbfs_ntohs(d->header->wlba_table[i]);
+                if (iwlba)
+                {
+				
+				if(i==0)
+					{
+					p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
+
+					
+					memset(&copy_buffer[1024+8], 0, copy_buffer[1027]*1024);
+					copy_buffer[1024]=0;copy_buffer[1025]=0;copy_buffer[1026]=0;
+					copy_buffer[1027]=0;
+
+					p->write_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
+					printf("game CFG deleted\n");
+					break;
+					}
+                
+                }
+	
+				
+				
+        }
+		
+        wbfs_iofree(copy_buffer);
+        return 0;
+error:
+        return 1;
+}
+
 // data extraction ISO
 u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,void *callback_data,progress_callback_t spinner)
 {

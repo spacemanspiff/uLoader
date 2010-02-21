@@ -3,3 +3,6 @@ Ejecuta el programa sin parametros para usar la GUI interna
 
 Añadido el comando Integrity Check para reparar discos donde
  se han borrado ficheros con viejas versiones de wbfs_win
+
+Añadida opción para borrar los parámetros/icono del juego de uLoader
+ (usa ésta opcion antes de crear WAD con Loadstructor)
