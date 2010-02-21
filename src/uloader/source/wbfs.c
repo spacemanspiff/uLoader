@@ -381,8 +381,11 @@ if (!hdd)
 		wbfs_disc_read(disc,(1024>>2), buff, 1024);
 		
 		if(buff[0]=='H' && buff[1]=='D' && buff[2]=='R' && buff[3]!=0)
-			
-			wbfs_disc_read(disc,(2048>>2), buff+1024, ((u32) buff[3])*1024);
+			{
+			if(((u32) buff[3])<201) 
+				wbfs_disc_read(disc,(2048>>2), buff+1024, ((u32) buff[3])*1024);
+			else {buff[3]=0;buff[9]=0;} // bad PNG
+			}
 		
 		/* Close disc */
 		wbfs_close_disc(disc);
@@ -706,4 +709,33 @@ char* WBFS_BannerTitle(u8 *discid, SoundInfo *snd){
 
 	return bannerTitle;
 }
+
+#if 0
+void parse_banner_tpl(void *banner, void **tpl_1);
+void WBFS_GetBannerTPL(u8 *discid, void **tpl){
+	void *banner = NULL;
+	int size;
+     
+	if (!hdd)
+	{*tpl=NULL;return;}
+
+	wbfs_disc_t* d =  wbfs_open_disc(hdd, (u8 *) discid);
+	if (!d) {*tpl=NULL;return;}
+	size = wbfs_extract_file(d, "opening.bnr", &banner);
+	wbfs_close_disc(d);
+
+	if (!banner || size <= 0) {*tpl=NULL;return;}
+
+	
+	parse_banner_tpl(banner, tpl);
+
+	//SAFE_FREE(banner);
+	if(banner){
+		free(banner);
+		banner=NULL;
+	}
+
+	return;
+}
+#endif
 

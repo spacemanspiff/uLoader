@@ -34,9 +34,10 @@
 //#define READ_FROM_FILE_ATTR
 #define IOCTL_ES_LAUNCH	0x08
 
-// flag emu =0->disable 1->enable
 
-extern int flag_emu;
+
+extern int flag_emu; // flag emu =0->disable 1->enable
+extern int flag_emu_mode; // 0-> default -> 1 DLC redirected to device:/nand -> 2-> Full emulation
 extern int light_on;
 extern int verbose_level;
 
@@ -109,24 +110,23 @@ int restore_ffs(u32 ios, u32 none);
 extern int out_ES_ioctlv(void *);
 
 
+
 int ES_ioctlv(ipcmessage *msg)
 {
 	s32 ret = 0;
 	
 //os_sync_before_read(msg, sizeof(ipcmessage));
-if(verbose_level>1) debug_printf("ES ioctlv: 0x%x\n",msg->ioctlv.command);
+	//if(verbose_level>2) debug_printf("ES ioctlv: %x\n",msg->ioctlv.command);
 
 	switch(msg->ioctlv.command) {
-
+	
     case IOCTL_ES_LAUNCH:
 		{
 		u64 title;
 		title=*((u64 *) msg->ioctlv.vector[0].data);
-		if(verbose_level) debug_printf("Launch Title: 0x%x-0x%x\n",(u32) (title>>32), (u32) (title & 0xffffffff));
+		if(verbose_level) debug_printf("Launch Title: %x-%x\n",(u32) (title>>32), (u32) (title & 0xffffffff));
 		
 		os_open(DEVICE_FAT":shutdown", 0);
-
-		swi_mload_call_func((void *) restore_ffs, NULL, NULL);
 
 		if(verbose_level) debug_printf("FFS Shutdown\n");
 
@@ -137,6 +137,8 @@ if(verbose_level>1) debug_printf("ES ioctlv: 0x%x\n",msg->ioctlv.command);
 	original_ioctlv:
 		ret = out_ES_ioctlv(msg);
 	}
+
+	if(ret<0 && verbose_level>2) debug_printf("ES ioctlv: %x ret: %i\n",msg->ioctlv.command, ret);
 	return ret;
 }
 
@@ -159,15 +161,10 @@ int ffs_Init(void)
 	return 0;
 }
 
-void preappend_nand_dev_name(const char *origname, char *newname)
-{
-	
-	FFS_Strcpy(newname, &dev_names[index_dev][0]);
-	FFS_Strcat(newname, origname);
-}
 
 static char filename1[MAX_FILENAME_SIZE] ATTRIBUTE_ALIGN(32);
 static char filename2[MAX_FILENAME_SIZE] ATTRIBUTE_ALIGN(32);
+static char filename3[MAX_FILENAME_SIZE] ATTRIBUTE_ALIGN(32);
 
 
 char * title_to_folder(void)
@@ -234,23 +231,55 @@ return -1;
 int test_string(char *s)
 {
 
+    // full emulation: it works but i don't use it for uLoader (you need a complete NAND dump of files and directories)
+	if(flag_emu_mode & 2)
+	{
+		//if(!cmp_string(s, "/tmp/launch.sys")) return -1; // es launch use this
+		if(!cmp_string(s, "/dev")) return -1;
+		if(!cmp_string(s, "/")) return 0;
+		return -1;
+	}
+
 	if(!cmp_string(s, "/title/00010000")) return 0;
 	if(!cmp_string(s, "/title/00010001")) return 0;
 	if(!cmp_string(s, "/title/00010004")) return 0;
-	if(!cmp_string(s, "/tmp/launch.sys")) return -1; // es launch use this
+	if(!cmp_string(s, "/title/00010005")) return 0;
+	if(!cmp_string(s, "/tmp/launch.sys")) return -1; // es launch use this and it fail from emu folder
 	if(!cmp_string(s, "/tmp")) return 0;
-	if(!cmp_string(s, "/ticket/00010000")) return 0;
 	if(!cmp_string(s, "/ticket/00010001")) return 0;
-	if(!cmp_string(s, "/ticket/00010004")) return 0;
+	if(!cmp_string(s, "/ticket/00010005")) return 0;
 	if(!cmp_string(s, "/sys/disc.sys")) return 0;
 	if(!cmp_string(s, "/sys/uid.sys")) return 0;
 
 return -1;
 }
 
+void preappend_nand_dev_name(const char *origname, char *newname)
+{
+	if((flag_emu_mode & 1) && (!cmp_string((char *) origname, "/title/00010005") || !cmp_string((char *) origname, "/ticket/00010005")))
+		FFS_Strcpy(newname, &dev_names[index_dev & 1][0]); // use sd:/nand or usb:/nand for DLC
+	else
+		FFS_Strcpy(newname, &dev_names[index_dev][0]);
+	FFS_Strcat(newname, origname);
+}
+
+static const char ffs_folders[11][17]={
+"\0\0",
+"/tmp",
+"/sys",
+"/ticket",
+"/ticket/00010001",
+"/ticket/00010005",
+"/title",
+"/title/00010000",
+"/title/00010001",
+"/title/00010004",
+"/title/00010005",
+};
 
 void nand_emu_device(void)
 {
+int n;
 
 	if(fatHandle<0)
 		{
@@ -259,40 +288,52 @@ void nand_emu_device(void)
 
 		if(fatHandle<0) return;
 
+		
 		// create FAT directories
-
-		preappend_nand_dev_name("", filename1);
-		ffs_MakeDir(filename1);
+        for(n=0;n<11;n++)
+			{
+			preappend_nand_dev_name(&ffs_folders[n][0], filename1);
+			os_sync_after_write(filename1, MAX_FILENAME_SIZE);
+			ffs_MakeDir(filename1);
+			
+			if(n==1) // clear /tmp
+				{
+				os_sync_after_write(filename1, MAX_FILENAME_SIZE);
+				ffs_DeleteDir(filename1);
+				ffs_MakeDir(filename1);
+				}
+			}
 	
-		preappend_nand_dev_name("/tmp", filename1);
+		// test for 0 len files 
+		preappend_nand_dev_name("/sys/disc.sys", filename1);
+		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
+		n=os_open(filename1, 0);
+		if(n>=0)
+			{
+			if(os_seek(n, 0, 2)==0) // truncated file ?
+				{
+				os_close(n);
+                ffs_Delete(filename1);
+				}
+			else os_close(n);
+			}
+
+		preappend_nand_dev_name("/sys/uid.sys", filename1);
+		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
+		n=os_open(filename1, 0);
+		if(n>=0)
+			{
+			if(os_seek(n, 0, 2)==0) // truncated file ?
+				{
+				os_close(n);
+                ffs_Delete(filename1);
+				}
+			else os_close(n);
+			}
 		
-		ffs_DeleteDir(filename1);
-		ffs_MakeDir(filename1);
-
-		preappend_nand_dev_name("/ticket", filename1);
-		
-		ffs_DeleteDir(filename1);
-		ffs_MakeDir(filename1);
-
-		//MakeDirGame();
-		preappend_nand_dev_name("/sys", filename1);
-		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
-
-		ffs_MakeDir(filename1);
-		preappend_nand_dev_name("/title", filename1);
-		ffs_MakeDir(filename1);
-		preappend_nand_dev_name("/title/00010000", filename1);
-		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
-		ffs_MakeDir(filename1);
-		preappend_nand_dev_name("/title/00010001", filename1);
-		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
-		ffs_MakeDir(filename1);
-
-		preappend_nand_dev_name("/title/00010004", filename1);
-		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
-		ffs_MakeDir(filename1);
 		
 		// create & truncate log file
+		
 		if(verbose_level)
 			{
 			int fd=os_open("sd:/ffs_log.txt" , O_CREAT | O_TRUNC | O_RDWR );
@@ -322,6 +363,8 @@ int ffs_open(ipcmessage *msg)
 	if(flag_emu==0) return -6; // call the original
 
 	nand_emu_device();
+	
+	if(!cmp_string(msg->open.device,"/dev")) return -6;
 
 	if(verbose_level>1) debug_printf("ffs open %s\n", msg->open.device);
 
@@ -375,7 +418,7 @@ static struct stat filestat;
 
 	if(fatHandle<0) return -6;
 
-	if(verbose_level>1) debug_printf("msg ioclt 0x%x 0x%x\n", msg->ioctl.command, msg->fd);
+	if(verbose_level>2) debug_printf("msg ioclt %x %x\n", msg->ioctl.command, msg->fd);
 
 	if(1) 
 	{
@@ -397,6 +440,7 @@ static struct stat filestat;
 		if(light_on) swi_mload_led_off();
 
 		if(verbose_level) debug_printf("Create dir %s ret %i\n", filename1, ret);
+
 		
 		break;
 	}
@@ -595,9 +639,8 @@ static struct stat filestat;
 	}
 	case FFS_IOCTL_GETFILESTATS: {
 
-		
-		//fstats *s = (fstats *) buffer_io;
-		if(verbose_level) debug_printf("FFS GETFILESTATS \n");
+	
+		if(verbose_level) debug_printf("FFS GETFILESTATS fd %i\n", msg->fd);
 		
 		ret=-6;
 		
@@ -729,7 +772,7 @@ static struct stat filestat;
 
 	default:
 
-		if(verbose_level) debug_printf("Unsupported ioclt command 0x%x\n", msg->ioctl.command);
+		if(verbose_level) debug_printf("Unsupported ioclt command %x\n", msg->ioctl.command);
 	  
 		*dont_use_ffs_call=1;
 		ret = -6;
@@ -744,8 +787,19 @@ static struct stat filestat;
 	return -6;
 }
 
+/*
+void dump_read_dir(char *outbuf, int len)
+{
+int n;
 
+for(n=0;n<len;n++)
+	{
+	debug_printf("%i) %s\n",n,outbuf);
+	outbuf+=1+strlen(outbuf);
+	}
 
+}
+*/
 
 
 int ffs_ioctlv(ipcmessage *msg, int *dont_use_ffs_call)
@@ -762,7 +816,7 @@ int ret=-6;
 	if(fatHandle<0) return -6;
 
 	
-    if(verbose_level>1) debug_printf("msg iocltv 0x%x 0x%x\n", msg->ioctlv.command, msg->fd);
+    if(verbose_level>2) debug_printf("msg iocltv %x %x\n", msg->ioctlv.command, msg->fd);
 
 	if(1) 
 	{
@@ -772,13 +826,15 @@ int ret=-6;
 	switch(msg->ioctlv.command) {
 
 	case FFS_IOCTLV_READDIR: {
+		
 
 		u32 len=0;
 
 		char *dirpath = (char *)vector[0].data;
 		u32 *outlen =  (u32 *)vector[1].data;
 		void *outbuf=NULL;
-		
+
+		if(verbose_level>2) debug_printf("Read dir 0 %s\n", dirpath);
 		if(test_string(dirpath)) {*dont_use_ffs_call=0;return -6;}
 
 
@@ -788,9 +844,10 @@ int ret=-6;
 			len = *(u32 *)vector[1].data;
 			outbuf = (char *)vector[2].data;
 			outlen =  (u32 *)vector[3].data;
+			FFS_Memset(outbuf,0, *outlen);
 
 			if(verbose_level) debug_printf("Read dir 1 %i %i %s\n", len, *outlen/13, dirpath);
-			//len/=13;
+			
 
 			
 
@@ -799,16 +856,17 @@ int ret=-6;
 
 		//if(test_string2(dirpath)) {*dont_use_ffs_call=0;return -6;}
       
-		preappend_nand_dev_name(dirpath, filename1);
+		preappend_nand_dev_name(dirpath, filename3);
 
 		if(light_on) swi_mload_led_on();
 
-		ret = ffs_ReadDir(filename1, outbuf, &len);
+		ret = ffs_ReadDir(filename3, outbuf, &len);
 
 		if(light_on) swi_mload_led_off();
 
-		if(verbose_level) debug_printf("Read dir 2 %i %s ret: %i \n", len, filename1, ret);
+		if(verbose_level) debug_printf("Read dir 2 %i %s ret: %i \n", len, filename3, ret);
 
+		//if (ret >= 0 && outbuf) dump_read_dir(outbuf, len);
 		if (ret >= 0) 
 		{*outlen = len;ret=0;}
 
@@ -818,25 +876,34 @@ int ret=-6;
 	
 	case FFS_IOCTLV_GETUSAGE: {
 		
-		
 
 		char *dirpath = (char *)vector[0].data;
 		
+		if(!strcmp(dirpath,"/")
+			|| !strcmp(dirpath,"/title")
+			|| !strcmp(dirpath,"/ticket")
+			|| !strcmp(dirpath,"/sys")) goto use_emu_getusage;
+
+		
 		if(test_string(dirpath)) {*dont_use_ffs_call=0;return -6;}
-		
-		
-		preappend_nand_dev_name(dirpath, filename1);
+
+        use_emu_getusage:
+
+		preappend_nand_dev_name(dirpath, filename3);
 
 		if(light_on) swi_mload_led_on();
 
-		ret= ffs_GetUsage(filename1, vector[1].data, vector[2].data);
+		ret= ffs_GetUsage(filename3, vector[1].data, vector[2].data);
+		
 		if(ret>=0)
 			{
+			
 			swi_mload_led_off();
+	
 			os_sync_after_write(vector[1].data, 4);
 		    os_sync_after_write(vector[2].data, 4);
 
-			if(verbose_level) debug_printf("GetUsage %i %i %s\n", *((u32*) vector[1].data), *((u32*) vector[2].data), filename1);
+			if(verbose_level) debug_printf("GetUsage %i %i %s\n", *((u32*) vector[1].data), *((u32*) vector[2].data), filename3);
 			}
 
 		if(light_on) swi_mload_led_off();
@@ -848,7 +915,7 @@ int ret=-6;
 	
 
 	default:
-		if(verbose_level) debug_printf("Unsupported iocltv command 0x%x\n",  msg->ioctlv.command);
+		if(verbose_level) debug_printf("Unsupported iocltv command %x\n",  msg->ioctlv.command);
 		//disable_ffs_nand_flag=1;
 		ret = -6;
 	}
@@ -892,6 +959,7 @@ int ffs_VFSStats(const char *path, struct statvfs *vfsstats)
 	os_sync_after_write(fatDataPtr, FAT_DATA_SIZE);
 
 	res = os_ioctlv(fatHandle, IOCTL_FAT_VFSSTATS, 1, 1, fatDataPtr->vector);
+	os_sync_before_read(fatDataPtr, FAT_DATA_SIZE);
 	
 	if (res >= 0) 
 		FFS_Memcpy(vfsstats,(void *) &fatDataPtr->statvfs.stat_vfs, VFSSTAT_DATA_SIZE);
@@ -967,7 +1035,8 @@ int ffs_ReadDir(const char *dirpath, u32 *outbuf, u32 *outlen)
 	int ret;
 	
 	u32 io;
-
+	
+	fatDataPtr->readdir.outlen = *outlen;
 	FFS_Strcpy(fatDataPtr->basic.filename, dirpath);
 
 	fatDataPtr->vector[0].data = &fatDataPtr->readdir.filename;
@@ -977,10 +1046,10 @@ int ffs_ReadDir(const char *dirpath, u32 *outbuf, u32 *outlen)
 	fatDataPtr->vector[1].len = sizeof(int);
 
 	if (outbuf) {
-		fatDataPtr->readdir.outlen = *outlen;
+		
 
 		fatDataPtr->vector[2].data = outbuf;
-		fatDataPtr->vector[2].len =  13/*MAX_FILENAME_SIZE*/ * (*outlen);
+		fatDataPtr->vector[2].len = (*outlen) ? 13 * (*outlen) : 4;
 
 		fatDataPtr->vector[3].data = &fatDataPtr->readdir.outlen;
 		fatDataPtr->vector[3].len = sizeof(int);
@@ -991,6 +1060,8 @@ int ffs_ReadDir(const char *dirpath, u32 *outbuf, u32 *outlen)
 	os_sync_after_write(fatDataPtr, FAT_DATA_SIZE);
 
 	ret = os_ioctlv(fatHandle, IOCTL_FAT_READDIR_SHORT, io, io, fatDataPtr->vector);
+
+	os_sync_before_read(fatDataPtr, FAT_DATA_SIZE);
 	if (ret == 0) {
 		*outlen = fatDataPtr->readdir.outlen;
 	}

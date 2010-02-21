@@ -8,4 +8,7 @@ s32   Mem_Init(void);
 void *Mem_Alloc(u32 size);
 void  Mem_Free(void *ptr);
 
+void *Mem_Alloc0(u32 size);
+void  Mem_Free0(void *ptr);
+
 #endif

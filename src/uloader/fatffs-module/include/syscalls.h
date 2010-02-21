@@ -5,8 +5,10 @@
 #include "types.h"
 
 /* Prototypes */
+
+
 s32   os_thread_create(u32 (*entry)(void *arg), void *arg, void *stack, u32 stacksize, u32 priority, s32 autostart);
-void  os_thread_set_priority(u32 priority);
+void  os_thread_set_priority(s32 id, u32 priority);
 s32   os_thread_get_priority(void);
 s32   os_get_thread_id(void);
 s32   os_get_parent_thread_id(void);
@@ -34,6 +36,7 @@ s32   os_write(s32 fd, void *s, s32 len);
 s32   os_seek(s32 fd, s32 offset, s32 mode);
 s32   os_ioctlv(s32 fd, s32 request, s32 bytes_in, s32 bytes_out, ioctlv *vector);
 s32   os_ioctl(s32 fd, s32 request, void *in,  s32 bytes_in, void *out, s32 bytes_out);
+s32   os_ioctl_async(s32 fd, s32 request, void *in,  s32 bytes_in, void *out, s32 bytes_out, ...);
 s32   os_create_timer(s32 time_us, s32 repeat_time_us, s32 message_queue, s32 message);
 s32   os_destroy_timer(s32 time_id);
 s32   os_stop_timer(s32 timer_id);

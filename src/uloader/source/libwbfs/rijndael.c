@@ -367,6 +367,49 @@ void aes_decrypt(u8 *iv, u8 *inbuf, u8 *outbuf, unsigned long long len) {
   }
 }
 
+// CBC mode decryption
+void aes_decrypt2(u8 *iv, u8 *inbuf, u8 *outbuf, unsigned long long len, int end) {
+  
+  u8 block[16];
+  unsigned int blockno = 0, i;
+  u8 *ctext_ptr= iv;
+
+  //printf("aes_decrypt(%p, %p, %p, %lld)\n", iv, inbuf, outbuf, len);
+
+  for (blockno = 0; blockno <= (len / sizeof(block)); blockno++) {
+     unsigned int fraction=0;
+
+    if (blockno == (len / sizeof(block))) { // last block
+      fraction = len % sizeof(block);
+      if (fraction == 0) break;
+      memset(block, 0, sizeof(block));
+    } else fraction = 16;
+
+    //    debug_printf("block %d: fraction = %d\n", blockno, fraction);
+    memcpy(block, inbuf + blockno * sizeof(block), fraction);
+    decrypt((char*)block);
+    
+	
+    if (blockno == 0) 
+		ctext_ptr = iv;
+    else ctext_ptr = inbuf + (blockno-1) * sizeof(block);
+    
+    for(i=0; i < fraction; i++) 
+      outbuf[blockno * sizeof(block) + i] =	ctext_ptr[i] ^ block[i];
+
+	//memcpy(iv, inbuf + blockno * sizeof(block),  fraction);
+    //    debug_printf("Block %d output: ", blockno);
+    //    hexdump(outbuf + blockno*sizeof(block), 16);
+  }
+
+if(blockno>0)
+	{
+	blockno--;
+	memcpy(iv, (void *) inbuf + blockno * sizeof(block) , sizeof(block));
+	}
+
+}
+
 // CBC mode encryption      
 void aes_encrypt(u8 *iv, u8 *inbuf, u8 *outbuf, unsigned long long len) {
   u8 block[16];

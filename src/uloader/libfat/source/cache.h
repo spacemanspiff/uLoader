@@ -39,7 +39,7 @@
 #include "common.h"
 #include "disc.h"
 
-#define PAGE_SECTORS 64
+#define PAGE_SECTORS 32
 #define CACHE_PAGE_SIZE (BYTES_PER_READ * PAGE_SECTORS)
 
 typedef struct {

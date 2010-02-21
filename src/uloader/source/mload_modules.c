@@ -272,7 +272,8 @@ s32 ret;
 				
 		if(!p) return -1;
 
-		global_mount &=~0xf;
+		global_mount &=~0xc;
+
 			
 		// change 'ud:' by 'usb:'
 		if(p[0]=='u') {global_mount|=2;file_name[0]='u';file_name[1]='s';file_name[2]='b';memcpy(file_name+3, (void *)p+2, 253);}			   

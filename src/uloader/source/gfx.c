@@ -34,7 +34,7 @@ int scroll_text=-20;
 GXTlutObj palette_icon;
 GXTexObj text_icon[10];
 
-GXTexObj text_button[4], default_game_texture, text_background[3], text_background2,text_game_empty[4];
+GXTexObj text_button[4], default_game_texture, default_game_texture2, text_background[4], text_background2,text_game_empty[4];
 GXTexObj text_screen_fx;
 
 u32 *screen_fx=NULL;
@@ -44,6 +44,8 @@ GXTexObj text_move_chan;
 GXTexObj png_texture;
 
 void *mem_move_chan= NULL;
+
+void *background_png=NULL;
 
 void splash_scr()
 {
@@ -59,7 +61,7 @@ void splash_scr()
 			#ifndef ALTERNATIVE_VERSION
 			PX=0; PY= 16; color= 0xffffffff; 
 			#else
-			PX=0; PY= 16; color= 0xff000000; 
+			PX=0; PY= 16; color= INK0; 
 			#endif
 
 			letter_size(32,64);
@@ -72,9 +74,9 @@ void splash_scr()
 
 			SelectFontTexture(1);
 			s_printf("%s","uLoader");
-			color= 0xff000000;
+			color= INK0;
 			SetTexture(NULL);
-			DrawRoundBox((SCR_WIDTH-260)/2, 16, 260, 64, 0, 4, 0xff000000);
+			DrawRoundBox((SCR_WIDTH-260)/2, 16, 260, 64, 0, 4, INK0);
 
 			SelectFontTexture(0);
 			PY+=80;
@@ -111,7 +113,7 @@ void splash_scr()
 			
 			
 			autocenter=0;
-			PX=20; PY= 32; color= 0xff000000; 
+			PX=20; PY= 32; color= INK0; 
 			letter_size(8,16);
 			SelectFontTexture(1);
 			#ifndef ALTERNATIVE_VERSION
@@ -121,7 +123,7 @@ void splash_scr()
 			s_printf("v%s",uloader_version);
 			autocenter=1;
 			//letter_size(12,16);
-			PX=20; PY= 480-40; color= 0xff000000;
+			PX=20; PY= 480-40; color= INK0;
 
 			#ifndef ALTERNATIVE_VERSION
 			s_printf("%s","40 Years Old - 25 Years Programming (11-06-1969)");
@@ -142,7 +144,7 @@ void splash2_scr()
 
 		draw_background();
 		letter_size(16,32);
-		PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+		PX=0; PY= SCR_HEIGHT/2+32; color= INK0; 
 				
 		bkcolor=0;
 		autocenter=1;
@@ -348,7 +350,7 @@ static int init=1;
 int n;
 int y,dx;
 
-	if(!flag_snow) return;
+	if(!flag_snow || (in_black & 3)==1) return;
 /*
 	ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,SCR_WIDTH,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
 	guMtxIdentity(modelView);
@@ -529,7 +531,7 @@ int len=strlen(cad);
 	if(px>=x && px<=x+len*8+32 && py>=y && py<y+56) DrawRoundFillBox(x-8, y-8, len*8+32+16, 56+16, 0, 0xffcfcfcf);
 		else DrawRoundFillBox(x, y, len*8+32, 56, 0, 0xffcfcfcf);
 	SetTexture(NULL);
-	PX=x+16; PY= y+12; color= 0xff000000;
+	PX=x+16; PY= y+12; color= INK0;
 	letter_size(8,32);
 
 	s_printf("%s",cad);
@@ -564,7 +566,7 @@ if(selected<0) color=0x80cfcfcf;
 		}
 
 	SetTexture(NULL);
-	PX=x+16; PY= y+8; color= 0xff000000;
+	PX=x+16; PY= y+8; color= INK0;
 	letter_size(8,32);
 
 	s_printf("%s",cad);
@@ -581,6 +583,7 @@ if(selected<0) color=0x80cfcfcf;
 return 0;
 }
 
+extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
 
 void * create_png_texture(GXTexObj *texture, void *png, int repeat)
 {
@@ -598,8 +601,15 @@ s32 ret;
 	ret = PNGU_GetImageProperties(ctx, &imgProp);
 	if (ret != PNGU_OK)
 		{return NULL;}
+    
+	if(repeat & 32)
+	{
+		texture_buff= (void *) SYS_AllocArena2MemLo(imgProp.imgWidth * imgProp.imgHeight *4+2048,32);
 
-    texture_buff=memalign(32, imgProp.imgWidth * imgProp.imgHeight *4+2048);
+		repeat&=~32;
+	}
+	else
+		texture_buff=memalign(32, imgProp.imgWidth * imgProp.imgHeight *4+2048);
 	if(!texture_buff) {return NULL;}
 
 	
@@ -646,14 +656,26 @@ GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
 ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,SCR_WIDTH,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
 if(frames==(12+2*(SCR_HEIGHT<=480))) {frames1++;frames=0;}
 SetTexture(&text_background[(frames1 % 3)]);
+
 frames++;
-	ConfigureForTexture(10);
-	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
-	AddTextureVertex(0, -12, 999, BACK_COLOR, 0, (frames2 & 1023));
-	AddTextureVertex(SCR_WIDTH, -12, 999, BACK_COLOR, 1023, (frames2 & 1023)); 
-	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT+24, 999, BACK_COLOR, 1023, 1024+(frames2 & 1023)); 
-	AddTextureVertex(0, SCR_HEIGHT+24, 999, BACK_COLOR, 0, 1024+(frames2 & 1023)); 
-	GX_End();
+	if((in_black & 3)==1)
+		{
+
+		if(background_png) {SetTexture(&text_background[3]);DrawRoundFillBox(0, -12, SCR_WIDTH, SCR_HEIGHT+24, 999, 0xffffffff);}
+		else {SetTexture(NULL);DrawRoundFillBox(0, -12, SCR_WIDTH, SCR_HEIGHT+24, 999, 0xff000000);}
+
+		
+		}
+	else
+		{
+		ConfigureForTexture(10);
+		GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
+		AddTextureVertex(0, -12, 999, BACK_COLOR, 0, (frames2 & 1023));
+		AddTextureVertex(SCR_WIDTH, -12, 999, BACK_COLOR, 1023, (frames2 & 1023)); 
+		AddTextureVertex(SCR_WIDTH, SCR_HEIGHT+24, 999, BACK_COLOR, 1023, 1024+(frames2 & 1023)); 
+		AddTextureVertex(0, SCR_HEIGHT+24, 999, BACK_COLOR, 0, 1024+(frames2 & 1023)); 
+		GX_End();
+		}
 
 
 if(is_16_9)
@@ -715,16 +737,16 @@ void display_spinner_draw()
 	DrawSlice(SCR_WIDTH/2, SCR_HEIGHT/2, 210, 210, 10, 4, 0, 360,  0xcf000000);
     
 
-	PX=0; PY=SCR_HEIGHT/2-16; color= 0xff000000; 
+	PX=0; PY=SCR_HEIGHT/2-16; color= INK0; 
 	letter_size(16,32);
 	SelectFontTexture(1);
 	if(spinner_mode)
 		color=0xffffffff;
 	else
-		color=0xff000000;
+		color=INK0;
 
 	s_printf("%s", spinner_str);
-	color=0xff000000;
+	color=INK0;
 	autocenter=0;
 
 	draw_snow();
@@ -755,7 +777,7 @@ if(thread_in_second_plane) {sprintf(my_perror_error,"Error: %s",err);return;}
 		DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-32, 540, 64, 999, 0xa00000ff);
 		DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-32, 540, 64, 999, 4, 0xa0000000);
 
-		PX=0; PY=SCR_HEIGHT/2-16; color= 0xff000000; 
+		PX=0; PY=SCR_HEIGHT/2-16; color= INK0; 
 		letter_size(8,32);
 		SelectFontTexture(1);
 		s_printf("Error: %s",err);
@@ -852,7 +874,7 @@ int ylev=(SCR_HEIGHT-440);
 
 
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK1; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -883,7 +905,7 @@ void cabecera(char *cab)
 	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK1; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -908,7 +930,7 @@ int ylev=(SCR_HEIGHT-440);
 
 	cabecera( &letrero[idioma][23][0]);
 	PX=0;PY=ylev+352/2-16;
-
+	color=INK0;
 	s_printf("%s",&letrero[idioma][41][0]);
 	draw_snow();
 	Screen_flip();
@@ -935,7 +957,7 @@ int ylev=(SCR_HEIGHT-440);
 	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 999, 4, 0xff303030);
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK0; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -1045,11 +1067,13 @@ void circle_select(int x, int y, char symb, int selected)
 {
 	SetTexture(NULL);
 
+	if(!in_black)
+	{
 	if(selected)
 		{
 		DrawFillEllipse(x, y, 50, 50, 0, 0xc0f0f0f0);
 		letter_size(32,64);
-		PX= x-16; PY= y-32; color= 0xff000000; bkcolor=0;
+		PX= x-16; PY= y-32; color= INK0; bkcolor=0;
 		s_printf("%c", symb);
 		DrawEllipse(x, y, 50, 50, 0, 6, 0xc0f0f000);
 		}
@@ -1057,11 +1081,31 @@ void circle_select(int x, int y, char symb, int selected)
 		{
 		DrawFillEllipse(x, y, 40, 40, 0, 0xc0f0f0f0);
 		letter_size(32,48);
-		PX= x-16; PY= y-24; color= 0xff000000; bkcolor=0;
+		PX= x-16; PY= y-24; color= INK0; bkcolor=0;
 		s_printf("%c", symb);
 		DrawEllipse(x, y, 40, 40, 0, 6, 0xc0000000);
 		}
-
+	}
+	else
+	{
+    
+	if(selected)
+		{
+		DrawFillEllipse(x, y, 40, 40, 0, 0xc0f0f0f0);
+		letter_size(32,64);
+		PX= x-16; PY= y-32; color= INK0; bkcolor=0;
+		s_printf("%c", symb);
+		DrawEllipse(x, y, 40, 40, 0, 6, 0xc0f0f000);
+		}
+	else
+		{
+		DrawFillEllipse(x, y, 30, 30, 0, 0xc0f0f0f0);
+		letter_size(32,48);
+		PX= x-16; PY= y-24; color= INK0; bkcolor=0;
+		s_printf("%c", symb);
+		DrawEllipse(x, y, 32, 32, 0, 2, 0xc0f00000);
+		}
+	}
 }
 
 char *down_mess=NULL;
@@ -1080,7 +1124,7 @@ int n;
 
 	letter_size(12,32);
 					
-	PX=0; PY= SCR_HEIGHT/2-32+64; color= 0xff000000; 
+	PX=0; PY= SCR_HEIGHT/2-32+64; color= INK0; 
 					
 	bkcolor=0;
 	autocenter=1;
@@ -1090,7 +1134,10 @@ int n;
 	DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32+64, 540, 64, 0, 4, 0xa0000000);
 		
 	if(down_mess)
+		{
+		if(strlen(down_mess)>40) letter_size(8,32);
 		s_printf("%s",down_mess);
+		}
 
 	autocenter=0;
 
@@ -1121,7 +1168,7 @@ int n;
 
 	letter_size(12,32);
 					
-	PX=0; PY= SCR_HEIGHT/2-32; color= 0xff000000; 
+	PX=0; PY= SCR_HEIGHT/2-32; color= INK0; 
 					
 	bkcolor=0;
 	autocenter=1;

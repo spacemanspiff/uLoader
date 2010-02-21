@@ -42,6 +42,8 @@
 
 #define ticks_to_msecs(ticks)  (ticks/TB_TIMER_CLOCK)
 
+extern WPADData * wmote_datas;
+
 extern unsigned gettick();
 
 unsigned GetTicks()
@@ -1050,6 +1052,33 @@ if(PADEVENT) // lectura del PAD por interrupciones :D
 		PADEVENT=0; // anula el evento (lectura cada 20ms, recuerda)
 
 		wiimote_read();
+
+		if(wmote_datas!=NULL && wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+			{
+ 
+			if(temp_pad & WPAD_CLASSIC_BUTTON_UP) temp_pad|=WPAD_BUTTON_RIGHT;
+
+			if(temp_pad & WPAD_CLASSIC_BUTTON_DOWN) temp_pad|=WPAD_BUTTON_LEFT;
+		
+			if(temp_pad & WPAD_CLASSIC_BUTTON_LEFT) temp_pad|=WPAD_BUTTON_UP;
+
+			if(temp_pad & WPAD_CLASSIC_BUTTON_RIGHT) temp_pad|=WPAD_BUTTON_DOWN;
+			
+			if(new_pad & WPAD_CLASSIC_BUTTON_A) new_pad|=WPAD_BUTTON_A;
+			if(old_pad & WPAD_CLASSIC_BUTTON_A) old_pad|=WPAD_BUTTON_A;
+
+			if(new_pad & WPAD_CLASSIC_BUTTON_B) new_pad|=WPAD_BUTTON_B;
+			if(old_pad & WPAD_CLASSIC_BUTTON_B) old_pad|=WPAD_BUTTON_B;
+
+			if(new_pad & WPAD_CLASSIC_BUTTON_X) new_pad|=WPAD_BUTTON_1;
+			if(old_pad & WPAD_CLASSIC_BUTTON_X) old_pad|=WPAD_BUTTON_1;
+
+			if(new_pad & WPAD_CLASSIC_BUTTON_Y) new_pad|=WPAD_BUTTON_2;
+			if(old_pad & WPAD_CLASSIC_BUTTON_Y) old_pad|=WPAD_BUTTON_2;
+
+			if(new_pad & WPAD_CLASSIC_BUTTON_HOME) new_pad|=WPAD_BUTTON_HOME;
+			if(old_pad & WPAD_CLASSIC_BUTTON_HOME) old_pad|=WPAD_BUTTON_HOME;
+			}
         
 		if(exit_by_reset) goto sal_del_juego;
 
@@ -1059,8 +1088,8 @@ if(PADEVENT) // lectura del PAD por interrupciones :D
 		{
 		if((new_pad & WPAD_BUTTON_A)) {pausa=0;rings=500;} // empieza
 		// ajusta bichos
-		if(new_pad & WPAD_BUTTON_UP) {nbichos--;if(nbichos<2) nbichos=2;copyMAP();}
-		if(new_pad & WPAD_BUTTON_DOWN) {nbichos++;if(nbichos>4) nbichos=4;copyMAP();}
+		if(new_pad & (WPAD_BUTTON_UP | WPAD_CLASSIC_BUTTON_UP)) {nbichos--;if(nbichos<2) nbichos=2;copyMAP();}
+		if(new_pad & (WPAD_BUTTON_DOWN | WPAD_CLASSIC_BUTTON_DOWN)) {nbichos++;if(nbichos>4) nbichos=4;copyMAP();}
 		}
 		// pausa
 		
@@ -1071,7 +1100,13 @@ if(PADEVENT) // lectura del PAD por interrupciones :D
 time1=GetTicks();
 count20ms=(time1-oldtime)/20;
 //if(count20ms & 1) {
-if(PADEVENT==0) {	wiimote_rumble(0);WPAD_ScanPads();PADEVENT=1;}
+if(PADEVENT==0) 
+	{
+	wiimote_rumble(0);
+
+	WPAD_ScanPads();
+	
+	PADEVENT=1;}
 //	}
 //if(pausa) count20ms=0;
 

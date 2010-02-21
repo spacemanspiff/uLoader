@@ -40,10 +40,62 @@ int dol_len=0;
 
 extern void patch_dol(void *Address, int Section_Size, int sel);
 
+
+
+#if 0
+
+extern void _start(void);
+
+#include "gfx.h"
+
+
+u32 check_dol() 
+{
+int i;
+dolheader *dol_header;
+
+
+	dol_header = (dolheader *) dol_data;
+
+PX=0;PY=50;
+letter_size(12,24);
+bkcolor=0xff000000;
+color=0xffffffff;
+
+
+s_printf("entry: %x\n", dol_header->entry_point);
+s_printf("bss: %x %x\n", dol_header->bss_start, dol_header->bss_size);
+
+
+
+if(dol_header->bss_start)
+	memset ((void *) dol_header->bss_start, 0, dol_header->bss_size);
+
+	for (i = 0; i < 18; i++) 
+		{
+		if((!dol_header->section_size[i]) || (dol_header->section_start[i] < 0x100)) continue;
+		
+		s_printf("section: %x %x\n", dol_header->section_start[i], dol_header->section_size[i]);
+
+		
+		}
+
+	Screen_flip();
+
+	sleep(60);
+   
+
+return dol_header->entry_point;
+
+}
+
+#endif
+
 u32 load_dol() 
 {
 int i;
 dolheader *dol_header;
+u32 current_addr=0;
 
 	dol_header = (dolheader *) dol_data;
 
@@ -54,18 +106,22 @@ if(dol_header->bss_start)
 		{
 		if((!dol_header->section_size[i]) || (dol_header->section_start[i] < 0x100)) continue;
 
+		current_addr=dol_header->section_start[i];
+		if(!(current_addr & 0x80000000)) dol_header->section_start[i]|=0x80000000;
+
 		if(i<7)
 			{
 			ICInvalidateRange ((void *) dol_header->section_start[i], dol_header->section_size[i]);
 			}
+			
 
 		memcpy ((void *) dol_header->section_start[i], dol_data+dol_header->section_pos[i], dol_header->section_size[i]);
-		if(i>=7)
+		if(i>=7 || 1)
 			{
-			DCFlushRangeNoSync ((void *) dol_header->section_start[i], dol_header->section_size[i]);
+			DCFlushRange ((void *) dol_header->section_start[i], dol_header->section_size[i]);
 			}
-
-		patch_dol((void *) dol_header->section_start[i], dol_header->section_size[i],1);
+		if(current_addr & 0x80000000)
+			patch_dol((void *) dol_header->section_start[i], dol_header->section_size[i],1);
 		}
    
 

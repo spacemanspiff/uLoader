@@ -631,7 +631,13 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 	//printf("imet: %.4s\n", ((IMET*)banner)->imet);
 	//printf("U8: %.4s 0x%x\n", u8_hdr->tag, u8_hdr->rootnode_offset);
 	//dbg_pause();
-	if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
+	if (memcmp(u8_hdr->tag, u8_tag, 4))
+	{
+		banner+=0x40;
+		data_hdr = banner + sizeof(IMET);
+		u8_hdr = data_hdr;
+		if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
+	}
 
 	node = data_hdr + u8_hdr->rootnode_offset;
 	num = node->size;
@@ -642,6 +648,7 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 		name = name_start + off;
 		//printf("%d %.20s [0x%x] @ %x\n", i, name, node[i].size, node[i].data_offset);
 		//dbg_pause();
+	
 		if (strcmp(name, "sound.bin") == 0) {
 			IMD5 *imd5 = data_hdr + node[i].data_offset;
 			void *sound_data = (void*)imd5 + sizeof(IMD5);
@@ -670,6 +677,172 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 				lz_data=NULL;}
 			
 		}
+	}
+	//printf("snd: %p %x\n", snd->dsp_data, snd->size);
+}
+
+
+static u16 be16(const u8 *p)
+{
+	return (p[0] << 8) | p[1];
+}
+
+static u32 be32(const u8 *p)
+{
+	return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+}
+
+
+// try to detect a useful icon image
+void parse_banner_tpl(void *banner, void **tpl_1)
+{
+	//extern char opening_bnr[];
+	//banner = opening_bnr;
+	void *data_hdr = banner + sizeof(IMET);
+	struct U8_archive_header *u8_hdr;
+	struct U8_node *node;
+	int i, num, off;
+	char *name_start, *name;
+	int count=0;
+	
+	u16 last_w=0, last_h=0;
+	
+	u16 w,h;
+	u32 t;
+	u8 u8_tag[4] = {0x55, 0xAA, 0x38, 0x2D}; // "U.8-"
+	
+	//dbg_hex_dump(banner, 128);
+	u8_hdr = data_hdr;
+
+	*tpl_1=NULL;
+
+
+	if (memcmp(u8_hdr->tag, u8_tag, 4))
+	{
+		banner+=0x40;
+		data_hdr = banner + sizeof(IMET);
+		u8_hdr = data_hdr;
+		if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
+	}
+
+	node = data_hdr + u8_hdr->rootnode_offset;
+	num = node->size;
+	name_start = (char*)&node[num];
+	if (num>5) num = 5;
+	for (i=1; i<num; i++) {
+		off = *(int*)(&node[i]) & 0x00FFFFFF;
+		name = name_start + off;
+		
+		if(!strcmp(name, "icon.bin"))
+		{
+		IMD5 *imd5 = data_hdr + node[i].data_offset;
+		void *icon_data = (void*)imd5 + sizeof(IMD5);
+		unsigned size = imd5->filesize;
+		void *lz_data =NULL;
+  
+		if (memcmp(icon_data, "LZ77", 4)==0)
+			{
+			struct U8_archive_header *u8_hdr2;
+			struct U8_node *node2;
+
+			lz_data = decompress_lz77(icon_data+8, size-8, &size);
+			if(lz_data)
+				{
+				u8_hdr2= lz_data;
+               
+
+				if (!memcmp(u8_hdr2->tag, u8_tag, 4))
+					{
+					int j, num2, off2;
+					char *name_start2, *name2;
+					node2 = lz_data + u8_hdr2->rootnode_offset;
+					num2 = node2->size;
+					name_start2 = (char*)&node2[num2];
+					//if (num2>10) num2 = 5;
+					count=0;
+					for (j=1; j<num2; j++) 
+						{
+						off2 = *(int*)(&node2[j]) & 0x00FFFFFF;
+						name2 = name_start2 + off2;
+						
+						if(!strcmp(name2, "timg") && node2[j].type==1) 
+							{
+							
+							num2=node2[j].size;
+							j++;
+							count=1;
+							break;
+							}
+						}
+					if(count==0) goto no_found; // timg folder not found
+
+					int pri_j=j;
+					
+					for (; j<num2; j++) 
+						{
+						off2 = *(int*)(&node2[j]) & 0x00FFFFFF;
+						name2 = name_start2 + off2;
+
+					
+						if( strstr(name2, ".tpl"))
+							{
+						
+							h = be16(lz_data + node2[j].data_offset + 0x14);
+							w = be16(lz_data + node2[j].data_offset + 0x16);
+							t = be32(lz_data + node2[j].data_offset + 0x18);
+							
+							if(count==1)  {pri_j=j;count++;continue;} // skip the first
+					
+							
+							if((w*h>=last_w*last_h )&& (t==4 || t==5 ||  t==14))
+								{
+								
+								last_w=w;last_h=h;
+								count++;
+                                
+								if(*tpl_1) free(*tpl_1);*tpl_1=malloc(node2[j].size);
+								if(*tpl_1) memcpy(*tpl_1, lz_data + node2[j].data_offset, node2[j].size);
+
+								}
+							
+							}
+					
+						}
+
+					if(!*tpl_1) 
+						{
+						j=pri_j;
+
+							h = be16(lz_data + node2[j].data_offset + 0x14);
+							w = be16(lz_data + node2[j].data_offset + 0x16);
+							t = be32(lz_data + node2[j].data_offset + 0x18);
+						
+							if(t>3)
+								{
+								
+                                
+								if(*tpl_1) free(*tpl_1);*tpl_1=malloc(node2[j].size);
+								if(*tpl_1) memcpy(*tpl_1, lz_data + node2[j].data_offset, node2[j].size);
+
+								}
+
+						}
+                     //
+					 free(lz_data); 
+					
+					return;
+					}
+
+				no_found:
+					free(lz_data); 
+				
+				return;
+				}
+				
+		
+			}
+		}
+		
 	}
 	//printf("snd: %p %x\n", snd->dsp_data, snd->size);
 }

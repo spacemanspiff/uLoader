@@ -66,7 +66,7 @@ int index=0;
 		else if(strlen(header->title)<=45) letter_size(12,32);
 		else letter_size(8,32);		
 
-		PX= 0; PY=8; color= 0xff000000; 
+		PX= 0; PY=8; color= INK0; 
 				
 		bkcolor=0;
 		
@@ -99,33 +99,34 @@ int index=0;
 			|| (mode_disc && (m==1 || m==2 || m==3 ||  m==6 || m==7 || m==8)) 
 			|| (!sd_ok  && m==10)
 			|| (is_fat && (m==1 ||  m==7 || (m==8 && dvd_only)))
+			|| (is_fat && header && (header->version & 2) && (m==6 || m==9))
 		 ) ? -1 : 0))
 			     select_game_bar=m+1;
 	//
 		}
-
-		if(px>=-is_16_9*80 && px<=80-is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+		int z=-is_16_9*80-10 * (!is_16_9); 
+		if(px>=z && px<=60+z && py>=ylev+220-40 && py<=ylev+220+40)
 			{
-			circle_select(40-is_16_9*80, ylev+220, '-', 1);
+			circle_select(40+z, ylev+220, '-', 1);
 			select_game_bar=50;
 			}
 		else
 		if(frames2 & 32)
 			{
-			circle_select(40-is_16_9*80, ylev+220, '-', 0);
+			circle_select(40+z, ylev+220, '-', 0);
 			}
 		
 
-		
-		if(px>=SCR_WIDTH-82+is_16_9*80 && px<=SCR_WIDTH-2+is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+		z=is_16_9*80+10 * (!is_16_9);
+		if(px>=SCR_WIDTH-82+z && px<=SCR_WIDTH-2+z && py>=ylev+220-40 && py<=ylev+220+40)
 			{
-			circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 1);
+			circle_select(SCR_WIDTH-42+z, ylev+220, '+', 1);
 			select_game_bar=51;
 			}
 		else
 		if(frames2 & 32)
 			{
-			circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 0);
+			circle_select(SCR_WIDTH-42+z, ylev+220, '+', 0);
 			}
 
 	if(select_game_bar>=0)
@@ -154,7 +155,11 @@ int index=0;
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 						{
 						wiimote_guitar();
-
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -178,8 +183,8 @@ int index=0;
 
 				if(new_pad & WPAD_BUTTON_A) 
 					{
-					if(select_game_bar==50) {index-=6;if(index<0) index=6;}
-					if(select_game_bar==51) {index+=6;if(index>6) index=0;}
+					if(select_game_bar==50) {index-=6;if(index<0) index=6;snd_fx_yes();}
+					if(select_game_bar==51) {index+=6;if(index>6) index=0;snd_fx_yes();}
 					
 					// return
 					if(select_game_bar==1) {snd_fx_yes();draw_snow();Screen_flip(); return 0;}
@@ -190,15 +195,15 @@ int index=0;
 					if(header)
 						{
 						// add png
-						if(select_game_bar==3) {snd_fx_yes();draw_snow();Screen_flip(); select_file(0,header); return 3;}
+						if(select_game_bar==3) {snd_fx_yes();draw_snow();Screen_flip(); in_black|=2;select_file(0,header); in_black^=2;return 3;}
 
 						// delete png
                         if(select_game_bar==4) {snd_fx_yes();draw_snow();Screen_flip(); 
 						                       if(delete_test(25, header->title))
 												   {
-												   memset(temp_data,0,256*1024);global_GetProfileDatas(header->id, temp_data);
-												   temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;temp_data[9]=0; // break PNG signature
-											       global_SetProfileDatas(header->id, temp_data);
+												   memset(disc_conf,0,256*1024);global_GetProfileDatas(header->id, disc_conf);
+												   disc_conf[0]='H'; disc_conf[1]='D'; disc_conf[2]='R';disc_conf[3]=0;disc_conf[9]=0; // break PNG signature
+											       global_SetProfileDatas(header->id, disc_conf);
 												   } 
 											   return 3;
 											   }
@@ -206,12 +211,12 @@ int index=0;
 						if(select_game_bar==7) {snd_fx_yes();draw_snow();Screen_flip(); if(rename_game(header->title))  {global_RenameGame(header->id, header->title);WBFS_Close();return 2;} else return 0;}
 						// delete game
 						if(select_game_bar==8) {snd_fx_yes();draw_snow();Screen_flip(); if(delete_test(29, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
-
+						// alternative dol
 						if(select_game_bar==10) {snd_fx_yes();draw_snow();Screen_flip();load_alt_game_disc=(mode_disc & 3)!=0; menu_alternativedol(header->id);return 0;}
 						}
 					
 					// parental control
-					if(select_game_bar==5) {snd_fx_yes();draw_snow();Screen_flip();load_alt_game_disc=(mode_disc & 3)!=0;set_parental_control();draw_snow();Screen_flip();return 0;}
+					if(select_game_bar==5) {snd_fx_yes();draw_snow();Screen_flip();in_black|=2;load_alt_game_disc=(mode_disc & 3)!=0;set_parental_control();in_black^=2;draw_snow();Screen_flip();return 0;}
 					
 					// menu wii
 					if(select_game_bar==6) {snd_fx_yes();draw_snow();Screen_flip(); return 1;}
@@ -297,7 +302,7 @@ while(1)
 	SelectFontTexture(1); // selecciona la fuente de letra extra
     
 	
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK0; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -309,7 +314,7 @@ while(1)
 	autocenter=0;
 	
 
-	color= 0xff000000; 
+	color= INK0; 
 	letter_size(8,24);
 	SetTexture(NULL);
 
@@ -333,7 +338,7 @@ while(1)
 			if(level>=2048+128)
 				{
 				DrawRoundFillBox((SCR_WIDTH-500)>>1, PY-16, 500, 64, 0, 0xff00ff00);
-				DrawRoundBox((SCR_WIDTH-500)>>1, PY-16, 500, 64, 0, 4, 0xff000000);
+				DrawRoundBox((SCR_WIDTH-500)>>1, PY-16, 500, 64, 0, 4, INK0);
 
 				s_printf("%s", &letrero[idioma][20][0]);
 				}
@@ -341,7 +346,7 @@ while(1)
 			if(level>=2048)
 				{
 				DrawRoundFillBox((SCR_WIDTH-500)>>1, PY-16, 500, 64, 0, 0xff0000ff);
-				DrawRoundBox((SCR_WIDTH-500)>>1, PY-16, 500, 64, 0, 4, 0xff000000);
+				DrawRoundBox((SCR_WIDTH-500)>>1, PY-16, 500, 64, 0, 4, INK0);
 
 				s_printf("%s", &letrero[idioma][21][0]);
 				}
@@ -362,9 +367,9 @@ while(1)
 
 			DrawRoundFillBox(PX-32, PY-12, 60*8+64, 56, 0, 0xcf0000ff);
 							
-			DrawRoundBox(PX-32, PY-12, 60*8+64, 56, 0, 4, 0xff000000);
+			DrawRoundBox(PX-32, PY-12, 60*8+64, 56, 0, 4, INK0);
 			
-			color= 0xff000000; 
+			color= INK0; 
 			/*s_printf("Partition %2.2i -> %2.2xh (%s) LBA: %.10u LEN: %.2fGB", m+1, partition_type[m].type & 255, &type[partition_type[m].type>>8][0],
 					partition_type[m].lba, ((float)partition_type[m].len* (float)sector_size)/(1024*1024*1024.0));*/
 			if((partition_type[m].type>>8)==4)
@@ -442,30 +447,32 @@ while(1)
 		
 			if(current_partition>=6)
 				{
-				if(px>=-is_16_9*80 && px<=-is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+				int z=-is_16_9*80-10 * (!is_16_9); 
+				if(px>=z && px<=z+60 && py>=ylev+220-40 && py<=ylev+220+40)
 					{
-					circle_select(40-is_16_9*80, ylev+220, '-', 1);
+					circle_select(40+z, ylev+220, '-', 1);
 					select_game_bar=50;
 					}
 				else
 				if(frames2 & 32)
 					{
-					circle_select(40-is_16_9*80, ylev+220, '-', 0);
+					circle_select(40+z, ylev+220, '-', 0);
 					}
 				}
 
 				if((current_partition+6)<num_partitions)
 				{
-				if(px>=SCR_WIDTH-82+is_16_9*80 && px<=SCR_WIDTH-2+is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+				int z=is_16_9*80+10 * (!is_16_9);
+				if(px>=SCR_WIDTH-82+z && px<=SCR_WIDTH-2+z && py>=ylev+220-40 && py<=ylev+220+40)
 					{
-					circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 1);
+					circle_select(SCR_WIDTH-42+z, ylev+220, '+', 1);
 					
 					select_game_bar=51;
 					}
 				else
 				if(frames2 & 32)
 					{
-					circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 0);
+					circle_select(SCR_WIDTH-42+z, ylev+220, '+', 0);
 					}
 				}
 
@@ -504,6 +511,11 @@ while(1)
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 						{
 						wiimote_guitar();
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -605,7 +617,8 @@ char str_id[7];
 			}
 
 		cabecera( &letrero[idioma][23][0]);
-	
+        color=INK0;
+	 
 		PX=0;PY=ylev+352/2-16;
 		s_printf("%s",&letrero[idioma][38][0]);
 		PX=0;PY+=64;
@@ -630,6 +643,7 @@ char str_id[7];
 				{
 				cabecera( &letrero[idioma][23][0]);
 				PX=0;PY=ylev+352/2-16;
+				color=INK0;
 
 				s_printf("%s",&letrero[idioma][39][0]);
 				if(n==0) snd_fx_no();
@@ -650,6 +664,7 @@ char str_id[7];
 			for(n=0;n<240;n++)
 				{
 				cabecera( &letrero[idioma][23][0]);
+				color=INK0;
 				PX=0;PY=ylev+352/2-16;
 				s_printf("ERROR! (ret = %d)", ret);
 				if(n==0) snd_fx_no();
@@ -680,6 +695,7 @@ char str_id[7];
 		for(n=0;n<240;n++)
 			{
 			cabecera( &letrero[idioma][23][0]);
+			color=INK0;
 			PX=0;PY=ylev+352/2-16;
 			s_printf("ERROR! (ret = %d)", ret);
 			draw_snow();
@@ -701,6 +717,7 @@ char str_id[7];
 		for(n=0;n<240;n++)
 			{
 			cabecera(&letrero[idioma][23][0]);
+			color=INK0;
 			PX=0;PY=ylev+352/2-16;
 			s_printf("%s",&letrero[idioma][42][0]);
 			if(n==0) snd_fx_no();
@@ -730,6 +747,7 @@ char str_id[7];
 		for(n=0;n<240;n++)
 			{
 			cabecera( &letrero[idioma][23][0]);
+			color=INK0;
 			PX=0;PY=ylev+352/2-16;
 			
 			s_printf("%s",&letrero[idioma][43][0]);
@@ -775,7 +793,7 @@ char str_id[7];
 		else letter_size(8,32);		
 
 
-		PX=0;PY=ylev+352/2-32; color= 0xff000000;
+		PX=0;PY=ylev+352/2-32; color= INK0;
 				
 		bkcolor=0;
 		
@@ -801,6 +819,7 @@ char str_id[7];
 			for(n=0;n<240;n++)
 				{
 				cabecera( &letrero[idioma][23][0]);
+				color=INK0;
 				PX=0;PY=ylev+352/2-16;
 				s_printf("%s",&letrero[idioma][39][0]);
 				if(n==0) snd_fx_no();
@@ -821,6 +840,7 @@ char str_id[7];
     for(n=0;n<60;n++)
 		{
 		cabecera( &letrero[idioma][23][0]);
+		color=INK0;
 		PX=0;PY=ylev+352/2-16;
 		
 		s_printf("%s",&letrero[idioma][44][0]);
@@ -836,9 +856,11 @@ char str_id[7];
 	WPAD_Shutdown();
 	time_sleep=0;
 	SetVideoSleep(0);
+	in_black|=2;
 
 	/* Install game */
 	ret = WBFS_AddGame(0);
+	in_black^=2;
 
 	while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 
@@ -861,6 +883,7 @@ char str_id[7];
 		for(n=0;n<240;n++)
 			{
 			cabecera( &letrero[idioma][23][0]);
+			color=INK0;
 			PX=0;PY=ylev+352/2-16;
 			s_printf("Installation ERROR! (ret = %d)", ret);
 			if(n==0) snd_fx_no();
@@ -881,7 +904,7 @@ char str_id[7];
 		{
 		cabecera( &letrero[idioma][23][0]);
 		PX=0;PY=ylev+352/2-16;
-
+		color=INK0;
 		
 		s_printf("%s",&letrero[idioma][45][0]);
 		if(n==0) snd_fx_yes();
@@ -898,6 +921,7 @@ char str_id[7];
 		}
 
 	}
+	color=INK0;
 autocenter=0;
 
 out:
@@ -938,7 +962,7 @@ while(1)
 	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK0; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -956,7 +980,7 @@ while(1)
 	else if(strlen(name)<=45) letter_size(12,32);
 	else letter_size(8,32);		
 
-	PX=0;PY=ylev+352/2+32; color= 0xff000000; 
+	PX=0;PY=ylev+352/2+32; color= INK0; 
 			
 	bkcolor=0;
 	
@@ -994,9 +1018,12 @@ while(1)
 					 else 
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 						{
-
 						wiimote_guitar();
-
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -1070,7 +1097,7 @@ while(1)
 
 	draw_background();
 
-	PX= 0; PY=8; color= 0xff000000; 
+	PX= 0; PY=8; color= INK0; 
 	letter_size(16,32);
 	
 	bkcolor=0;//0xc0f08000;
@@ -1107,7 +1134,7 @@ while(1)
 				if(parental_str[n]==0) DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0ffffff);
 				else DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa000ff00);
 
-				PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", parental_str[n]==0 ? ' ' : parental_str[n]);
+				PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("%c", parental_str[n]==0 ? ' ' : parental_str[n]);
 				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
 
 				}
@@ -1119,7 +1146,7 @@ while(1)
 				
 				DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
 
-				PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", 48+n); 
+				PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("%c", 48+n); 
 
 				if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
 					{
@@ -1143,7 +1170,7 @@ while(1)
             if(config_file.game_log[n].id[0])
 				{
 				letter_size(12,32);
-				color=0xff000000;
+				color=INK0;
 			
 				s_printf("%c%c%c%c%c%c ",config_file.game_log[n].id[0],config_file.game_log[n].id[1],config_file.game_log[n].id[2],config_file.game_log[n].id[3],config_file.game_log[n].id[4],config_file.game_log[n].id[5]);
 
@@ -1161,7 +1188,7 @@ while(1)
 					}
 
                 color=0xffff1000; s_printf("%s ",title_str);
-				color=0xff000000;
+				color=INK0;
 
 				s_printf("%c%c-%s-%c%c%c%c %c%c:%c%c",
 					(config_file.game_log[n].bcd_time[0]>>4)+48, (config_file.game_log[n].bcd_time[0] & 15)+48,
@@ -1196,14 +1223,14 @@ while(1)
 			if(n==4) DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0ffffff);
 			else DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa000ff00);
 
-			PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", n==4 ? '0' : parental_str[n]);
+			PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("%c", n==4 ? '0' : parental_str[n]);
 			DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
 
 			}
 
 		letter_size(16,32);
 
-		color= 0xff000000; bkcolor=0;
+		color= INK0; bkcolor=0;
 		PX=0;PY=ylev+352/2-32;
 		autocenter=1;letter_size(12,32);
 		s_printf("%s", &letrero[idioma][47][0]);
@@ -1245,7 +1272,11 @@ while(1)
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 						{
 						wiimote_guitar();
-
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -1358,7 +1389,7 @@ while(1)
 
 	draw_background();
 
-	PX= 0; PY=8; color= 0xff000000; 
+	PX= 0; PY=8; color= INK0; 
 	letter_size(16,32);
 	
 	bkcolor=0;//0xc0f08000;
@@ -1376,7 +1407,7 @@ while(1)
 		else if(len_str<=45) {letter_size(12,32);sx=12;}
 		else letter_size(8,32);		
 
-		color= 0xff000000; 
+		color= INK0; 
 				
 		bkcolor=0x20000000;
 		
@@ -1395,7 +1426,7 @@ while(1)
 
 	select_game_bar=-1;
 
-	color= 0xff000000; 
+	color= INK0; 
 
 	letter_size(16,24);
 	bkcolor=0;
@@ -1410,7 +1441,7 @@ while(1)
 
 			DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
 
-			PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", keyboard[m+shift][n]); 
+			PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("%c", keyboard[m+shift][n]); 
 
 			if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
 				{
@@ -1429,7 +1460,7 @@ while(1)
 		// shift
 		DrawRoundFillBox(my_x, my_y, 48+16*1, 48, 0, 0xa0cfffff);
 
-		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("Aa");
+		PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("Aa");
 
 		if(px>=my_x && px<my_x+48+16*1 && py>=my_y && py<my_y+48)
 				{
@@ -1444,7 +1475,7 @@ while(1)
 		// <
 		DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
 
-		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("<");
+		PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("<");
 
 		if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
 				{
@@ -1461,7 +1492,7 @@ while(1)
 
 		DrawRoundFillBox(my_x, my_y, 48*5, 48, 0, 0xa0cfffff);
 
-		PX=my_x+16*5; PY=my_y+6+8; color= 0xff000000;s_printf("Space");
+		PX=my_x+16*5; PY=my_y+6+8; color= INK0;s_printf("Space");
 
 		if(px>=my_x && px<my_x+48*5 && py>=my_y && py<my_y+48)
 				{
@@ -1476,7 +1507,7 @@ while(1)
 		// >
 		DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
 
-		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf(">");
+		PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf(">");
 
 		if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
 				{
@@ -1492,7 +1523,7 @@ while(1)
 
 		DrawRoundFillBox(my_x, my_y, 48+16*2, 48, 0, 0xa0cfffff);
 
-		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("Del");
+		PX=my_x+16; PY=my_y+6+8; color= INK0;s_printf("Del");
 
 		if(px>=my_x && px<my_x+48+16*2 && py>=my_y && py<my_y+48)
 				{
@@ -1539,7 +1570,11 @@ while(1)
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 						{
 						wiimote_guitar();
-
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -1699,7 +1734,7 @@ while(1)
 	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK0; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -1814,30 +1849,30 @@ while(1)
 		//punt=&letrero[idioma][22+n+index][0];
 		//memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 		}
-		
-				if(px>=-is_16_9*80 && px<=80-is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+		        int z=-is_16_9*80-10 * (!is_16_9); 
+				if(px>=z && px<=60+z && py>=ylev+220-40 && py<=ylev+220+40)
 					{
-					circle_select(40-is_16_9*80, ylev+220, '-', 1);
+					circle_select(40+z, ylev+220, '-', 1);
 					
 					select_game_bar=50;
 					}
 				else
 				if(frames2 & 32)
 					{
-					circle_select(40-is_16_9*80, ylev+220, '-', 0);
+					circle_select(40+z, ylev+220, '-', 0);
 					}
 			
 
-			
-				if(px>=SCR_WIDTH-82+is_16_9*80 && px<=SCR_WIDTH-2+is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+			    z=is_16_9*80+10 * (!is_16_9);
+				if(px>=SCR_WIDTH-82+z && px<=SCR_WIDTH-2+z && py>=ylev+220-40 && py<=ylev+220+40)
 					{
-					circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 1);
+					circle_select(SCR_WIDTH-42+z, ylev+220, '+', 1);
 					select_game_bar=51;
 					}
 				else
 				if(frames2 & 32)
 					{
-					circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 0);
+					circle_select(SCR_WIDTH-42+z, ylev+220, '+', 0);
 					}
 				
 
@@ -1903,6 +1938,11 @@ while(1)
 						 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 							{
 							wiimote_guitar();
+							}
+						 else
+						 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+							{
+							wiimote_classic();
 							}
 						 else
 						   {px=-100;py=-100;}
@@ -2140,7 +2180,7 @@ while(1)
 
 		{
 
-		PX= 0; PY=8; color= 0xff000000; 
+		PX= 0; PY=8; color= INK0; 
 				
 		bkcolor=0;
 		letter_size(16,32);
@@ -2184,6 +2224,11 @@ while(1)
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
 						{
 						wiimote_guitar();
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -2512,7 +2557,16 @@ if(ehc_data)
 if(uload_data)
 	{
 	uload_data+=12;
-	memcpy((void *) temp_hacks+5, (void *) uload_data, 4);
+	memcpy((void *) temp_hacks+5, (void *) uload_data, 3);
+	temp_hacks[8]=(uload_data[3] & 1)!=0;
+	temp_hacks[9]=(uload_data[3] & 2)!=0;
+	temp_hacks[10]=(uload_data[3] & 4)!=0;
+	temp_hacks[11]=(uload_data[3] & 8)!=0;
+	temp_hacks[12]=(uload_data[3] & 16)!=0;
+	temp_hacks[13]=(uload_data[3] & 32)!=0;
+	temp_hacks[14]=(uload_data[3] & 64)!=0;
+	temp_hacks[15]=(uload_data[3] & 128)!=0;
+
 	}
 
 	while(1)
@@ -2539,7 +2593,7 @@ if(uload_data)
 
 		letter_size(16,32);
 		
-		PX= 0; PY=8; color= 0xff000000; 
+		PX= 0; PY=8; color= INK0; 
 				
 		bkcolor=0;
 		
@@ -2558,7 +2612,7 @@ if(uload_data)
 			int m=n+index;
 
 			memset(buff,32,56);buff[56]=0;
-			if(m>8)
+			if(m>10)
 				{
 				Draw_button2(30+48, ylev+32+64*n, buff, 0);
 				continue;
@@ -2576,30 +2630,32 @@ if(uload_data)
 		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
 
 		if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
+		
+		int z=-is_16_9*80-10 * (!is_16_9); 
 
-		if(px>=-is_16_9*80 && px<=80-is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+		if(px>=z && px<=60+z && py>=ylev+220-40 && py<=ylev+220+40)
 			{
-			circle_select(40-is_16_9*80, ylev+220, '-', 1);
+			circle_select(40+z, ylev+220, '-', 1);
 		
 			select_game_bar=50;
 			}
 		else
 		if(frames2 & 32)
 			{
-			circle_select(40-is_16_9*80, ylev+220, '-', 0);
+			circle_select(40+z, ylev+220, '-', 0);
 			}
 		
 
-		
-		if(px>=SCR_WIDTH-82+is_16_9*80 && px<=SCR_WIDTH-2+is_16_9*80 && py>=ylev+220-40 && py<=ylev+220+40)
+		z=is_16_9*80+10 * (!is_16_9);
+		if(px>=SCR_WIDTH-82+z && px<=SCR_WIDTH-2+z && py>=ylev+220-40 && py<=ylev+220+40)
 			{
-			circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 1);
+			circle_select(SCR_WIDTH-42+z, ylev+220, '+', 1);
 			select_game_bar=51;
 			}
 		else
 		if(frames2 & 32)
 			{
-			circle_select(SCR_WIDTH-42+is_16_9*80, ylev+220, '+', 0);
+			circle_select(SCR_WIDTH-42+z, ylev+220, '+', 0);
 			}
 
 		if(select_game_bar>=0)
@@ -2621,7 +2677,7 @@ if(uload_data)
 		SetTexture(NULL);
 		DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 		
-		PX= 0; PY=ylev+128; color= 0xff000000; 
+		PX= 0; PY=ylev+128; color= INK0; 
 				
 		bkcolor=0;
 		
@@ -2657,6 +2713,11 @@ if(uload_data)
 						wiimote_guitar();
 						}
 					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						wiimote_classic();
+						}
+					 else
 					   {px=-100;py=-100;}
 
 			if(mi_letrero==0)
@@ -2669,18 +2730,18 @@ if(uload_data)
 
                 if(new_pad & WPAD_BUTTON_MINUS)
 					{
-						index-=5;if(index<0) index=5;snd_fx_tick();
+						index-=5;if(index<0) index=10;snd_fx_tick();
 					}
 				
 				if(new_pad & WPAD_BUTTON_PLUS)
 					{
-						index+=5;if(index>5) index=0;snd_fx_tick();
+						index+=5;if(index>10) index=0;snd_fx_tick();
 					}
 
 				if(new_pad & WPAD_BUTTON_A) 
 					{
-					if(select_game_bar==50) {index-=5;if(index<0) index=5;}
-					if(select_game_bar==51) {index+=5;if(index>5) index=0;}
+					if(select_game_bar==50) {index-=5;if(index<0) index=10;}
+					if(select_game_bar==51) {index+=5;if(index>10) index=0;}
 
 					// done
 					if(select_game_bar==10)
@@ -2688,6 +2749,9 @@ if(uload_data)
 						FILE *fp;
 						u8 *mem=NULL;
 						int size=0;
+
+						make_rumble_off();
+						wiimote_read();
 
 					    snd_fx_yes();draw_snow();Screen_flip();
 
@@ -2755,8 +2819,16 @@ if(uload_data)
 
 								if(uload_data)
 									{
+									int n;
 									uload_data+=12;
-									memcpy((void *) uload_data, (void *) temp_hacks+5, 4);
+									memcpy((void *) uload_data, (void *) temp_hacks+5, 3);
+									   
+									uload_data[3]=0;
+									for(n=0;n<8;n++)
+										{
+										uload_data[3]|= (temp_hacks[8+n]!=0)<<n;
+										}
+
 									}
 								
 								if(!ehc_data || !uload_data)
@@ -2806,7 +2878,7 @@ if(uload_data)
 								remote_call(down_uload_gfx);
 								sleep(3);
 								}
-
+							
 							remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 
 							if(mem) return 1;
@@ -2825,7 +2897,7 @@ if(uload_data)
 					// return
 					if(select_game_bar==11) {snd_fx_yes();draw_snow();Screen_flip(); return 0;}
 
-					if(select_game_bar==108)
+					if(select_game_bar==110)
 						{
 						snd_fx_yes();draw_snow();Screen_flip();
 						happy_new_year(-1);
@@ -2860,7 +2932,7 @@ int ret=0;
 
 static char url[512];
 static char region[3][8]={"pal", "ntsc", "ntscj"};
-static char region2[3][8]={"PAL", "NTSC", "NTSC-J"};
+//static char region2[3][8]={"PAL", "NTSC", "NTSC-J"};
 static char region3[11][4]={"US", "EN", "FR", "DE", "ES", "IT", "NL", "PT", "AU", "JA", "KO"};
 
 char *flag;
@@ -2918,6 +2990,8 @@ for(n=0;n<=gameCnt;n++)
 
 	int ylev=(SCR_HEIGHT-440);
 
+	
+
 
 	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
 
@@ -2932,7 +3006,7 @@ for(n=0;n<=gameCnt;n++)
 
 	draw_background();
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK0; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -2941,14 +3015,14 @@ for(n=0;n<=gameCnt;n++)
 	bkcolor=num_partitions=0;//0xb0f0f0f0;
 	s_printf("%s", "Downloading...");
 	bkcolor=0;
-
+   
 	if(header && n<gameCnt)
 		{
 		if(strlen(header->title)<=37) letter_size(16,32);
 		else if(strlen(header->title)<=45) letter_size(12,32);
 		else letter_size(8,32);		
 
-		PX= 0; PY=112; color= 0xff000000; 
+		PX= 0; PY=112; color= INK0; 
 				
 		bkcolor=0;
 		
@@ -2959,7 +3033,10 @@ for(n=0;n<=gameCnt;n++)
 
 	letter_size(16,32);
 	SetTexture(NULL);
-	DrawFillBox(10, SCR_HEIGHT/2-16 , 620, 32, 2, 0xff000000);
+	DrawFillBox(10, SCR_HEIGHT/2-16 , 620, 32, 2, INK0);
+
+	if(is_fat && header && (header->version & 2)) flag[n]=2;
+
     for(m=0;m<gameCnt;m++)
 		{
 		switch(flag[m])
@@ -2974,7 +3051,7 @@ for(n=0;n<=gameCnt;n++)
 			}
 		}
 
-   PX= 0; PY=SCR_HEIGHT/2+120; color= 0xff000000; 
+   PX= 0; PY=SCR_HEIGHT/2+120; color= INK0; 
 				
 	bkcolor=0;
 		
@@ -2983,6 +3060,8 @@ for(n=0;n<=gameCnt;n++)
 		
 		autocenter=0;
 	Screen_flip();
+
+    if(is_fat && header && (header->version & 2)) continue;
 
 	if(n>=gameCnt) break;
 
@@ -3007,9 +3086,16 @@ for(n=0;n<=gameCnt;n++)
 
 						}
 					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						 angle_icon=0.0f;
+						if(new_pad & WPAD_CLASSIC_BUTTON_B) new_pad|=WPAD_BUTTON_B;
+						if(old_pad & WPAD_CLASSIC_BUTTON_B) old_pad|=WPAD_BUTTON_B;
+						}
+					 else
 					   {px=-100;py=-100;}
 
-				
+	
 
 				if(new_pad & WPAD_BUTTON_B)
 					{
@@ -3030,10 +3116,10 @@ for(n=0;n<=gameCnt;n++)
 
 
    
-	memset(temp_data,0,256*1024);
-	global_GetProfileDatas(header->id, temp_data);
+	memset(disc_conf,0,256*1024);
+	global_GetProfileDatas(header->id, disc_conf);
 		
-	if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R') || !(temp_data[9]=='P' && temp_data[10]=='N' && temp_data[11]=='G'))
+	if(!(disc_conf[0]=='H' && disc_conf[1]=='D' && disc_conf[2]=='R') || !(disc_conf[9]=='P' && disc_conf[10]=='N' && disc_conf[11]=='G'))
 		{
 		ret=-1;
 		for(m=0;m<nfiles;m++)
@@ -3154,11 +3240,11 @@ for(n=0;n<=gameCnt;n++)
 				if(texture_png)
 					{
 					free(texture_png);
-					temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=((temp_size+8+1023)/1024)-1;
+					disc_conf[0]='H'; disc_conf[1]='D'; disc_conf[2]='R';disc_conf[3]=((temp_size+8+1023)/1024)-1;
 									
-					memcpy(&temp_data[8], temp_buf, temp_size);
+					memcpy(&disc_conf[8], temp_buf, temp_size);
 
-					global_SetProfileDatas(header->id, temp_data);
+					global_SetProfileDatas(header->id, disc_conf);
 					flag[n]=1;
 					}
 					
@@ -3237,7 +3323,7 @@ while(1)
 		else if(strlen(header->title)<=45) letter_size(12,32);
 		else letter_size(8,32);		
 
-		PX= 0; PY=ylev-32; color= 0xff000000; 
+		PX= 0; PY=ylev-32; color= INK0; 
 				
 		bkcolor=0;
 		
@@ -3261,7 +3347,7 @@ while(1)
 
 	SetTexture(NULL);
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
+	PX= 0; PY=ylev-32; color= INK0; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -3286,7 +3372,7 @@ while(1)
 			
             
 			PX=16;PY=48+2+m*30;
-			color=0xff000000;
+			color=INK0;
 			
 			
 			if(n== posfile)
@@ -3315,8 +3401,8 @@ while(1)
 				}
 			else 
 				{
-				color=0xff000000;
-	            if(files[n].is_selected) color=0xff000000;
+				color=INK0;
+	            if(files[n].is_selected) color=INK0;
 
 				s_printf("%s", (char *) get_name_short_fromUTF8(&files[n].name[0]));
 				}
@@ -3327,7 +3413,7 @@ while(1)
 	if(mode==0) 
 		{
 		letter_size(12,32);
-		color=0xff000000;
+		color=INK0;
 		PX=16;PY=480-160;
 		s_printf(" Press PLUS to");
 		PX=16;PY+=40;
@@ -3372,7 +3458,7 @@ while(1)
 		if(mode==100)
 			{
 			bkcolor=0;
-			PX= 0; PY=480-40; color= 0xff000000; 
+			PX= 0; PY=480-40; color= INK0; 
 			letter_size(12,32);
 			autocenter=1;
 			s_printf("%s", &letrero[idioma][37][0]);
@@ -3404,7 +3490,6 @@ while(1)
 						{
 						angle_icon=0.0f;
 
-						
 						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
 						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
 
@@ -3426,6 +3511,44 @@ while(1)
 						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_STRUM_DOWN) new_pad|=WPAD_BUTTON_DOWN;
 						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_STRUM_DOWN) old_pad|=WPAD_BUTTON_DOWN;
 
+						}
+					 else
+					 if(wmote_datas->exp.type==WPAD_EXP_CLASSIC)
+						{
+						angle_icon=0.0f;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_UP) new_pad|=WPAD_BUTTON_UP;
+						if(old_pad & WPAD_CLASSIC_BUTTON_UP) old_pad|=WPAD_BUTTON_UP;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_DOWN) new_pad|=WPAD_BUTTON_DOWN;
+						if(old_pad & WPAD_CLASSIC_BUTTON_DOWN) old_pad|=WPAD_BUTTON_DOWN;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_LEFT) new_pad|=WPAD_BUTTON_LEFT;
+						if(old_pad & WPAD_CLASSIC_BUTTON_LEFT) old_pad|=WPAD_BUTTON_LEFT;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_RIGHT) new_pad|=WPAD_BUTTON_RIGHT;
+						if(old_pad & WPAD_CLASSIC_BUTTON_RIGHT) old_pad|=WPAD_BUTTON_RIGHT;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_A) new_pad|=WPAD_BUTTON_A;
+						if(old_pad & WPAD_CLASSIC_BUTTON_A) old_pad|=WPAD_BUTTON_A;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_B) new_pad|=WPAD_BUTTON_B;
+						if(old_pad & WPAD_CLASSIC_BUTTON_B) old_pad|=WPAD_BUTTON_B;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_X) new_pad|=WPAD_BUTTON_1;
+						if(old_pad & WPAD_CLASSIC_BUTTON_X) old_pad|=WPAD_BUTTON_1;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_Y) new_pad|=WPAD_BUTTON_2;
+						if(old_pad & WPAD_CLASSIC_BUTTON_Y) old_pad|=WPAD_BUTTON_2;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_HOME) new_pad|=WPAD_BUTTON_HOME;
+						if(old_pad & WPAD_CLASSIC_BUTTON_HOME) old_pad|=WPAD_BUTTON_HOME;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_PLUS) new_pad|=WPAD_BUTTON_PLUS;
+						if(old_pad & WPAD_CLASSIC_BUTTON_PLUS) old_pad|=WPAD_BUTTON_PLUS;
+
+						if(new_pad & WPAD_CLASSIC_BUTTON_MINUS) new_pad|=WPAD_BUTTON_MINUS;
+						if(old_pad & WPAD_CLASSIC_BUTTON_MINUS) old_pad|=WPAD_BUTTON_MINUS;
 						}
 					 else
 					   {px=-100;py=-100;}
@@ -3460,13 +3583,13 @@ while(1)
 
 									memcpy(discid,header->id,6); discid[6]=0;
 
-									memset(temp_data,0,256*1024);
-									global_GetProfileDatas(discid, temp_data);
-									temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=((len_png+8+1023)/1024)-1;
+									memset(disc_conf,0,256*1024);
+									global_GetProfileDatas(discid, disc_conf);
+									disc_conf[0]='H'; disc_conf[1]='D'; disc_conf[2]='R';disc_conf[3]=((len_png+8+1023)/1024)-1;
 									
-									memcpy(&temp_data[8], mem_png, len_png);
+									memcpy(&disc_conf[8], mem_png, len_png);
 
-									global_SetProfileDatas(discid, temp_data);
+									global_SetProfileDatas(discid, disc_conf);
 
 									Screen_flip();
 

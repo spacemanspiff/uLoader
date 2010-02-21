@@ -41,6 +41,7 @@ extern int use_icon2;
 extern struct discHdr *gameList;
 extern u32 gameCnt;
 
+extern u8 *disc_conf;
 extern u8 *temp_data;
 
 extern char* bannerTitle;

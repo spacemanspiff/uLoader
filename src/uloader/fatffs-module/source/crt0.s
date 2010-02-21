@@ -40,7 +40,7 @@
 
 	.EQU	ios_thread_arg, 4
 	.EQU	ios_thread_priority,	0x62
-	.EQU	ios_thread_stacksize, 0x3000
+	.EQU	ios_thread_stacksize, 0x5000
 	
 
 _start:	

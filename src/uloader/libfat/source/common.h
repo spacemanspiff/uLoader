@@ -57,8 +57,8 @@
 
 // Platform specific options
 #if   defined (__wii__)
-   #define DEFAULT_CACHE_PAGES 4
-   #define DEFAULT_SECTORS_PAGE 64
+   #define DEFAULT_CACHE_PAGES 8
+   #define DEFAULT_SECTORS_PAGE 32
    #define USE_LWP_LOCK
    #define USE_RTC_TIME
 #elif defined (__gamecube__)

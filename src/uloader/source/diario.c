@@ -12,6 +12,16 @@
 #include <stdio.h>
 #include <ogcsys.h>
 
+#define SECONDS_TO_2000 946684800LL
+#define TICKS_PER_SECOND 60750000LL
+
+// Thanks to Dr. Clipper
+u64 getWiiTime(void) {
+time_t uTime;
+uTime = time(NULL);
+return TICKS_PER_SECOND * (uTime - SECONDS_TO_2000);
+}
+
 #define PLAYRECPATH "/title/00000001/00000002/data/play_rec.dat"
 
 typedef struct{
@@ -31,6 +41,7 @@ typedef struct{
 
 playrec_struct playrec_buf;
 
+
 int Diario_ActualizarDiario(char* bannerTitle,char* gameId){
 	s32 ret,playrec_fd;
 	u32 sum = 0;
@@ -43,7 +54,7 @@ int Diario_ActualizarDiario(char* bannerTitle,char* gameId){
 	//Open play_rec.dat
 	playrec_fd = IOS_Open(PLAYRECPATH, IPC_OPEN_RW);
 	if(playrec_fd < 0) {
-		printf("* ERROR: abriendo play_rec.dat (%d)\n",playrec_fd);
+		//printf("* ERROR: abriendo play_rec.dat (%d)\n",playrec_fd);
 		goto error_1;
 		
 	}
@@ -51,12 +62,14 @@ int Diario_ActualizarDiario(char* bannerTitle,char* gameId){
 	//Read play_rec.dat
 	ret = IOS_Read(playrec_fd, &playrec_buf, sizeof(playrec_buf));
 	if(ret != sizeof(playrec_buf)){
-		printf("* ERROR: leyendo play_rec.dat (%d)\n",ret);
+		//printf("* ERROR: leyendo play_rec.dat (%d)\n",ret);
 		goto error_2;
 	}
 
 	if(IOS_Seek(playrec_fd, 0, 0)<0) goto error_2;
-
+    
+	playrec_buf.ticks_boot=getWiiTime();
+	playrec_buf.ticks_last=getWiiTime();
 
 	//Update channel name and ID
 	for(i=0;i<84;i++)
@@ -77,7 +90,7 @@ int Diario_ActualizarDiario(char* bannerTitle,char* gameId){
 
 	ret = IOS_Write(playrec_fd, &playrec_buf, sizeof(playrec_buf));
 	if(ret!=sizeof(playrec_buf)){
-		printf("* ERROR: guardando play_rec.dat (%d)\n",ret);
+		//printf("* ERROR: guardando play_rec.dat (%d)\n",ret);
 		goto error_2;
 	}
 

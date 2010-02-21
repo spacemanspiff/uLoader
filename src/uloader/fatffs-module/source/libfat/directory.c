@@ -220,13 +220,13 @@ static bool _FAT_directory_entryGetAlias (const u8* entryData, char* destName) {
 		} else {		
 			// Copy the filename from the dirEntry to the string
 			for (i = 0; (i < 8) && (entryData[DIR_ENTRY_name + i] != ' '); i++) {
-				destName[i] = entryData[DIR_ENTRY_name + i];
+				destName[i] = tolower(entryData[DIR_ENTRY_name + i]);
 			}
 			// Copy the extension from the dirEntry to the string
 			if (entryData[DIR_ENTRY_extension] != ' ') {
 				destName[i++] = '.';
 				for ( j = 0; (j < 3) && (entryData[DIR_ENTRY_extension + j] != ' '); j++) {
-					destName[i++] = entryData[DIR_ENTRY_extension + j];
+					destName[i++] = tolower(entryData[DIR_ENTRY_extension + j]);
 				}
 			}
 			destName[i] = '\0';

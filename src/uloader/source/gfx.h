@@ -44,6 +44,10 @@ extern "C" {
 #define BACK_COLOR 0xffa0a0a0
 #endif
 
+extern u32 INK0;
+extern u32 INK1;
+extern int in_black;
+
 extern int num_partitions;
 
 extern int exit_by_reset;
@@ -83,12 +87,14 @@ unsigned wiimote_read();
 void wiimote_ir();
 
 void wiimote_guitar();
+void wiimote_classic();
 
 
 /*************************************/
 
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
 
+extern void *background_png;
 extern int thread_in_second_plane;
 extern char my_perror_error[256];
 
@@ -107,7 +113,7 @@ extern int abort_signal;
 extern GXTlutObj palette_icon;
 extern GXTexObj text_icon[10];
 
-extern GXTexObj text_button[4], default_game_texture, text_background[3], text_background2,text_game_empty[4];
+extern GXTexObj text_button[4], default_game_texture, default_game_texture2, text_background[4], text_background2,text_game_empty[4];
 extern GXTexObj text_screen_fx;
 
 extern u32 *screen_fx;

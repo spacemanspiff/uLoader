@@ -532,6 +532,7 @@ void patch_dol(void *Address, int Section_Size, int mode)
 {
 	DCFlushRange(Address, Section_Size);
 	//if(mode)
+	
 	__Patch_Error001((void *) Address, Section_Size);
 
 	
@@ -560,17 +561,383 @@ void patch_dol(void *Address, int Section_Size, int mode)
 	DCFlushRange(Address, Section_Size);
 }
 
+void set_language_and_ocarina(void)
+{
+	switch(langsel)
+		{
+			case 0:
+					configbytes[0] = 0xCD;
+			break;
+
+			case 1:
+					configbytes[0] = 0x00;
+			break;
+
+			case 2:
+					configbytes[0] = 0x01;
+			break;
+
+			case 3:
+					configbytes[0] = 0x02;
+			break;
+
+			case 4:
+					configbytes[0] = 0x03;
+			break;
+
+			case 5:
+					configbytes[0] = 0x04;
+			break;
+
+			case 6:
+					configbytes[0] = 0x05;
+			break;
+
+			case 7:
+					configbytes[0] = 0x06;
+			break;
+
+			case 8:
+					configbytes[0] = 0x07;
+			break;
+
+			case 9:
+					configbytes[0] = 0x08;
+			break;
+
+			case 10:
+					configbytes[0] = 0x09;
+			break;
+		}
+
+	
+		hooktype = 0;
+		
+		
+		if((len_cheats && buff_cheats))
+			{ 
+			void *codelist=(void*)0x800022A8;
+
+			// OLD METHOD
+			if(hook_selected==8)
+				{
+			
+				/*HOOKS STUFF - FISHEARS*/
+				memset((void*)0x80001800,0,kenobiwii_size);
+				memcpy((void*)0x80001800,kenobiwii,kenobiwii_size);
+				memcpy((void*)0x80001800, (char*)0x80000000, 6);	// For WiiRD
+				DCFlushRange((void*)0x80001800,kenobiwii_size);
+				memcpy((void*)0x800027E8, buff_cheats, len_cheats);
+				*(vu8*)0x80001807 = 0x01;
+				hooktype =1;
+				}
+            else
+				{
+				// new from Neogamma
+			
+				#include"codehandleronly.h"
+
+           
+				memset((void*)0x80001800,0,codehandleronly_size);
+				memcpy((void*)0x80001800,codehandleronly,codehandleronly_size);
+				memcpy((void*)0x80001906, &codelist, 2);
+				memcpy((void*)0x8000190A, ((u8*) &codelist) + 2, 2);
+				memcpy((void*)0x80001800, (char*)0x80000000, 6);	// For WiiRD
+				*(vu8*)0x80001807 = 0x01;
+				DCFlushRange((void*)0x80001800,codehandleronly_size);
+				hooktype = hook_selected;
+
+				switch(hooktype)
+				{
+					case 0x01:
+						memcpy((void*)0x8000119C,viwiihooks,12);
+						memcpy((void*)0x80001198,viwiihooks+3,4);
+						break;
+					case 0x02:
+						memcpy((void*)0x8000119C,kpadhooks,12);
+						memcpy((void*)0x80001198,kpadhooks+3,4);
+						break;
+					case 0x03:
+						memcpy((void*)0x8000119C,joypadhooks,12);
+						memcpy((void*)0x80001198,joypadhooks+3,4);
+						break;
+					case 0x04:
+						memcpy((void*)0x8000119C,gxdrawhooks,12);
+						memcpy((void*)0x80001198,gxdrawhooks+3,4);
+						break;
+					case 0x05:
+						memcpy((void*)0x8000119C,gxflushhooks,12);
+						memcpy((void*)0x80001198,gxflushhooks+3,4);
+						break;
+					case 0x06:
+						memcpy((void*)0x8000119C,ossleepthreadhooks,12);
+						memcpy((void*)0x80001198,ossleepthreadhooks+3,4);
+						break;
+					case 0x07:
+						memcpy((void*)0x8000119C,axnextframehooks,12);
+						memcpy((void*)0x80001198,axnextframehooks+3,4);
+						break;
+					
+				}
+				DCFlushRange((void*)0x80001198,16);
+			  
+			
+				memcpy((void*) codelist, buff_cheats, len_cheats);
+
+				DCFlushRange(codelist, len_cheats);
+				}
+		
+			}
+		
+}
+
 static void __noprint(const char *fmt, ...)
 {
 }
 
 
+void *title_dol= NULL;
+
+typedef void (*entrypoint) (void);
+
+u32 entryPoint;
+
+#include "fatffs_util.h"
+
+/*
+
+bootTitle: It use some parts from "Triiforce" 
+
+   Copyright (c) 2009 The Lemon Man
+   Copyright (c) 2009 Nicksasa
+   Copyright (c) 2009 WiiPower
+
+*/
+
+void _unstub_start();
+
+int bootTitle(u64 titleid)
+{
+entrypoint appJump;
+int ret;
+
+	cabecera2( "Loading...");
+
+    dol_data=title_dol;
+
+	WDVD_Init();
+    WDVD_SetUSBMode(NULL, 0);
+	WDVD_Reset();
+	WDVD_Close();
+
+	//Determine_VideoMode(*Disc_Region);
+
+	Determine_VideoMode((((u32) titleid) & 0xff));
+
+	set_language_and_ocarina();
+	
+
+		DCFlushRange((void*)0x80000000, 0x3f00);
+
+	if(title_dol) 
+		{
+		
+		if(nand_mode & 3)
+		global_mount|= (nand_mode & 3);
+		else global_mount&=~3;
+	
+
+		if(global_mount & 3)
+			{
+			
+			if(load_fatffs_module(NULL)<0)  {cabecera2( "Fail Loading FAT FFS Module!!!");sleep(4);return 17;}
+			}
+		
+		 /* enable_ffs:
+		  bit 0   -> 0 SD 1-> USB
+		  bit 1-2 -> 0-> /nand, 1-> /nand2, 2-> /nand3, 3-> /nand4
+		  bit 3   -> led on in save operations
+		  bit 4-  -> verbose level: 0-> disabled, 1-> logs from FAT operations, 2 -> logs FFS operations
+		  bit 7   -> FFS emulation enabled/disabled
+
+		  bit 8-9 -> Emulation mode: 0->default 1-> DLC redirected to device:/nand, 2-> Full Mode  3-> Fullmode with DLC redirected to device:/nand
+		  */
+
+		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | 128 );
+
+		// mounting FFS system
+		ISFS_Deinitialize();
+		ISFS_Initialize();
+		usleep(500*1024);
+		ISFS_Deinitialize();
+		
+		}
+	
+	
+	if(FAT_Identify()<0) {cabecera2( "ES_Identify error!!!");sleep(4);return 888;}
+
+	ret = ES_SetUID(titleid);
+	if (ret < 0)
+	{
+        cabecera2( "SetUID Error!!!");
+		sleep(4);
+		return 890;
+	}	
+
+	ASND_StopVoice(1);
+	ASND_End();
+	usleep(100*1000);
+
+	
+	remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+	remote_end();
+	flag_snow=0;
+	Screen_flip();
+	Screen_flip();
+	WPAD_Shutdown();
+
+	// Cleanup loader information
+    //   WDVD_Close();
+	usleep(500*1000);
+   
+
+	entryPoint = load_dol();
+	
+	if(!entryPoint) return -999;
+
+
+
+	if (vmode)
+			Set_VideoMode();
+	
+
+	   VIDEO_SetBlack(TRUE);
+	   VIDEO_Flush();
+	   VIDEO_WaitVSync();
+	   VIDEO_SetBlack(TRUE);
+	   VIDEO_Flush();
+	   VIDEO_WaitVSync();
+
+	// Set the clock
+	settime(secs_to_ticks(time(NULL) - 946684800));
+
+	
+
+	// Remove 002 error
+	
+	*(u32 *)0x80003140 = (title_ios<<16) | 0xffff;
+	*(u32 *)0x80003188 = *(u32 *)0x80003140;
+	DCFlushRange((void*)0x80003140, 4);
+	DCFlushRange((void*)0x80003188, 4);
+
+   
+
+
+      if (entryPoint != 0x3400)
+		{
+	   // Patch in info missing from apploader reads
+        *Sys_Magic	= 0x0d15ea5e;
+        *Version	= 1;
+        *Arena_L	= 0x00000000;
+		*BI2		= 0x817E5480;
+        *Bus_Speed	= 0x0E7BE2C0;
+        *CPU_Speed	= 0x2B73A840;
+
+		/* Setup low memory */
+		*(vu32 *)0x80000060 = 0x38A00040;
+		*(vu32 *)0x800000E4 = 0x80431A80;
+		*(vu32 *)0x800000EC = 0x81800000;
+
+		*(vu32 *)0x800000F0 = 0x01800000;       // Simulated Memory Size
+
+		}	
+	
+	   // fix for PeppaPig
+	   memcpy((char *) temp_data, (void*)0x800000F4,4);
+	
+       SYS_ResetSystem(SYS_SHUTDOWN, 0, 0);
+
+       // fix for PeppaPig
+	   memcpy((void*)0x800000F4,(char *) temp_data, 4);
+
+	   *Disc_ID=0x10001;
+
+	   memcpy(Online_Check, Disc_ID, 4);
+
+	   appJump = (entrypoint)entryPoint;
+
+	   // Flush application memory range
+       DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded value
+	
+
+	if (entryPoint != 0x3400)
+	{
+	if (hooktype)
+		{
+			__asm__(
+						"lis %r3, entryPoint@h\n"
+						"ori %r3, %r3, entryPoint@l\n"
+						"lwz %r3, 0(%r3)\n"
+						"mtlr %r3\n"
+						"lis %r3, 0x8000\n"
+						"ori %r3, %r3, 0x18A8\n"
+						"mtctr %r3\n"
+						"bctr\n"
+						);
+						
+		} else
+		{
+			appJump();	
+		}
+	} else
+	{
+		if (hooktype)
+		{
+			__asm__(
+						"lis %r3, returnpoint@h\n"
+						"ori %r3, %r3, returnpoint@l\n"
+						"mtlr %r3\n"
+						"lis %r3, 0x8000\n"
+						"ori %r3, %r3, 0x18A8\n"
+						"mtctr %r3\n"
+						"bctr\n"
+						"returnpoint:\n"
+						"bl DCDisable\n"
+						"bl ICDisable\n"
+						"li %r3, 0\n"
+						"mtsrr1 %r3\n"
+						"lis %r4, entryPoint@h\n"
+						"ori %r4,%r4,entryPoint@l\n"
+						"lwz %r4, 0(%r4)\n"
+						"mtsrr0 %r4\n"
+						"rfi\n"
+						);
+		} else
+		{
+			_unstub_start();
+		}
+	}
+
+return 0;
+
+}
 
 int load_disc(u8 *discid)
 {
         static struct DiscHeader Header ATTRIBUTE_ALIGN(32);
         static struct Partition_Descriptor Descriptor ATTRIBUTE_ALIGN(32);
         static struct Partition_Info Partition_Info ATTRIBUTE_ALIGN(32);
+		signed_blob* Certs		= 0;
+        signed_blob* Ticket		= 0;
+        signed_blob* Tmd		= 0;
+        
+        unsigned int C_Length	= 0;
+        unsigned int T_Length	= 0;
+        unsigned int MD_Length	= 0;
+        
+        static u8	Ticket_Buffer[0x800] ATTRIBUTE_ALIGN(32);
+        static u8	Tmd_Buffer[0x49e4] ATTRIBUTE_ALIGN(32);
+
         int i;
 		
 
@@ -578,8 +945,9 @@ int load_disc(u8 *discid)
         memset(&Descriptor, 0, sizeof(Descriptor));
         memset(&Partition_Info, 0, sizeof(Partition_Info));
 
-		
+				
 		cabecera2( "Loading...");
+
 
 		if(discid[6]!=0) is_fat=0;
         
@@ -590,6 +958,7 @@ int load_disc(u8 *discid)
 
 		if(is_fat)
 			{
+			
 			if(load_fatffs_module(discid)<0) return 17;
 			}
 		else
@@ -600,8 +969,6 @@ int load_disc(u8 *discid)
 				if(load_fatffs_module(NULL)<0) return 17;
 				}
 			}
-
-      
 
 		
 		WDVD_Init();
@@ -651,10 +1018,14 @@ int load_disc(u8 *discid)
 		  bit 3   -> led on in save operations
 		  bit 4-  -> verbose level: 0-> disabled, 1-> logs from FAT operations, 2 -> logs FFS operations
 		  bit 7   -> FFS emulation enabled/disabled
+
+		  bit 8-9 -> Emulation mode: 0->default 1-> DLC redirected to device:/nand, 2-> Full Mode  3-> Fullmode with DLC redirected to device:/nand
 		  */
 
-		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | 128 );
-
+        
+		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | 128 | (256* ((nand_mode & 16)!=0)));
+		
+		// mounting FFS system
 		ISFS_Deinitialize();
 		ISFS_Initialize();
 		usleep(500*1024);
@@ -742,21 +1113,12 @@ int load_disc(u8 *discid)
 
         Offset = 0;
           
-        signed_blob* Certs		= 0;
-        signed_blob* Ticket		= 0;
-        signed_blob* Tmd		= 0;
-        
-        unsigned int C_Length	= 0;
-        unsigned int T_Length	= 0;
-        unsigned int MD_Length	= 0;
-        
-        static u8	Ticket_Buffer[0x800] ATTRIBUTE_ALIGN(32);
-        static u8	Tmd_Buffer[0x49e4] ATTRIBUTE_ALIGN(32);
         
         GetCerts(&Certs, &C_Length);
         WDVD_UnencryptedRead(Ticket_Buffer, 0x800, ((u64) Partition_Info.Offset) << 2);
         Ticket		= (signed_blob*)(Ticket_Buffer);
         T_Length	= SIGNED_TIK_SIZE(Ticket);
+
 
 		cabecera2( "Loading...");
 
@@ -782,7 +1144,7 @@ int load_disc(u8 *discid)
 			}
 
 		DCFlushRange((void*)0x80000000, 0x3f00);
-		
+
 
         // Open Partition and get the TMD buffer
        
@@ -817,151 +1179,21 @@ int load_disc(u8 *discid)
         int		Section_Size;
         int		Partition_Offset;
 
-		switch(langsel)
-                {
-                        case 0:
-                                configbytes[0] = 0xCD;
-                        break;
+		set_language_and_ocarina();
+		
+		void* Entry;
 
-                        case 1:
-                                configbytes[0] = 0x00;
-                        break;
-
-                        case 2:
-                                configbytes[0] = 0x01;
-                        break;
-
-                        case 3:
-                                configbytes[0] = 0x02;
-                        break;
-
-                        case 4:
-                                configbytes[0] = 0x03;
-                        break;
-
-                        case 5:
-                                configbytes[0] = 0x04;
-                        break;
-
-                        case 6:
-                                configbytes[0] = 0x05;
-                        break;
-
-                        case 7:
-                                configbytes[0] = 0x06;
-                        break;
-
-                        case 8:
-                                configbytes[0] = 0x07;
-                        break;
-
-                        case 9:
-                                configbytes[0] = 0x08;
-                        break;
-
-                        case 10:
-                                configbytes[0] = 0x09;
-                        break;
-                }
-
+		
+		while (Load(&Address, &Section_Size, &Partition_Offset))
+		{
 	
-   
-		hooktype = 0;
-		
-		
-		if((len_cheats && buff_cheats))
-			{ 
-			void *codelist=(void*)0x800022A8;
-
-			// OLD METHOD
-			if(hook_selected==8)
-				{
-			
-				/*HOOKS STUFF - FISHEARS*/
-				memset((void*)0x80001800,0,kenobiwii_size);
-				memcpy((void*)0x80001800,kenobiwii,kenobiwii_size);
-				memcpy((void*)0x80001800, (char*)0x80000000, 6);	// For WiiRD
-				DCFlushRange((void*)0x80001800,kenobiwii_size);
-				memcpy((void*)0x800027E8, buff_cheats, len_cheats);
-				*(vu8*)0x80001807 = 0x01;
-				hooktype =1;
-				}
-            else
-				{
-				// new from Neogamma
-			
-				#include"codehandleronly.h"
-
-           
-				memset((void*)0x80001800,0,codehandleronly_size);
-				memcpy((void*)0x80001800,codehandleronly,codehandleronly_size);
-				memcpy((void*)0x80001906, &codelist, 2);
-				memcpy((void*)0x8000190A, ((u8*) &codelist) + 2, 2);
-				memcpy((void*)0x80001800, (char*)0x80000000, 6);	// For WiiRD
-				*(vu8*)0x80001807 = 0x01;
-				DCFlushRange((void*)0x80001800,codehandleronly_size);
-				hooktype = hook_selected;
-
-				/*memset((void*)0x80001000,0,multidol_size);
-				memcpy((void*)0x80001000,multidol,multidol_size); 
-				DCFlushRange((void*)0x80001000,multidol_size);*/
-
-				switch(hooktype)
-				{
-					case 0x01:
-						memcpy((void*)0x8000119C,viwiihooks,12);
-						memcpy((void*)0x80001198,viwiihooks+3,4);
-						break;
-					case 0x02:
-						memcpy((void*)0x8000119C,kpadhooks,12);
-						memcpy((void*)0x80001198,kpadhooks+3,4);
-						break;
-					case 0x03:
-						memcpy((void*)0x8000119C,joypadhooks,12);
-						memcpy((void*)0x80001198,joypadhooks+3,4);
-						break;
-					case 0x04:
-						memcpy((void*)0x8000119C,gxdrawhooks,12);
-						memcpy((void*)0x80001198,gxdrawhooks+3,4);
-						break;
-					case 0x05:
-						memcpy((void*)0x8000119C,gxflushhooks,12);
-						memcpy((void*)0x80001198,gxflushhooks+3,4);
-						break;
-					case 0x06:
-						memcpy((void*)0x8000119C,ossleepthreadhooks,12);
-						memcpy((void*)0x80001198,ossleepthreadhooks+3,4);
-						break;
-					case 0x07:
-						memcpy((void*)0x8000119C,axnextframehooks,12);
-						memcpy((void*)0x80001198,axnextframehooks+3,4);
-						break;
-					
-				}
-				DCFlushRange((void*)0x80001198,16);
-			  
-			
-				memcpy((void*) codelist, buff_cheats, len_cheats);
-
-				DCFlushRange(codelist, len_cheats);
-				}
-		
-			}
-			
-		
-        //printf("Loading game");
-		//if(!dol_data)
-		
-        while (Load(&Address, &Section_Size, &Partition_Offset))
-        {
-	
-                if (!Address) return 5;
+				if (!Address) return 5;
 				cabecera2("Loading...");
-                WDVD_Read(Address, Section_Size, ((u64) Partition_Offset) << 2);
+				WDVD_Read(Address, Section_Size, ((u64) Partition_Offset) << 2);
 
 				patch_dol(Address, Section_Size,0);
 
-        }
+		}
 		
 
 		if(!strncmp((void *) AlternativeDol_infodat.id, (void *) discid, 6))
@@ -996,14 +1228,13 @@ int load_disc(u8 *discid)
                 if (ret < 0)
                         return ret;
         }
+
+		
+
 		#endif
   
-        
-		 //enable_ffs(1);
-
+   
 		// Retrieve application entry point
-        void* Entry;
-
 		
 
 			if(dol_data)
@@ -1018,20 +1249,22 @@ int load_disc(u8 *discid)
 		else
 			Entry= Exit();
 
+
 		if(!Entry) return -999;
 
 		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 		remote_end();
+		flag_snow=0;
+		Screen_flip();
+		Screen_flip();
 
         // Enable online mode in games
         memcpy(Online_Check, Disc_ID, 4);
-
+		
+		title_ios =(u32)(Tmd_Buffer[0x18b]);
+		*(u32 *)0x80003140 = (title_ios<<16) | 0xffff;
 		//*(u32 *)0x80003140 = *(u32 *)0x80003188; // removes 002-Error (by WiiPower: http://gbatemp.net/index.php?showtopic=158885&hl=)
         *(u32 *)0x80003188 = *(u32 *)0x80003140;
-
-		  //
-       
-
 
 		DCFlushRange((void*)0x80000000, 0x17fffff);
 			

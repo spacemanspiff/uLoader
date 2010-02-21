@@ -126,15 +126,16 @@ int n,m;
 //int is_printf=0;
 int internal_debug_printf=0;
 
+static int internal=0;
 void printf_write(int fd, void *data, int len)
 { 
 os_sync_after_write(data, len);
-if(internal_debug_printf) FAT_Write(fd, data, len);
+if(internal) FAT_Write(fd, data, len);
 else 
 	{
-	internal_debug_printf|=2;
+	internal|=2;
 	os_write(fd, data, len);
-	internal_debug_printf&=1;
+	internal&=1;
 	}
   // is_printf=0;
 }
@@ -154,16 +155,30 @@ void debug_printf(char *format,...)
  va_start(opt, format);
 
  int fd;
+
+int message;
+
+static int one=1;
+static u32 buffer[8];
+static u32 queuehandle2=-1;
+if(one)
+	{
+	queuehandle2 = os_message_queue_create(buffer, 8);
+	one=0;
+	}
+else
+ os_message_queue_receive(queuehandle2, (void *)&message, 0);
+internal=internal_debug_printf;
  
- if(internal_debug_printf & 2) return;
- if(internal_debug_printf)
-    fd = FAT_Open("sd:/log.txt" ,O_WRONLY | O_APPEND);
+ if(internal & 2) goto salir;
+ if(internal)
+    fd = FAT_Open("sd:/ffs_log.txt" ,O_WRONLY | O_APPEND);
  else
-	fd=os_open("sd:/log.txt" ,O_WRONLY | O_APPEND);
+	fd=os_open("sd:/ffs_log.txt" ,O_WRONLY | O_APPEND);
 
 	
 
-	if(fd<0) return;
+	if(fd<0) goto salir;
 
  while(format[0])
 	{
@@ -210,11 +225,13 @@ void debug_printf(char *format,...)
 	}
    
 	va_end(opt);
-if(internal_debug_printf)
+if(internal)
 	FAT_Close(fd);
 else
 	os_close(fd);
 
+salir:
+	os_message_queue_send(queuehandle2, 0, 0);
 #endif	
 }
 #endif 

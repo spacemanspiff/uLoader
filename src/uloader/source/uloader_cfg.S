@@ -1,5 +1,5 @@
 
-	.text
+	.data
 	.global ulo_cfg;
 ulo_cfg:
 	.string "ULO_CFG"
@@ -17,8 +17,8 @@ automatic_dvd_mode:
 launch_short:
 	.byte 0x0
 	
-	.global cfg_param3
-cfg_param3:
+	.global uhack_settings0
+uhack_settings0:
 	.byte 0x0
 
 	.byte 0x0,0x0,0x0,0x0
