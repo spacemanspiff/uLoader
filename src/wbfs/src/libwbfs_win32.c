@@ -119,6 +119,8 @@ wbfs_t *wbfs_try_open_hd(char *driveName, int reset)
 wbfs_t *wbfs_try_open_partition(char *partitionLetter, int reset)
 {
 	HANDLE *handle;
+	wbfs_t * ret;
+
 	char drivePath[8] = "\\\\?\\Z:";
 	
 	u32 sector_size, sector_count;
@@ -142,8 +144,11 @@ wbfs_t *wbfs_try_open_partition(char *partitionLetter, int reset)
 	{
 		return NULL;
 	}
-	
-	return wbfs_open_partition(read_sector, write_sector, close_handle, handle, sector_size, sector_count, 0, reset);
+
+	ret= wbfs_open_partition(read_sector, write_sector, close_handle, handle, sector_size, sector_count, 0, reset);
+
+	if(!ret) CloseHandle(handle);
+	return ret;
 }
 
 wbfs_t *wbfs_try_open(char *disc, char *partition, int reset)

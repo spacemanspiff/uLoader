@@ -194,6 +194,143 @@ error:
         return;
 }
 
+wbfs_disc_t *wbfs_open_index_disc(wbfs_t* p, u32 i)
+{
+        int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
+        wbfs_disc_t *d = 0;
+       
+                if (p->head->disc_table[i]){
+                        p->read_hdsector(p->callback_data,
+                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer);
+                       
+                                d = wbfs_malloc(sizeof(*d));
+                                if(!d)
+                                        ERR("allocating memory");
+                                d->p = p;
+                                d->i = i;
+                                d->header = wbfs_ioalloc(p->disc_info_sz);
+                                if(!d->header)
+                                        ERR("allocating memory");
+                                p->read_hdsector(p->callback_data,
+                                                  p->part_lba+1+i*disc_info_sz_lba,
+                                                  disc_info_sz_lba,d->header);
+                                p->n_disc_open ++;
+
+                                return d;
+                }
+       
+        return 0;
+error:
+        if(d)
+                wbfs_iofree(d);
+        return 0;
+        
+}
+
+static void load_freeblocks(wbfs_t*p);
+
+void wbfs_integrity_check(wbfs_t* p)
+{
+u32 i,i2,n,m, flag=0;
+int ret=0;
+int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
+int discn;
+int keyinput;
+
+u8 id1[7],id2[7];
+
+load_freeblocks(p);
+
+for(i=0;i<p->max_disc;i++)
+        {
+      	wbfs_disc_t *d= wbfs_open_index_disc(p, i);
+		if(!d) continue;
+		memcpy(id1,p->tmp_buffer,6);id1[6]=0;
+		ret=0;
+		flag=1;
+		keyinput=1;
+
+		printf("Checking %s\n",id1);
+
+		for(i2=0;i2<p->max_disc;i2++)
+			{
+			wbfs_disc_t *d2;
+			if(i==i2) continue;
+			d2= wbfs_open_index_disc(p, i2);
+			if(!d2) continue;
+			memcpy(id2,p->tmp_buffer,6);id2[6]=0;
+			 for(n=0; n<p->n_wbfs_sec_per_disc; n++)
+				{
+                u32 iwlba = wbfs_ntohs(d->header->wlba_table[n]);
+		
+                if (iwlba)
+					{
+					if(flag==2) flag=0;
+					if(flag==1) flag=2;
+					
+
+					for(m=0; m<p->n_wbfs_sec_per_disc; m++)
+						{
+						u32 iwlba2 = wbfs_ntohs(d2->header->wlba_table[m]);
+						if(iwlba)
+							{// 4
+							
+							if(iwlba==iwlba2)
+								{//3
+								
+								printf("Error! Crossed LBA %u in Disc %s and Disc %s\n", iwlba, id1, id2);
+								if(flag==2 && keyinput)
+									{// 2
+									char c;
+									printf("\nThe begin of this disc is bad (LBA's Crossed)");
+									printf("\nDelete Disc %s ? (y/n)\n\n",id1);
+
+									keyinput=0;
+									
+									while(1) {if(!kbhit()) break; getch();}
+
+									while(1)
+										{//1
+										c = getchar();
+										if(c==10 || c==13 || c>127) continue;
+
+										if (toupper(c) != 'Y')
+											{
+											flag=0;break;
+											}
+										else break;
+										}// 1
+									}// 2
+								if(flag==2 || ret) {iwlba=0;d->header->wlba_table[n]=0;ret=1;break;}
+								} // 3
+							
+							}// 4
+						}
+					}
+				}
+
+			wbfs_close_disc(d2);
+			}
+		///////////////
+		if(ret)
+			{
+			printf("Deleting Disc %s\n", id1);
+			discn = d->i;
+			memset(d->header,0,p->disc_info_sz);
+			p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,d->header);
+			p->head->disc_table[discn] = 0;
+			}
+			///////////////
+		wbfs_close_disc(d);wbfs_sync(p);
+		if(ret) load_freeblocks(p);
+		}
+
+printf("End\n\nPress Any Key\n");
+
+while(1) {if(!kbhit()) break; getch();}
+getch();
+}
+
 wbfs_disc_t *wbfs_open_disc(wbfs_t* p, u8 *discid)
 {
         u32 i;
@@ -217,8 +354,7 @@ wbfs_disc_t *wbfs_open_disc(wbfs_t* p, u8 *discid)
                                                   p->part_lba+1+i*disc_info_sz_lba,
                                                   disc_info_sz_lba,d->header);
                                 p->n_disc_open ++;
-//                                for(i=0;i<p->n_wbfs_sec_per_disc;i++)
-//                                        printf("%d,",wbfs_ntohs(d->header->wlba_table[i]));
+
                                 return d;
                         }
                 }
@@ -414,10 +550,14 @@ static u32 alloc_block(wbfs_t*p)
         }
         return ~0;
 }
+
+
 static void free_block(wbfs_t *p,int bl)
 {
-        int i = bl/(32);
-        int j = bl&31;
+  
+        int i = (bl-1)/(32);
+        int j = (bl-1)&31;
+        
         u32 v = wbfs_ntohl(p->freeblks[i]);
         p->freeblks[i] = wbfs_htonl(v | 1<<j);
 }

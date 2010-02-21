@@ -1,5 +1,11 @@
 Modified by Hermes
 
+NEW: 
+
+-run without params to use the GUI
+
+- Integrity Check added (for files bad deleted in olders versions)
+
 The new support add/extract in .ciso format (Compact ISO) and one new command to add a .png file (<200KB) to use on the uLoader application.
 
 

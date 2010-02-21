@@ -1,7 +1,7 @@
 PROGS = wbfs_win
 COMMON = tools.o bn.o ec.o disc_usage_table.o libwbfs.o libwbfs_win32.o wiidisc.o rijndael.o
 DEFINES = -DLARGE_FILES -D_FILE_OFFSET_BITS=64
-LIBS = C:/Dev-Cpp/lib/libwsock32.a C:/Dev-Cpp/lib/libcrypto.a
+LIBS = C:/Dev-Cpp/lib/libwsock32.a C:/Dev-Cpp/lib/libcrypto.a C:/Dev-Cpp/lib/libcomdlg32.a
 
 CC = gcc
 #CFLAGS = -Wall -W -Os -Ilibwbfs -I.

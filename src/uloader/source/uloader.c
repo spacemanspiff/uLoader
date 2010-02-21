@@ -804,9 +804,9 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.2");
+			s_printf("v1.3");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.2");
+			s_printf("v1.3");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -1737,8 +1737,11 @@ int main(int argc, char **argv) {
 
 														DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
 														DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+														
+														if(ret==666)s_printf("ERROR FROM THE LOADER: Disc ID is not equal!\n"); 
+														else 
+															s_printf("ERROR FROM THE LOADER: %i\n", ret);
 
-														s_printf("ERROR FROM THE LOADER: %i\n", ret);
 														Screen_flip();
 
 
@@ -1990,6 +1993,8 @@ int load_disc(u8 *discid)
         
         Determine_VideoMode(*Disc_Region);
         DI_Read_Unencrypted(&Header, sizeof(Header), 0);
+
+		if(strncmp((char *) &Header, (char *) discid, 6)) return 666;
 
         //printf("%s\n",Header.Title);
 		

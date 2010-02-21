@@ -4,10 +4,13 @@
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 #include <windows.h>
+#include "commdlg.h"
 #include <stdio.h>     /* for printf */
 #include <stdlib.h>    /* for exit */
 #include "xgetopt.h"
 #include <sys/stat.h>
+
+#include <conio.h>
 
 #ifdef WIN32
 #include <direct.h>
@@ -25,6 +28,8 @@
 
 wbfs_t *wbfs_try_open(char *disc, char *partition, int reset);
 wbfs_t *wbfs_try_open_partition(char *fn, int reset);
+
+void wbfs_integrity_check(wbfs_t* p);
 
 #define GB (1024 * 1024 * 1024.)
 
@@ -126,6 +131,56 @@ int write_wii_disc_sector(void *_handle, u32 lba, u32 count, void *buf)
 	}
 	
 	return 0;
+}
+
+int pos_list=0;
+
+char string_id[7]="";
+
+void wbfs_display_list(wbfs_t *p)
+{
+	int count = wbfs_count_discs(p);
+    u32 count2 = wbfs_count_usedblocks(p);
+
+	string_id[0]=0;
+
+	 printf(" Games: %i | Total: %.2fGB Used: %.2fGB Free: %.2fGB\n\n",count, (float)p->n_wbfs_sec * p->wbfs_sec_sz / GB, 
+			(float)(p->n_wbfs_sec-count2) * p->wbfs_sec_sz / GB, (float)(count2) * p->wbfs_sec_sz / GB);
+	
+
+	if (count == 0)
+	{
+		printf("wbfs is empty\n");
+		pos_list=-1;
+	}
+	else
+	{
+		int i,m;
+		u32 size;
+		u8 *b = wbfs_ioalloc(0x100);
+
+		if(pos_list<0) pos_list=0;
+		
+		if(pos_list>=count) pos_list=count-1;
+		i = pos_list-5;
+		if(i<0) i=0;
+
+		for (m=0; m <10; m++)
+		{
+		if(i>=count) printf("\n");
+		else
+			{
+			if (!wbfs_get_disc_info(p, i, b, 0x100, &size))
+				{
+					printf("    %c %c%c%c%c%c%c %40s %.2fG\n",i==pos_list ? '>': ' ', b[0], b[1], b[2], b[3], b[4], b[5], b + 0x20, size * 4ULL / (GB));
+					if(i==pos_list) {memcpy(&string_id[0], b, 6);string_id[6]=0;}
+				}
+			}
+		i++;
+		}
+
+		wbfs_iofree(b);
+	}
 }
 
 void wbfs_applet_list(wbfs_t *p)
@@ -318,7 +373,7 @@ void wbfs_applet_isoextract(wbfs_t *p, char *argv)
 		// replace silly chars by '_'
 		for (i = 0; i < len; i++)
 		{
-			if (isoname[i] == ' ' || isoname[i] == '/' || isoname[i] == ':')
+			if (isoname[i] == ' ' || isoname[i] == '/' || isoname[i] == ':' || isoname[i] == '|')
 			{
 				isoname[i] = '_';
 			}
@@ -394,7 +449,7 @@ void wbfs_applet_extract(wbfs_t *p, char *argv)
 		// replace silly chars by '_'
 		for (i = 0; i < len; i++)
 		{
-			if (isoname[i] == ' ' || isoname[i] == '/' || isoname[i] == ':')
+			if (isoname[i] == ' ' || isoname[i] == '/' || isoname[i] == ':' || isoname[i] == '|')
 			{
 				isoname[i] = '_';
 			}
@@ -475,7 +530,30 @@ int usage(char **argv)
 			wbfs_applets[i].function_with_twoarguments ? "file.png" : "");
 	}
 
+system("pause");
 	return EXIT_FAILURE;
+}
+
+int Ask_Yes_no()
+{
+ char c;
+
+	while(1) {if(!kbhit()) break; getch();}
+
+while(1)
+	{
+	c = getchar();
+	if(c==10 || c==13) continue;
+
+	if (toupper(c) != 'Y')
+		{
+		printf("Aborted.\n");
+		return 0;
+		}
+	else break;
+	}
+
+ return 1;
 }
 
 int main(int argc, char *argv[])
@@ -485,8 +563,233 @@ int main(int argc, char *argv[])
 	BOOL executed = FALSE;
 	char *partition = NULL;
 	char *command = NULL;
+
+	static char device_letter[2]="Z";
+	char current_directory[1024];
+
+	current_directory[0]=0;
+	getcwd(current_directory,1024);
 	
-	fprintf(stderr, "wbfs windows port build 'delta'\nModified by Hermes\n\n");
+	if(argc>1)
+		fprintf(stderr, "wbfs windows port build 'delta'\nModified by Hermes\n\n");
+	else
+	{
+	wbfs_t *p;
+			
+	while(1) {if(!kbhit()) break; getch();}
+
+    while(1)
+	{
+		while(1)
+		{
+		int k;
+		system("cls");
+		printf("wbfs windows port build 'delta'\nModified by Hermes\n\n");
+		printf("Press Device letter:\n\n");
+
+		device_letter[0]=getch();
+		device_letter[1]=0;
+
+		if(device_letter[0]==27) return 0;
+	   
+		if((device_letter[0]>='A' && device_letter[0]<='Z') || (device_letter[0]>='a' && device_letter[0]<='z')) {device_letter[0]&=~32;break;}
+
+		}
+
+  
+	p = wbfs_try_open(NULL, device_letter, 0);
+
+	if(p) break; 
+	else 
+		{
+			
+	    printf("\n\nFormat as WBFS? (y/n)\n\n");
+        if(Ask_Yes_no())
+			{
+			system("cls");
+			printf("!!! Warning ALL data on drive '%s' will be lost irretrievably !!!\n\n", device_letter);
+		    printf("Are you sure? (y/n): ");
+			
+            if(Ask_Yes_no())
+				{
+				p = wbfs_try_open(NULL, device_letter, 1);
+				if(p) {wbfs_close(p);p = wbfs_try_open(NULL, device_letter, 0);}
+				if(p) break; 
+				}
+			}
+		printf("\nPress Any Key\n");
+		while(1) {if(!kbhit()) break; getch();}
+		getch();
+
+		}
+	}
+
+	while(1)
+	{
+	int k;
+	system("cls");
+	printf("wbfs windows port build 'delta'\nModified by Hermes\n\n");
+
+	printf("Device: %c\n\n",device_letter[0]);
+
+    
+	wbfs_display_list(p);
+
+	printf("\nUse ARROWS to Select and press key:\n\n");
+    
+	printf(" 1-> Add 2-> Add PNG 3-> Extract 4-> ISO Extract 5-> Remove\n 8->Integrity Check 0-> Format\n");
+
+	k=getch();
+
+	if(k==224)
+		{
+		k=getch();
+		if(k==80 && pos_list>=0) pos_list++;
+		if(k==72 && pos_list>=0) {pos_list--;if(pos_list<0) pos_list=0;}
+		}
+
+    // add game
+	if(k=='1') 
+		{
+		OPENFILENAME ofn;
+		char szFileName[MAX_PATH] = "";
+
+		ZeroMemory(&ofn, sizeof(ofn));
+
+		ofn.lStructSize = sizeof(ofn); 
+		ofn.hwndOwner =NULL;
+		ofn.lpstrFilter = "ISO Files (*.iso; *.ciso)\0*.iso;*.ciso\0\0\0";
+		ofn.lpstrFile = szFileName;
+		ofn.nMaxFile = MAX_PATH;
+		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_SHAREAWARE ;
+		ofn.lpstrDefExt = "iso";
+		
+		if(GetOpenFileName(&ofn)) 
+			{
+			system("cls");
+			wbfs_applet_add(p, szFileName);
+
+			printf("\nPress Any Key\n");
+			while(1) {if(!kbhit()) break; getch();}
+			getch();
+			}
+		}
+
+	// add .png
+	if(k=='2' && pos_list>=0 && string_id[0]!=0) 
+		{
+		OPENFILENAME ofn;
+		char szFileName[MAX_PATH] = "";
+
+		ZeroMemory(&ofn, sizeof(ofn));
+
+		ofn.lStructSize = sizeof(ofn); 
+		ofn.hwndOwner =NULL;
+		ofn.lpstrFilter = "PNG Files (*.png)\0*.png\0\0\0";
+		ofn.lpstrFile = szFileName;
+		ofn.nMaxFile = MAX_PATH;
+		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_SHAREAWARE ;
+		ofn.lpstrDefExt = "png";
+		
+		if(GetOpenFileName(&ofn)) 
+			{
+				system("cls");
+				wbfs_applet_png(p, string_id, szFileName);
+
+				printf("\nPress Any Key\n");
+				while(1) {if(!kbhit()) break; getch();}
+				getch();
+			}
+		}
+
+	// extract .ciso
+	if(k=='3' && pos_list>=0 && string_id[0]!=0)
+		{
+			
+			system("cls");
+			chdir(current_directory);
+			printf("extract %s to .ciso format? (y/n)\n\n",string_id);
+			if(Ask_Yes_no())
+				wbfs_applet_extract(p, string_id);
+			printf("\nPress Any Key\n");
+			while(1) {if(!kbhit()) break; getch();}
+			getch();
+
+		}
+		
+	// extract .iso
+	if(k=='4' && pos_list>=0  && string_id[0]!=0)
+		{
+			
+			system("cls");
+			chdir(current_directory);
+			printf("extract %s to .iso format? (y/n)\n\n",string_id);
+			if(Ask_Yes_no())
+				wbfs_applet_isoextract(p, string_id);
+			printf("\nPress Any Key\n");
+			while(1) {if(!kbhit()) break; getch();}
+			getch();
+
+		}
+		
+	// remove
+	if(k=='5' && pos_list>=0  && string_id[0]!=0)
+		{   
+			
+			system("cls");
+			chdir(current_directory);
+			printf("!!! Warning it remove %s game !!!\n\n", string_id);
+			printf("Are you sure? (y/n):\n");
+            if(Ask_Yes_no())
+				wbfs_applet_remove(p, string_id);
+
+			printf("\nPress Any Key\n");
+			while(1) {if(!kbhit()) break; getch();}
+			getch();
+
+		}
+
+	if(k=='8' && pos_list>=0)
+		{
+		printf("Integrity Check:\n\n");
+		wbfs_integrity_check(p);
+		}
+
+	if(k=='0')
+		{
+		system("cls");	
+	    printf("\n\nFormat as WBFS? (y/n)\n\n");
+        if(Ask_Yes_no())
+			{
+			system("cls");
+			printf("!!! Warning ALL data on drive '%s' will be lost irretrievably !!!\n\n", device_letter);
+		    printf("Are you sure? (y/n):\n");
+			
+            if(Ask_Yes_no())
+				{
+				wbfs_close(p);
+				p = wbfs_try_open(NULL, device_letter, 1);
+				if(p) {wbfs_close(p);p = wbfs_try_open(NULL, device_letter, 0);}
+				if(!p)
+					{
+					printf("Exiting by ERROR\n");
+					while(1) {if(!kbhit()) break; getch();}
+					getch();
+					return -1;
+					}
+				}
+			}
+		printf("\nPress Any Key\n");
+		while(1) {if(!kbhit()) break; getch();}
+		getch();
+
+		}
+
+	if(k==27) break;
+	}
+    wbfs_close(p);
+	return 0;
+	}
 
 	while ((opt = getopt(argc, argv, "d:hf")) != -1)
 	{

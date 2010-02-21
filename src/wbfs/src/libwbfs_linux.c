@@ -85,13 +85,18 @@ wbfs_t *wbfs_try_open_hd(char *fn,int reset)
 wbfs_t *wbfs_try_open_partition(char *fn,int reset)
 {
         u32 sector_size, n_sector;
+		wbfs_t * ret;
+
         if(!get_capacity(fn,&sector_size,&n_sector))
                 return NULL;
         FILE *f = fopen(fn,"r+");
         if (!f)
                 return NULL;
-        return wbfs_open_partition(wbfs_fread_sector,wbfs_fwrite_sector,f,
+        ret= wbfs_open_partition(wbfs_fread_sector,wbfs_fwrite_sector,f,
                                    sector_size ,n_sector,0,reset);
+
+		if(!ret) fclose(f);
+		return ret;
 }
 wbfs_t *wbfs_try_open(char *disc,char *partition, int reset)
 {

@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 #define wbfs_fatal(x) fatal(x)
-#define wbfs_error(x) fatal(x)
+#define wbfs_error(x) print_error(x)
 
 #include <stdlib.h>
 #define wbfs_malloc(x) malloc(x)

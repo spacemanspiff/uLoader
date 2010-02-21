@@ -380,6 +380,19 @@ void fatal(const char *s, ...)
 	exit(1);
 }
 
+void print_error(const char *s, ...)
+{
+	char message[256];
+	va_list ap;
+
+	va_start(ap, s);
+	vsnprintf(message, sizeof message, s, ap);
+
+	perror(message);
+
+
+}
+
 //
 // output formatting
 //
