@@ -2794,9 +2794,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.1B");
+			s_printf("v2.1C");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.1B");
+			s_printf("v2.1C");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -2982,7 +2982,22 @@ int main(int argc, char **argv) {
 		SetTexture(NULL);
 
 			ret2 = USBStorage2_Init(); 
-			
+
+			if(ret2==-20000) 
+				{n=0;
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+
+				s_printf("ERROR: USB Device is detected as HUB!!!");
+
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
+				
+				PY+=80;
+				s_printf("You need plug one device on USB port 0...");
+
+				}
+			else
 			if(ret2==-100) 
 				{n=0;
 				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);

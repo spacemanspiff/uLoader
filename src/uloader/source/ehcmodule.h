@@ -1,3 +1,3 @@
-#define size_ehcmodule 18880
+#define size_ehcmodule 18852
 
-extern unsigned char ehcmodule[18880];
+extern unsigned char ehcmodule[18852];
