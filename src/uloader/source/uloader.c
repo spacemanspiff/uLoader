@@ -3933,7 +3933,7 @@ get_games:
 
 		cnt=0;buffer=NULL;
 		//ret = WBFS_GetCount(&cnt);
-		ret=partition_cnt[current_partition];
+		ret= partition_cnt[current_partition];
 		cnt= ret;
 
 		if (ret < 0 || cnt==0) {
@@ -5581,6 +5581,23 @@ get_games:
 				{
 				if(is_favorite) {is_favorite=0;actual_game=0;if(last_game>=0) {actual_game=last_game;last_game=-1;}} 
 				else {actual_game+=15;if(actual_game>=gameCnt) {actual_game=0;is_favorite=1;}}
+				if(is_favorite)
+					{
+					int flag=0;
+					for(n=0;n<15;n++)
+							if(config_file.id[n][0]!=0)	
+								{
+								for(g=0;g<gameCnt;g++)
+									{
+									struct discHdr *header = &gameList[g];
+									if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
+										{
+										flag=1;break;
+										}
+									 }
+								}
+					if(!flag) {is_favorite=0;}
+					}
 				}
 			if(scroll_mode>0)
 				{
