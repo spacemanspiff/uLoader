@@ -337,24 +337,25 @@ char letrero[2][50][64]=
 	" Cheats Codes found !!! ", "Apply Codes ", "Skip Codes ", "Format WBFS", "Selected", "You have one WBFS partition", "Are You Sure You Can Format?",
 	" Yes ", " No ", "Formatting...","Formatting Disc Successfull","Formatting Disc Failed",
 //22 
-	"Return", "Add New Game", "Add PNG Bitmap", "Delete PNG Bitmap", "Delete Game", "Format Disc", "Fix Parental Control","Return to Wii Menu","","",
+	"Return", "Add New Game", "Add PNG Bitmap", "Delete PNG Bitmap",  "Fix Parental Control","Return to Wii Menu", "Rename Game", "Delete Game", "Format Disc", "",
 //32
 	"Are you sure you want delete this?", "Press A to accept or B to cancel", 
 // 34
 "Insert the game DVD disc...", "ERROR! Aborted", "Press B to Abort","Opening DVD disc...", "ERROR: Not a Wii disc!!",
-"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done", "Change the password", "Use this password?",
+"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done", "Change the password", "Use this password?","Restore Name"
 	},
     // spanish
 	{"Retorna", "Configurar", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", "Hecho", "Descartar",
 	" Códigos de Trucos encontrados !!! ","Usa Códigos", "Salta Códigos", "Formatear WBFS", "Seleccionado", "Ya tienes una partición WBFS", 
 	"¿Estas seguro que quieres formatear?", " Si ", " No ", "Formateando...", "Exito Formateando el Disco", "Error al Formatear el Disco",
 //22	
-	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Bitmap PNG", "Borrar Juego", "Formatear Disco", "Fijar Control Parental", "Retorna al Menu de Wii", "","",
+	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Bitmap PNG", "Fijar Control Parental", "Retorna al Menu de Wii", "Renombrar Juego", "Borrar Juego", "Formatear Disco","",
+
 //32
 	"¿Estás seguro de que quieres borrar éste?", "Pulsa A para aceptar o B para cancelar",
 // 34
 "Inserta el DVD del juego ...", "ERROR! Abortado", "Pulsa B para Abortar","Abriendo el disco DVD...", "ERROR: No es un disco de Wii!!",
-"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado", "Cambia la contraseña", "¿Usar esta contraseña?",
+"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado", "Cambia la contraseña", "¿Usar esta contraseña?", "Restaurar Nombre"
 
 	},
 	};
@@ -886,6 +887,23 @@ struct _config_file
 }
 config_file ATTRIBUTE_ALIGN(32);
 
+
+struct _cheat_file
+{
+struct
+	{
+	u8 id[6];
+	u8 sel[25];
+	u8 magic;
+	}
+	cheats[1024];
+}
+cheat_file ATTRIBUTE_ALIGN(32);
+
+void set_cheats_list(u8 *id);
+void get_cheats_list(u8 *id);
+
+
 void add_game_log(u8 *id)
 {
 int n;
@@ -929,8 +947,10 @@ int n=0;
 
 	config_file.magic=0;
 
+	memset((void *) &cheat_file, 0, 32768);
+
     // Load CFG from HDD (or create __CFG_ disc)
-	if(WBFS_LoadCfg(&config_file,sizeof (config_file)))
+	if(WBFS_LoadCfg(&config_file,sizeof (config_file), &cheat_file))
 	{
 	if(config_file.magic!=0xcacafea1)
 		{
@@ -983,7 +1003,7 @@ void save_cfg()
 
 config_file.magic=0xcacafea1;
 
-if(WBFS_SaveCfg(&config_file,sizeof (config_file)))
+if(WBFS_SaveCfg(&config_file,sizeof (config_file), &cheat_file))
 	{
 	return;
 	}
@@ -2380,6 +2400,386 @@ while(1)
 	}
 }
 
+
+int rename_game(char *old_title)
+{
+int frames2=0;
+int n,m;
+
+int old_select=-1;
+
+int shift=0;
+
+int cursor=0;
+int len_str=0;
+int sx;
+
+static char keyboard[8][10]={
+	{'1','2','3','4','5','6','7','8','9','0',},
+	{'Q','W','E','R','T','Y','U','I','O','P',},
+	{'A','S','D','F','G','H','J','K','L','Ñ',},
+	{'Z','X','C','V','B','N','M','&',':','_',},
+
+	{'1','2','3','4','5','6','7','8','9','0',},
+	{'q','w','e','r','t','y','u','i','o','p',},
+	{'a','s','d','f','g','h','j','k','l','ñ',},
+	{'z','x','c','v','b','n','m','ç','.','-',},
+	//{'','','','','','','','','','',},
+
+};
+
+char title[64];
+
+memcpy(title,old_title,64);
+
+title[63]=0;
+
+len_str=strlen(title);
+
+while(1)
+	{
+	int select_game_bar=-1;
+	int ylev=(SCR_HEIGHT-440);
+
+	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
+
+	if(rumble) 
+		{
+		if(rumble<=7) wiimote_rumble(0); 
+		rumble--;
+		}
+	else wiimote_rumble(0);
+
+	WPAD_ScanPads(); // esto lee todos los wiimotes
+
+	//SetTexture(NULL);
+    //DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+
+	SetTexture(&text_background);
+
+
+	ConfigureForTexture(10);
+	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
+	AddTextureVertex(0, 0, 999, 0xfff0f0f0, 0, (frames2 & 1023));
+	AddTextureVertex(SCR_WIDTH, 0, 999, 0xffa0a0a0, 1023, (frames2 & 1023)); 
+	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT, 999, 0xfff0f0f0, 1023, 1024+(frames2 & 1023)); 
+	AddTextureVertex(0, SCR_HEIGHT, 999, 0xffa0a0a0, 0, 1024+(frames2 & 1023)); 
+	GX_End();
+
+	PX= 0; PY=8; color= 0xff000000; 
+	letter_size(16,32);
+	
+	bkcolor=0;//0xc0f08000;
+			
+	autocenter=1;
+	s_printf("%s",&letrero[idioma][28][0]);
+	autocenter=0;
+
+    SetTexture(NULL);
+
+    //DrawRoundFillBox(20+148, ylev+32, 148*2, 352, 0, 0xcfafafaf);
+
+        sx=8;
+		if(len_str<=37) {letter_size(16,32);sx=16;}
+		else if(len_str<=45) {letter_size(12,32);sx=12;}
+		else letter_size(8,32);		
+
+		color= 0xff000000; 
+				
+		bkcolor=0x20000000;
+		
+        PX=(SCR_WIDTH-sx*len_str)/2;PY=56;
+		for(n=0;n<len_str;n++)
+			{
+			PX=(SCR_WIDTH-sx*len_str)/2+n*sx; PY=56;
+			if(n==cursor && (frames2 & 8)==0) {bkcolor=0xa000ff00;s_printf(" ");bkcolor=0x20000000;PX-=sx;PY=56;}
+			s_printf("%c",title[n]);
+			}
+
+		if(n==cursor && (frames2 & 8)==0) {PY=56;bkcolor=0xa000ff00;s_printf(" ");bkcolor=0x20000000;}
+		
+
+    letter_size(16,32);
+
+	select_game_bar=-1;
+
+	color= 0xff000000; 
+
+	letter_size(16,24);
+	bkcolor=0;
+	autocenter=0;
+
+	for(m=0;m<4;m++)
+		{
+		for(n=0;n<10;n++)
+			{
+			int my_x=SCR_WIDTH/2-5*50+50*n;
+			int my_y=ylev+64+50*m;
+
+			DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
+
+			PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", keyboard[m+shift][n]); 
+
+			if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
+				{
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xfff08000);
+				select_game_bar=1024+keyboard[m+shift][n];
+				}
+			else
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+			}
+		}
+
+		{
+		int my_x=SCR_WIDTH/2-5*50;
+		int my_y=ylev+64+50*4+16;
+
+		// shift
+		DrawRoundFillBox(my_x, my_y, 48+16*1, 48, 0, 0xa0cfffff);
+
+		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("Aa");
+
+		if(px>=my_x && px<my_x+48+16*1 && py>=my_y && py<my_y+48)
+				{
+				DrawRoundBox(my_x, my_y, 48+16*1, 48, 0, 4, 0xfff08000);
+				select_game_bar=100;
+				}
+			else
+				DrawRoundBox(my_x, my_y, 48+16*1, 48, 0, 4, 0xa0000000);
+		
+		my_x+=50+16*1;
+
+		// <
+		DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
+
+		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("<");
+
+		if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
+				{
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xfff08000);
+				select_game_bar=101;
+				}
+			else
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+		
+		my_x+=50;
+
+
+		// Space
+
+		DrawRoundFillBox(my_x, my_y, 48*5, 48, 0, 0xa0cfffff);
+
+		PX=my_x+16*5; PY=my_y+6+8; color= 0xff000000;s_printf("Space");
+
+		if(px>=my_x && px<my_x+48*5 && py>=my_y && py<my_y+48)
+				{
+				DrawRoundBox(my_x, my_y, 48*5, 48, 0, 4, 0xfff08000);
+				select_game_bar=1024+32;
+				}
+			else
+				DrawRoundBox(my_x, my_y, 48*5, 48, 0, 4, 0xa0000000);
+		
+		my_x+=5*50;
+
+		// >
+		DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
+
+		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf(">");
+
+		if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
+				{
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xfff08000);
+				select_game_bar=102;
+				}
+			else
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+		
+		my_x+=50;
+
+		// Del
+
+		DrawRoundFillBox(my_x, my_y, 48+16*2, 48, 0, 0xa0cfffff);
+
+		PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("Del");
+
+		if(px>=my_x && px<my_x+48+16*2 && py>=my_y && py<my_y+48)
+				{
+				DrawRoundBox(my_x, my_y, 48+16*2, 48, 0, 4, 0xfff08000);
+				select_game_bar=104;
+				}
+			else
+				DrawRoundBox(my_x, my_y, 48+16*2, 48, 0, 4, 0xa0000000);
+		
+		//my_x+=5*50;
+
+		}
+
+		
+		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=60;
+
+		if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][44][0])) select_game_bar=65;
+			
+		if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=61;
+	
+	
+	if(select_game_bar>=0)
+		{
+		if(old_select!=select_game_bar)
+			{
+			snd_fx_tick();if(rumble==0) {wiimote_rumble(1);rumble=10;}
+			old_select=select_game_bar;
+			}
+		}
+	else 
+		old_select=-1;
+
+	temp_pad= wiimote_read(); 
+	new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+
+	if(wmote_datas!=NULL)
+			{
+			SetTexture(NULL);		// no uses textura
+
+					if(wmote_datas->ir.valid)
+						{
+						px=wmote_datas->ir.x;py=wmote_datas->ir.y;
+						
+						SetTexture(NULL);
+						DrawIcon(px,py,frames2);
+						}
+					 else 
+					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
+						{
+
+						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
+							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
+						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
+							{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
+							
+
+						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
+							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
+						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
+							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+						
+						if(guitar_pos_x<0) guitar_pos_x=0;
+						if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+						if(guitar_pos_y<0) guitar_pos_y=0;
+						if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
+
+						
+						px=guitar_pos_x; py=guitar_pos_y;
+
+						
+						SetTexture(NULL);
+						DrawIcon(px,py,frames2);
+						
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) new_pad|=WPAD_BUTTON_B;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) old_pad|=WPAD_BUTTON_B;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) new_pad|=WPAD_BUTTON_1;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) old_pad|=WPAD_BUTTON_1;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS) new_pad|=WPAD_BUTTON_MINUS;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS) old_pad|=WPAD_BUTTON_MINUS;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) new_pad|=WPAD_BUTTON_PLUS;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) old_pad|=WPAD_BUTTON_PLUS;
+
+						}
+					 else
+					   {px=-100;py=-100;}
+
+				if(new_pad & WPAD_BUTTON_B)
+					{
+					snd_fx_no();
+					select_game_bar=-1;
+
+					
+					Screen_flip();break;
+						
+					}
+
+				
+			    if(new_pad & (WPAD_BUTTON_MINUS | WPAD_BUTTON_LEFT))
+					{
+						cursor--;if(cursor<0) {cursor=0;snd_fx_no();} else snd_fx_yes();
+					}
+				
+				if(new_pad & (WPAD_BUTTON_PLUS | WPAD_BUTTON_RIGHT))
+					{
+						cursor++;if(cursor>len_str) {cursor=len_str;snd_fx_no();} else snd_fx_yes();
+					}
+
+				if(new_pad & WPAD_BUTTON_A) 
+					{
+					if(select_game_bar==60) {if(len_str<2) {select_game_bar=65;}
+						                    else {Screen_flip();snd_fx_yes(); title[63]=0;memcpy(old_title,title,64);return 1;}
+					                        }// OK
+					if(select_game_bar==61) {
+											Screen_flip();
+											snd_fx_no();
+											return 0;
+											} // discard
+
+					if(select_game_bar==65) {
+											memcpy(title,old_title,64);title[63]=0;len_str=strlen(title);cursor=0;
+											snd_fx_no();
+					
+											} // No
+
+
+											
+
+
+
+
+
+					if(select_game_bar==100) {shift^=4;snd_fx_yes();}
+
+					if(select_game_bar==101) {cursor--;if(cursor<0) {cursor=0;snd_fx_no();} else snd_fx_yes();}
+					if(select_game_bar==102) {cursor++;if(cursor>len_str) {cursor=len_str;snd_fx_no();} else snd_fx_yes();}
+
+					if(select_game_bar==104) {if(cursor==0) snd_fx_no();
+											  else
+												{
+												memcpy(&title[cursor-1], &title[cursor], 64-cursor);
+												len_str=strlen(title);snd_fx_yes();
+												cursor--;
+												}
+											  }
+
+					if(select_game_bar>=1024)
+											  {
+											  if(len_str>62) snd_fx_no();
+											  else
+												  {
+												  if(cursor>=len_str) cursor=len_str;
+												  for(n=62;n>=cursor;n--) title[n+1]=title[n];
+												  title[cursor]=select_game_bar-1024; title[63]=0;
+                                                  len_str=strlen(title);snd_fx_yes();
+												  cursor++;if(cursor>=len_str) cursor=len_str;
+												  }
+											  
+											  }
+                   
+					}
+				}
+
+	
+
+	Screen_flip();
+	if(exit_by_reset) break;
+
+	frames2++;
+	
+	}
+return 0;
+}
+
 void select_file(int flag, struct discHdr *header);
 
 int home_menu(struct discHdr *header)
@@ -2389,6 +2789,8 @@ int n;
 int old_select=-1;
 char *punt;
 char buff[64];
+
+int index=0;
 
 	while(1)
 	{
@@ -2438,14 +2840,63 @@ char buff[64];
 		letter_size(16,32);
 		
 
-    for(n=0;n<8;n++)
+    for(n=0;n<6;n++)
 		{
+		int m=n+index;
+
 		memset(buff,32,56);buff[56]=0;
-		punt=&letrero[idioma][22+n][0];
+		if(m>8)
+			{
+			Draw_button2(30+48, ylev+32+64*n, buff, 0);
+			continue;
+			}
+		
+		punt=&letrero[idioma][22+n+index][0];
 		memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 	
-		if(Draw_button2(30+48, ylev+56*n, buff,(!header && (n==2 || n==3 || n==4 || (parental_control_on && n!=0 && n!=7))) ? -1 : 0)) select_game_bar=n+1;
+		if(Draw_button2(30+48, ylev+32+64*n, buff,(!header && (m==2 || m==3 || m==6 || m==7 || (parental_control_on && m!=0 && m!=5))) ? -1 : 0)) select_game_bar=m+1;
 		}
+
+		if(px>=0 && px<=80 && py>=ylev+220-40 && py<=ylev+220+40)
+			{
+			DrawFillEllipse(40, ylev+220, 50, 50, 0, 0xc0f0f0f0);
+			letter_size(32,64);
+			PX= 40-16; PY= ylev+220-32; color= 0xff000000; bkcolor=0;
+			s_printf("-");
+			DrawEllipse(40, ylev+220, 50, 50, 0, 6, 0xc0f0f000);
+			select_game_bar=50;
+			}
+		else
+		if(frames2 & 32)
+			{
+			DrawFillEllipse(40, ylev+220, 40, 40, 0, 0xc0f0f0f0);
+			letter_size(32,48);
+			PX= 40-16; PY= ylev+220-24; color= 0xff000000; bkcolor=0;
+			s_printf("-");
+			DrawEllipse(40, ylev+220, 40, 40, 0, 6, 0xc0000000);
+			}
+		
+
+		
+		if(px>=SCR_WIDTH-82 && px<=SCR_WIDTH-2 && py>=ylev+220-40 && py<=ylev+220+40)
+			{
+			DrawFillEllipse(SCR_WIDTH-42, ylev+220, 50, 50, 0, 0xc0f0f0f0);
+			letter_size(32,64);
+			PX= SCR_WIDTH-42-16; PY= ylev+220-32; color= 0xff000000; bkcolor=0;
+			s_printf("+");
+			DrawEllipse(SCR_WIDTH-42, ylev+220, 50, 50, 0, 6, 0xc0f0f000);
+			select_game_bar=51;
+			}
+		else
+		if(frames2 & 32)
+			{
+			DrawFillEllipse(SCR_WIDTH-42, ylev+220, 40, 40, 0, 0xc0f0f0f0);
+			letter_size(32,48);
+			PX= SCR_WIDTH-42-16; PY= ylev+220-24; color= 0xff000000; bkcolor=0;
+			s_printf("+");
+			DrawEllipse(SCR_WIDTH-42, ylev+220, 40, 40, 0, 6, 0xc0000000);
+			}
+
 	if(select_game_bar>=0)
 		{
 		if(old_select!=select_game_bar)
@@ -2456,6 +2907,7 @@ char buff[64];
 		}
 	else 
 		old_select=-1;
+
 
 	temp_pad= wiimote_read(); 
 	new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
@@ -2523,15 +2975,33 @@ char buff[64];
 					return 0;
 					}
 
+                if(new_pad & WPAD_BUTTON_MINUS)
+					{
+						index-=6;if(index<0) index=6;snd_fx_tick();
+					}
+				
+				if(new_pad & WPAD_BUTTON_PLUS)
+					{
+						index+=6;if(index>6) index=0;snd_fx_tick();
+					}
 
 				if(new_pad & WPAD_BUTTON_A) 
 					{
+					if(select_game_bar==50) {index-=6;if(index<0) index=6;}
+					if(select_game_bar==51) {index+=6;if(index>6) index=0;}
+					
+					// return
 					if(select_game_bar==1) {snd_fx_yes();Screen_flip(); return 0;}
+
+					// add game
 					if(select_game_bar==2) {snd_fx_yes();Screen_flip(); add_game(); return 2;}
 				
 					if(header)
 						{
+						// add png
 						if(select_game_bar==3) {snd_fx_yes();Screen_flip(); select_file(0,header); return 3;}
+
+						// delete png
                         if(select_game_bar==4) {snd_fx_yes();Screen_flip(); 
 						                       if(delete_test(25, header->title))
 												   {
@@ -2541,13 +3011,24 @@ char buff[64];
 												   } 
 											   return 3;
 											   }
-						if(select_game_bar==5) {snd_fx_yes();Screen_flip(); if(delete_test(26, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
+						// rename
+						if(select_game_bar==7) {snd_fx_yes();Screen_flip(); if(rename_game(header->title))  {WBFS_RenameGame(header->id, header->title);WBFS_Close();return 2;} else return 0;}
+						// delete game
+						if(select_game_bar==8) {snd_fx_yes();Screen_flip(); if(delete_test(26, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
 						}
-					if(select_game_bar==6) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
-
-					if(select_game_bar==7) {set_parental_control();Screen_flip();return 0;}
 					
-					if(select_game_bar==8) {snd_fx_yes();Screen_flip(); return 1;}
+					// parental control
+					if(select_game_bar==5) {set_parental_control();Screen_flip();return 0;}
+					
+					// menu wii
+					if(select_game_bar==6) {snd_fx_yes();Screen_flip(); return 1;}
+					
+					
+
+					// format
+					if(select_game_bar==9) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
+
+					
 					}
 			}
 	
@@ -2766,7 +3247,40 @@ for(n=0;n<=gameCnt;n++)
 		
 	if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R') || !(temp_data[9]=='P' && temp_data[10]=='N' && temp_data[11]=='G'))
 		{
-		ret=download_file(url, &temp_buf, &temp_size);
+		ret=-1;
+		for(m=0;m<nfiles;m++)
+			{
+			if(!files[m].is_directory)
+				if(!strncmp((char *) header->id,get_name_from_UTF8(&files[m].name[0]), 6))
+					{
+					FILE *fp;
+
+					fp=fopen(&files[m].name[0],"rb"); // lee el fichero de texto
+					if(fp)
+						{
+						fseek(fp, 0, SEEK_END);
+
+						temp_size = ftell(fp);
+
+						temp_buf= (u8 *) malloc(temp_size);
+
+						if(!temp_buf) {fclose(fp);break;}
+						else
+							{
+							fseek(fp, 0, SEEK_SET);
+							if(fread(temp_buf,1, temp_size ,fp)==temp_size) ret=0;
+							
+							if(ret<0) {free(temp_buf);temp_buf=NULL;}
+
+							fclose(fp);break;
+							}
+						}
+					}
+			}
+
+		if(ret!=0)
+			ret=download_file(url, &temp_buf, &temp_size);
+
 		if(ret==0)
 			{
 			#if 0
@@ -2855,9 +3369,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.3");
+			s_printf("v2.4");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.3");
+			s_printf("v2.4");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -4767,8 +5281,11 @@ get_games:
 														if(load_cheats(discid)) cheat_mode=1;
 
 													if(select_game_bar>=1000) cheat_mode=0;
-
+													
+													set_cheats_list(discid);
 													if(select_game_bar==1000) create_cheats();
+
+													
 													
 													if(select_game_bar==1001) len_cheats=0; // don't apply cheats
 						
@@ -5002,7 +5519,10 @@ get_games:
 														
 			if(load_cheats(discid)) cheat_mode=1;
 
+			set_cheats_list(discid);
 			create_cheats();
+
+			
 														
 			ret=load_game_routine(discid, game_mode);
 
@@ -5926,6 +6446,54 @@ for(n=0;n<8;n++)
 return 2; // numero
 }
 
+void set_cheats_list(u8 *id)
+{
+int n,m;
+
+int free=-1;
+
+	if(!txt_cheats) return;
+
+	for(n=0;n<1024;n++)
+		{
+		if(cheat_file.cheats[n].magic!=0xae && free<0) free=n;
+
+		if(cheat_file.cheats[n].magic==0xae && !strncmp((char *) cheat_file.cheats[n].id, (char *) id, 6))
+			{
+			for(m=0;m<25;m++) cheat_file.cheats[n].sel[m]=(data_cheats[m].apply!=0);
+			return;
+			}
+		}
+
+	if(free<0)
+		{
+		free=1023;
+		memcpy((char *) &cheat_file, ((char *) &cheat_file)+32, 32768-32);
+		}
+
+	memcpy((char *) cheat_file.cheats[free].id, (char *) id, 6);
+	cheat_file.cheats[free].magic=0xae;
+	for(m=0;m<25;m++) cheat_file.cheats[free].sel[m]=(data_cheats[m].apply!=0);
+}
+
+void get_cheats_list(u8 *id)
+{
+int n, m;
+
+	if(!txt_cheats) return;
+
+	for(n=0;n<1024;n++)
+		{
+		if(cheat_file.cheats[n].magic==0xae && !strncmp((char *) cheat_file.cheats[n].id, (char *) id, 6))
+			{
+			for(m=0;m<25;m++) data_cheats[m].apply= (cheat_file.cheats[n].sel[m]==1);
+			return;
+			}
+		}
+
+}
+
+
 void create_cheats()
 {
 int n,m,f;
@@ -6129,6 +6697,8 @@ fp = fopen(file_cheats, "rb");
 
 		for(n=0;n<MAX_LIST_CHEATS;n++)
 			if(data_cheats[n].title!=NULL) num_list_cheats=n+1; else break;
+
+		get_cheats_list(discid);
 		
 		}
 	else
@@ -6313,19 +6883,23 @@ while(1)
 		{
 		letter_size(12,32);
 		color=0xff000000;
-		PX=16;PY=480-120;
+		PX=16;PY=480-160;
 		s_printf(" Press PLUS to");
 		PX=16;PY+=40;
 		s_printf("Download Covers");
 		PX=16;PY+=40;
 		s_printf(" From Internet");
+		PX=16;PY+=40;
+		s_printf("or this folder");
 
-		PX=396;PY=480-120;
+		PX=396;PY=480-160;
 		s_printf("  Pulsa MAS Para");
 		PX=396;PY+=40;
 		s_printf("Descargar Caratulas");
 		PX=396;PY+=40;
 		s_printf("  Desde Internet");
+		PX=396;PY+=40;
+		s_printf("%s","o éste directorio");
 		}
 	if(texture_png)
 		{

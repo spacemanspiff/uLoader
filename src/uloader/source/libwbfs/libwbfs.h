@@ -229,6 +229,7 @@ void wbfs_set_force_mode(int force);
 // for uloader: it creates __CFG_ file
 u32 wbfs_add_cfg(wbfs_t *p, read_wiidisc_callback_t read_src_wii_disc, void *callback_data, progress_callback_t spinner, partition_selector_t sel);
 
+int wbfs_ren_disc(wbfs_t* p, u8 *discid, char *new_name);
 
 #ifdef __cplusplus
    }

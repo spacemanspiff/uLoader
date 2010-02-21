@@ -292,6 +292,9 @@ error:
         return 0;
         
 }
+
+
+
 void wbfs_close_disc(wbfs_disc_t*d)
 {
         d->p->n_disc_open --;
@@ -946,4 +949,29 @@ u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,v
 error:
         return 1;
 }
+
+int wbfs_ren_disc(wbfs_t* p, u8 *discid, char *new_name)
+{
+        u32 i;
+        int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
+       
+        for(i=0;i<p->max_disc;i++)
+        {
+                if (p->head->disc_table[i]){
+                        p->read_hdsector(p->callback_data,
+                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer);
+                        if(wbfs_memcmp(discid,p->tmp_buffer,6)==0){
+							wbfs_memcpy(p->tmp_buffer+0x20, new_name, 64);
+						p->write_hdsector(p->callback_data,
+                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer);
+
+						return 1;
+                        }
+                }
+        }
+     
+return 0;
+        
+}
+
 u32 wbfs_extract_file(wbfs_disc_t*d, char *path);

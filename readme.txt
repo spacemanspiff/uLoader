@@ -1,4 +1,4 @@
-uLoader v2.3 BETA - by Hermes (www.elotrolado.net)
+uLoader v2.4 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (1.6 required). Now you can select the IOS used to install
@@ -16,7 +16,7 @@ Features:
  with date/time, enables the password box (automatic when you enter in the menu) and fix a new password.
  (from 1.8 00000 disbles Parental control)
 
-- 16 games per screen, showing an icon that can be inserted in the device, using the attached wbfs_win.exe revision (see below "Notes about wbfs_win").
+- 15 games per screen, showing an icon that can be inserted in the device, using the attached wbfs_win.exe revision (see below "Notes about wbfs_win").
 
 - It has a Favorites Screen (up to 16 games) (save __CFG_ in HDD)
 
@@ -32,12 +32,16 @@ Features:
 - Possibility to use the alternative cIOS 223 (only to launch games)
 
 - Option to add or delete PNG icons/covers from the SD to the game directly (PNG is added in the HDD)
-  Now you can download Covers from Internet!
+  Now you can download Covers from Internet or to adquire covers automatically from the current folder in the SD
 
 - Now you can load games as Red Steel using one alternative .dol (see ALTERNATIVE DOL NOTES in this document)
 
 - Now you can load ehcmodule.elf externally (put it in sd:/apps/uloader/ehcmodule.elf) to use old versions
   of the module (see "src/uloader/resources")
+
+- Support rename games added
+
+- Support added to record the selected cheats index when you use cheats from txt files
 
 - New USB code and more
 

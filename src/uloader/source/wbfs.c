@@ -355,7 +355,7 @@ if (!hdd)
 	return 0;
 }
 
-s32 WBFS_LoadCfg(void *data, s32 size)
+s32 WBFS_LoadCfg(void *data, s32 size, void *data2)
 {
 wbfs_disc_t *disc = NULL;
 if (!hdd)
@@ -366,11 +366,13 @@ if (!hdd)
 	if (!disc)
 		{
 		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
+		memset(data2,0,32768);
 		return 1;
 		}
 	else 
 		{
         wbfs_disc_read(disc,(256>>2), data, size); // from 0x100 to 0x1ff is cfg datas (of the 2MB)
+		wbfs_disc_read(disc,(1024>>2), data2, 32768);
 		wbfs_close_disc(disc);
 		
 		return 1;
@@ -379,7 +381,7 @@ if (!hdd)
 return 0;
 }
 
-s32 WBFS_SaveCfg(void *data, s32 size)
+s32 WBFS_SaveCfg(void *data, s32 size, void *data2)
 {
 wbfs_disc_t *disc = NULL;
 if(!hdd) WBFS_Open();
@@ -397,6 +399,7 @@ if (!hdd)
 	if(disc)
 		{
         wbfs_disc_write(disc,(256>>2), data, size); // from 0x100 to 0x1ff is cfg datas (of the 2MB)
+		wbfs_disc_write(disc,(1024>>2), data2, 32768);
 		wbfs_close_disc(disc);
 		
 		return 1;
@@ -498,4 +501,20 @@ s32 WBFS_DiskSpace(f32 *used, f32 *free)
 	*used = ssize * (hdd->n_wbfs_sec - cnt);
 
 	return 0;
+}
+
+
+
+s32 WBFS_RenameGame(u8 *discid, char *new_name)
+{
+
+int ret=0;
+if(!hdd) WBFS_Open();
+if (!hdd)
+		return 0;
+	/* Try to open game disc */
+	ret= wbfs_ren_disc(hdd, (u8 *) discid,new_name);
+
+	
+return ret;
 }

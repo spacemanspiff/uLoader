@@ -1,4 +1,4 @@
-uLoader v2.3 BETA - por Hermes (www.elotrolado.net)
+uLoader v2.4 BETA - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (1.6 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -16,7 +16,7 @@ Caracteristicas:
   parental se listan los ultimos 8 juegos lanzados con fecha y hora, se habilita la petición de contraseña solo con entrar o se puede cambiar la 
   contraseña por otra (desde 1.8 la contraseña 00000 deshabilita el control parental)
 
-- Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe 
+- Visualiza 15 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe 
   que adjunto (ver mas abajo "Notas sobre wbfs_win").
 
 - Dispone de una pantalla de Juegos Favoritos (hasta 16 juegos). (salva __CFG_ en HDD)
@@ -33,12 +33,16 @@ Caracteristicas:
 - Posibilidad de usar el cIOS alternativo 223 para lanzar juego.
 
 - Posibilidad de añadir/borrar iconos/caratulas desde la SD a los juegos, directamente (el PNG  es añadido al HDD directamente).
-  Ahora puedes descargar caratulas desde Internet
+  Ahora puedes descargar caratulas desde Internet o adquirir automaticamente las carátulas desde el directorio actual de la SD
 
 - Ahora puedes cargar juegos como Red Steel usando un .dol alternativo (mira NOTAS DE DOL ALTERNATIVO en este documento)
 
 - Ahora puedes cargar ehcmodule.elf externamente (mete en sd:/apps/uloader/ehcmodule.elf) para
   utilizar versiones antiguas del modulo (mira en src/uloader/resources)
+
+- Añadido soporte para renombrar juegos
+
+- Añadido soporte para recordar los trucos seleccionados cuando se usan trucos desde fichero txt
 
 - Código USB mejorado y más cosas
 
