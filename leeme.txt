@@ -1,4 +1,4 @@
-uLoader v1.0 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.1 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
@@ -15,6 +15,8 @@ Caracteristicas:
 
 - Textos en Inglés y Español (autodetecta)
 
+- Soporta Forzado de video, seleccion de idioma y Ocarina
+
 CONTROLES
 ---------
 
@@ -27,6 +29,12 @@ CONTROLES
 - Boton +/-: Pagina Siguiente/Anterior
 
 - Boton 1 o Boton Amarillo: Ir a la pagina de favoritos/volver a la ultima 			   pagina
+
+
+BOTON DE CONFIGURAR
+-------------------
+
+Aqui puedes acceder a la pantalla de seleccion de idioma, video y cIOS del juego
 
 ICONOS
 ------
@@ -62,6 +70,14 @@ LANZAR JUEGOS
 
 La pantalla de lanzar juegos te permite seleccionar el custom IOS a lanzar (si cIOS 222 no está disponible, se bloqueará en cIOS 249), añadir a favoritos y obviamente, cargar el juego sin más dilación
 
+OCARINA
+-------
+
+Los codigos de trucos deben estar en la carpeta "codes" de la SD con extensión .gct y nombre igual a la ID del juego
+
+Ejemplo:
+
+:/codes/RB4P08.gct -> trucos de Resident Evil 4 Wii 
 
 
 Notas sobre wbfs_win
@@ -74,7 +90,6 @@ http://www.elotrolado.net/hilo_yal-juegos-sin-usbloader-desde-homebrew-channel_1
 La utilidad tiene algunos cambios que permiten extraer a .ciso por defecto (si lo renombras a .iso funcionará igual en otros GUI que fuerzan el tipo de fichero), con lo cual nos ahorraremos unos GB de disco, subir tanto .iso como .ciso y la posibilidad de añadir un icono a la iso subida.
 
 Tambien se soporta la extracción como iso usando el comando "isoextract" (ver readme_new.txt)
-
 
 Para añadir un icono basta hacer:
 
@@ -94,10 +109,6 @@ Tanto el ancho como el alto es mejor que sean divisibles entre 16 para evitar pr
 Si tienes dudas, pregunta en el foro.
 
 
- 
-
-
-wbfs_win.exe Z png RSPP01 HBC_icono_WiiSports.png
 
 
 

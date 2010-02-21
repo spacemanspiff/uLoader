@@ -49,7 +49,7 @@ static s32 hid = -1, fd = -1;
 static u32 sector_size;
 
 
-inline s32 __USBStorage_isMEM2Buffer(const void *buffer)
+inline s32 __USBStorage2_isMEM2Buffer(const void *buffer)
 {
 	u32 high_addr = ((u32)buffer) >> 24;
 
@@ -57,7 +57,7 @@ inline s32 __USBStorage_isMEM2Buffer(const void *buffer)
 }
 
 
-s32 USBStorage_GetCapacity(u32 *_sector_size)
+s32 USBStorage2_GetCapacity(u32 *_sector_size)
 {
 	if (fd > 0) {
 		s32 ret;
@@ -73,7 +73,7 @@ s32 USBStorage_GetCapacity(u32 *_sector_size)
 	return IPC_ENOENT;
 }
 
-s32 USBStorage_Init(void)
+s32 USBStorage2_Init(void)
 {
 	s32 ret;
 	int n=5;
@@ -105,7 +105,7 @@ s32 USBStorage_Init(void)
 	sleep(1);
 	
 	/* Get device capacity */
-	ret = USBStorage_GetCapacity(NULL);
+	ret = USBStorage2_GetCapacity(NULL);
 /*	if (!ret)
 		goto err;
 
@@ -131,7 +131,7 @@ err:
 	return -1;
 }
 
-void USBStorage_Deinit(void)
+void USBStorage2_Deinit(void)
 {
 	/* Close USB device */
 	if (fd > 0) {
@@ -140,12 +140,12 @@ void USBStorage_Deinit(void)
 	}
 }
 
-s32 USBStorage_ReadSectors(u32 sector, u32 numSectors, void *buffer)
+s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 {
 	/* Read sectors from USB */
 	if (fd > 0) {
 		/* MEM2 buffer */
-		if (!__USBStorage_isMEM2Buffer(buffer)) {
+		if (!__USBStorage2_isMEM2Buffer(buffer)) {
 			u8 *_buffer = iosAlloc(hid, sector_size * numSectors);
 			s32 ret;
 
@@ -167,12 +167,12 @@ s32 USBStorage_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 	return IPC_ENOENT;
 }
 
-s32 USBStorage_WriteSectors(u32 sector, u32 numSectors, const void *buffer)
+s32 USBStorage2_WriteSectors(u32 sector, u32 numSectors, const void *buffer)
 {
 	/* Write sectors to USB */
 	if (fd > 0) {
 		/* MEM2 buffer */
-		if (!__USBStorage_isMEM2Buffer(buffer)) {
+		if (!__USBStorage2_isMEM2Buffer(buffer)) {
 			u8 *_buffer = iosAlloc(hid, sector_size * numSectors);
 			s32 ret;
 

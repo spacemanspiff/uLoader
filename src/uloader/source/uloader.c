@@ -41,6 +41,8 @@
 
 #include <wiiuse/wpad.h>
 
+#include "patchcode.h"
+#include "kenobiwii.h"
 
 
 #define CIOS 222
@@ -51,6 +53,7 @@
 #include "screen.h"
 #include <fat.h>
 #include <math.h>
+
 
 #include "defpng.h"
 #include "button1.h"
@@ -69,17 +72,44 @@
 
 MODPlay mod_track;
 
-#include "affair.h" // segundo mod
+#include "affair.h" 
 
 #endif
 
+
+/*LANGUAGE PATCH - FISHEARS*/
+u32 langsel = 0;
+char languages[11][22] =
+{
+{" Default  "},
+{" Japanese "},
+{" English  "},
+{"  German  "},
+{"  French  "},
+{" Spanish  "},
+{" Italian  "},
+{"  Dutch   "},
+{"S. Chinese"},
+{"T. Chinese"},
+{"  Korean  "}
+};
+/*LANGUAGE PATCH - FISHEARS*/
+
+/*memset(gameid, 0, 8);
+	memcpy(gameid, (char*)0x80000000, 6);
+	do_sd_code(gameid);*/
 //---------------------------------------------------------------------------------
-/* Gloabal definitions */
+/* Global definitions */
 //---------------------------------------------------------------------------------
 
 s32 WBFS_SetProfileDatas(u8 *discid, u8 *buff);
 s32 WBFS_GetProfileDatas(u8 *discid, void *buff);
 
+
+unsigned char *buff_cheats;
+int len_cheats=0;
+
+int load_cheats(u8 *discid);
 void LoadLogo(void);
 void DisplayLogo(void);
 int load_disc(u8 *discid);
@@ -97,13 +127,17 @@ u32 game_empty[128*64*3] ALIGNED(0x20);
 
 int idioma=0;
 
-char letrero[2][32][32]=
+char letrero[2][32][40]=
 	{
-	{"Return", "Change the IOS", "Delete Favorite", "Add Favorite", "Load Game", "Add to Favorites", "Favorites", "Page", },
-	{"Retorna", "Cambia IOS", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", },
+	{"Return", "Configure", "Delete Favorite", "Add Favorite", "Load Game", "Add to Favorites", "Favorites", "Page", "Ok" ,"Discard",
+	" Cheats Codes found !!! ", "Apply Codes ", "Skip Codes " },
+    // spanish
+	{"Retorna", "Configurar", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", "Hecho", "Descartar",
+	" Códigos de Trucos encontrados !!! ","Usa Códigos", "Salta Códigos"},
 	};
 
-
+ 
+																     
 //---------------------------------------------------------------------------------
 /* Reset and Power Off */
 //---------------------------------------------------------------------------------
@@ -123,62 +157,88 @@ GXRModeObj*		vmode;					// System Video Mode
 unsigned int	_Video_Mode;				// System Video Mode (NTSC, PAL or MPAL)	
 u32 *xfb; 
 
+int forcevideo=0;
 
 void Determine_VideoMode(char Region)
 {
+	u32 progressive;
 	// Get vmode and Video_Mode for system settings first
 	u32 tvmode = CONF_GetVideo();
 	// Attention: This returns &TVNtsc480Prog for all progressive video modes
         vmode = VIDEO_GetPreferredMode(0);
-	switch (tvmode) 
+
+	switch(forcevideo)
 	{
-        case CONF_VIDEO_PAL:
-                if (CONF_GetEuRGB60() > 0) 
-                        _Video_Mode = PAL60;
-                else 
-                        _Video_Mode = PAL;
-                break;
-        case CONF_VIDEO_MPAL:
-                _Video_Mode = MPAL;
-                break;
+	case 0:
+				switch (tvmode) 
+				{
+					case CONF_VIDEO_PAL:
+							if (CONF_GetEuRGB60() > 0) 
+									_Video_Mode = PAL60;
+							else 
+									_Video_Mode = PAL;
+							break;
+					case CONF_VIDEO_MPAL:
+							_Video_Mode = MPAL;
+							break;
 
-        case CONF_VIDEO_NTSC:
-        default:
-                _Video_Mode = NTSC;
-	}
+					case CONF_VIDEO_NTSC:
+					default:
+							_Video_Mode = NTSC;
+				}
 
-	// Overwrite vmode and Video_Mode when disc region video mode is selected and Wii region doesn't match disc region
-        switch (Region) 
-        {
-        case PAL_Default:
-        case PAL_France:
-        case PAL_Germany:
-        case Euro_X:
-        case Euro_Y:
-                if (CONF_GetVideo() != CONF_VIDEO_PAL)
-                {
-                        _Video_Mode = PAL60;
+			// Overwrite vmode and Video_Mode when disc region video mode is selected and Wii region doesn't match disc region
+				switch (Region) 
+				{
+				case PAL_Default:
+				case PAL_France:
+				case PAL_Germany:
+				case Euro_X:
+				case Euro_Y:
+						if (CONF_GetVideo() != CONF_VIDEO_PAL)
+						{
+								_Video_Mode = PAL60;
 
-                        if (CONF_GetProgressiveScan() > 0 && VIDEO_HaveComponentCable())
-                                vmode = &TVNtsc480Prog; // This seems to be correct!
-                        else
-                                vmode = &TVEurgb60Hz480IntDf;
-                }
+								if (CONF_GetProgressiveScan() > 0 && VIDEO_HaveComponentCable())
+										vmode = &TVNtsc480Prog; // This seems to be correct!
+								else
+										vmode = &TVEurgb60Hz480IntDf;
+						}
+						break;
+
+				case NTSC_USA:
+				case NTSC_Japan:
+						if (CONF_GetVideo() != CONF_VIDEO_NTSC)
+						{
+								_Video_Mode = NTSC;
+								if (CONF_GetProgressiveScan() > 0 && VIDEO_HaveComponentCable())
+										vmode = &TVNtsc480Prog;
+								else
+										vmode = &TVNtsc480IntDf;
+						}
+				default:
+						break;
+				}
+				break;
+
+		 case 1:
+				/* GAME LAUNCHED WITH 1 - FISHEARS*/
+                _Video_Mode = 5;
+                progressive = (CONF_GetProgressiveScan() > 0) && VIDEO_HaveComponentCable();
+                vmode     = (progressive) ? &TVNtsc480Prog : &TVEurgb60Hz480IntDf;
                 break;
-
-        case NTSC_USA:
-        case NTSC_Japan:
-                if (CONF_GetVideo() != CONF_VIDEO_NTSC)
-                {
-                        _Video_Mode = NTSC;
-                        if (CONF_GetProgressiveScan() > 0 && VIDEO_HaveComponentCable())
-                                vmode = &TVNtsc480Prog;
-                        else
-                                vmode = &TVNtsc480IntDf;
-                }
-        default:
+         case 2:
+                /* GAME LAUNCHED WITH 2 - FISHEARS*/
+                _Video_Mode = 0;
+                progressive = (CONF_GetProgressiveScan() > 0) && VIDEO_HaveComponentCable();
+                vmode     = (progressive) ? &TVNtsc480Prog : &TVNtsc480IntDf;
                 break;
-        }
+		}		
+
+/* Set video mode register */
+	*(vu32 *)0x800000CC = _Video_Mode;
+
+	
 }
 
 void Set_VideoMode(void)
@@ -191,8 +251,7 @@ void Set_VideoMode(void)
     *Video_Mode = _Video_Mode;
 
     VIDEO_Configure(vmode);
-    return;
-	VIDEO_SetNextFramebuffer(xfb);
+	//VIDEO_SetNextFramebuffer(xfb);
     VIDEO_SetBlack(false);
     VIDEO_Flush();
     VIDEO_WaitVSync();
@@ -396,6 +455,40 @@ int len=strlen(cad);
 return 0;
 }
 
+int Draw_button2(int x,int y,char *cad, int selected)
+{
+int len=strlen(cad);
+unsigned color=0xffcfcfcf;
+
+if(selected) color= 0xff3fcf3f;
+
+if(selected<0) color=0x80cfcfcf;
+
+	SetTexture(&text_button[(step_button>>4) & 3]);
+	
+	if(selected>=0)
+		{
+		if(px>=x && px<=x+len*8+32 && py>=y && py<y+48) DrawRoundFillBox(x-8, y-8, len*8+32+16, 48+16, 0, color);
+			else DrawRoundFillBox(x, y, len*8+32, 48, 0, color);
+		}
+	SetTexture(NULL);
+	PX=x+16; PY= y+8; color= 0xff000000;
+	letter_size(8,32);
+
+	s_printf("%s",cad);
+
+	x_temp=x+len*8+32;
+
+	if(selected>=0)
+		if(px>=x && px<=x+len*8+32 && py>=y && py<y+48)
+			{DrawRoundBox(x-8, y-8, len*8+32+16, 48+16, 0, 5, 0xfff08000);return 1;}
+	
+	DrawRoundBox(x, y, len*8+32, 48, 0, 4, 0xff606060);
+	
+
+return 0;
+}
+
 
 void * create_png_texture(GXTexObj *texture, void *png, int repeat)
 {
@@ -548,13 +641,15 @@ int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
         u8 discid[7];
 
-		int ret;//,ret2;
+		int ret,ret2;
 		u32 cnt, len;
 		struct discHdr *buffer = NULL;
 		int frames=0,frames2=0;
 		int load_png=1;
 		int scroll_mode=0;
 		int game_mode=0;
+		int edit_cfg=0;
+		int cheat_mode=0;
 		int select_game_bar=0;
 
 		int is_favorite=1;
@@ -575,9 +670,10 @@ int main(int argc, char **argv) {
 		
         discid[6]=0;
 	
-		//ret2=-1;
+		ret2=-1;
+		ret=-1;
 
-		for(n=0;n<16;n++)
+		for(n=0;n<3;n++)
 			{
 
 			if(cios!=249)
@@ -590,10 +686,12 @@ int main(int argc, char **argv) {
 				cios=249;
 				ret=IOS_ReloadIOS(cios);
 				}
-			if(ret!=0) break;
 
-			//ret2 = WBFS_Init(); // si inicio esto, peta libfat al detectar dispositivo USB la particion WBFS
-			//if(!ret2) break;
+			
+			if(ret!=0) break;
+			
+			ret2 = WBFS_Init(); // si inicio esto, peta libfat al detectar dispositivo USB la particion WBFS
+			if(!ret2) break;
 			
 			}
 
@@ -644,13 +742,18 @@ int main(int argc, char **argv) {
 			s_printf("%s","Based in YAL \251 2009, Kwiirk");
 			PY+=40;
 			s_printf("%s","and USBLoader \251 2009, Waninkoko");
+			PY+=34;
+			letter_size(8,32);
+			SelectFontTexture(1);
+			s_printf("%s","Ocarina and some game patch added from FISHEARS usbloader version");
+			
 			autocenter=0;
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.0B");
+			s_printf("v1.1");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.0B");
+			s_printf("v1.1");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -691,7 +794,7 @@ int main(int argc, char **argv) {
 
 		letter_size(8,32);
 				
-		PX=0; PY= SCR_HEIGHT/2; color= 0xff000000; 
+		PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
 				
 		bkcolor=0;
 		autocenter=1;
@@ -699,8 +802,8 @@ int main(int argc, char **argv) {
 
 		if(ret!=0) 
 			{
-			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
 			s_printf("ERROR: You need cIOS222 and/or cIOS249 to work!!!\n");
 			Screen_flip();
@@ -708,12 +811,12 @@ int main(int argc, char **argv) {
 			}
 		
 
-		ret = WBFS_Init();
-		if (ret < 0) {
-			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+		//ret = WBFS_Init();
+		if (ret2 < 0) {
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
-			s_printf("ERROR: Could not initialize USB subsystem! (ret = %d)\n", ret);
+			s_printf("ERROR: Could not initialize USB subsystem! (ret = %d)\n", ret2);
 			Screen_flip();
 			goto error;
 			}
@@ -724,8 +827,8 @@ int main(int argc, char **argv) {
 		/* Get list length */
 		ret = WBFS_Open();
 		if (ret < 0) {
-			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
 			s_printf("No WBFS partition found!\n");
 			Screen_flip();
@@ -734,8 +837,8 @@ int main(int argc, char **argv) {
 
 		ret = WBFS_GetCount(&cnt);
 		if (ret < 0 || cnt==0) {
-			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
 			s_printf("No Game found\n");
 			Screen_flip();
@@ -748,8 +851,8 @@ int main(int argc, char **argv) {
 		/* Allocate memory */
 		buffer = (struct discHdr *)memalign(32, len);
 		if (!buffer){
-			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
 			s_printf("Error in memalign()\n");
 			Screen_flip();
@@ -762,8 +865,8 @@ int main(int argc, char **argv) {
 		/* Get header list */
 		ret = WBFS_GetHeaders(buffer, cnt, sizeof(struct discHdr));
 		if (ret < 0) {
-			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
 			s_printf("Error in WBFS_GetHeaders()\n");
 			Screen_flip();
@@ -841,10 +944,12 @@ int main(int argc, char **argv) {
 
 
     {
-	int n,m;
+	int m;
     int ylev=(SCR_HEIGHT-440);
 
 	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
+
+	
 
 	if(game_mode)
 		{
@@ -875,25 +980,106 @@ int main(int argc, char **argv) {
 		s_printf("%s",header->title);
 		autocenter=0;
 
-		//draw_text(header->title);
-		bkcolor=0;
-
-		PX= 26; PY=ylev; color= 0xff000000; 
-		if((game_datas[game_mode-1].config & 1) || force_ios249) s_printf("cIOS 249"); else s_printf("cIOS 222");
-
-	
-		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
-		if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
+		letter_size(16,32);
 		
-		if(test_favorite)
-			{
-			if(is_favorite)
-				{if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][2][0])) select_game_bar=4;}
-			else
-				if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][3][0])) select_game_bar=3;
-			}
+		bkcolor=0;
+		if(cheat_mode)
+		{
+		
+        PX= 26; PY=ylev+108*2-64; color= 0xff000000;
 
-		if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) select_game_bar=5;
+		letter_size(16,64);
+		autocenter=1;
+		bkcolor=0xb0f0f0f0;
+		s_printf("%s", &letrero[idioma][10][0]);
+		bkcolor=0;
+		autocenter=0;
+		letter_size(16,32);
+													
+
+		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][11][0])) select_game_bar=1000;
+		if(Draw_button(600-32-strlen(&letrero[idioma][12][0])*8, ylev+108*4-64, &letrero[idioma][12][0])) select_game_bar=1001;
+
+		}
+		else
+        if(!edit_cfg)
+			{
+			PX= 26; PY=ylev+12; color= 0xff000000; 
+			bkcolor=0xb0f0f0f0;
+			if((game_datas[game_mode-1].config & 1) || force_ios249) s_printf("cIOS 249"); else s_printf("cIOS 222");
+			
+			forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
+
+			langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+
+			if(forcevideo==1) s_printf(" Forced to PAL");
+			if(forcevideo==2) s_printf(" Forced to NTSC");
+		 
+			autocenter=1;
+			PX= 26; PY=ylev+108*4-80-48;
+			if(langsel) s_printf("%s", &languages[langsel][0]);
+			autocenter=0;
+
+			bkcolor=0x0;
+		
+			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
+			if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
+			
+			if(test_favorite)
+				{
+				if(is_favorite)
+					{if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][2][0])) select_game_bar=4;}
+				else
+					if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][3][0])) select_game_bar=3;
+				}
+
+			
+
+			if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) select_game_bar=5;
+			}
+		else
+			{// edit config
+			int g;
+
+			PX= 36; PY=ylev+8; color= 0xff000000; 
+			letter_size(12,24);
+			autocenter=1;
+			bkcolor=0xb0f0f0f0;
+			s_printf(" Select Language ");
+			bkcolor=0;
+			autocenter=0;
+			
+			for(g=0;g<11;g++)
+				{
+				if((g & 3)==0) m=36+32; else m=x_temp+16;
+
+				if(Draw_button2(m, ylev+36+56*(g/4), &languages[g][0],langsel==g)) select_game_bar=100+g;
+				}
+			m=x_temp+16;
+			if(Draw_button2(m, ylev+36+56*(11/4), &languages[0][0],langsel==0)) select_game_bar=100;
+
+			PY=m=ylev+36+56*(g/4)+56;
+			PX=36+192-36;
+			letter_size(12,24);
+			autocenter=0;
+			bkcolor=0xb0f0f0f0;
+			s_printf(" Video Mode ");
+			PX=460-12;s_printf(" Select cIOS ");
+			bkcolor=0;
+			m+=28;
+
+			if(Draw_button2(36, m, " Autodetect ",(forcevideo==0))) select_game_bar=200;
+			if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
+			if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;
+
+			if(Draw_button2(472, m, " cIOS 222 ", force_ios249 ? -1 : cios==222)) select_game_bar=300;
+			if(Draw_button2(472, m+56, " cIOS 249 ",cios==249)) select_game_bar=301;
+
+
+			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
+			if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
+
+			}
 		
 		step_button++;
 		}
@@ -1263,14 +1449,15 @@ int main(int argc, char **argv) {
 						else
 							{
 							if(select_game_bar==1) {int n;  // return
-													game_mode=0;select_game_bar=0;
+													game_mode=0;edit_cfg=0;select_game_bar=0;
 													for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 												   
 													load_png=1;
 													} 
 
-							if(select_game_bar==2 && !force_ios249) { // change the IOS
-												   struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+							if(select_game_bar==2) 
+												  { // Configuration (load)
+							                       struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
 
 												   memcpy(discid,header->id,6); discid[6]=0;
 
@@ -1278,20 +1465,18 @@ int main(int argc, char **argv) {
 
 												   memset(temp_data,0,256*1024);
 												   WBFS_GetProfileDatas(discid, temp_data);
-												   // si no existe crea uno
-												   if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
-														{
-														temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;
-														temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
-														temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
-														}
-
-												   temp_data[4]^=1;
 												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
+												   
+												   if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; else cios=222;
 
-												   WBFS_SetProfileDatas(discid, temp_data);
+												   forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
+
+												   langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+
+												   edit_cfg=1;
 												   }
-							if(select_game_bar==3) {int n;
+
+							if(select_game_bar==3) {int n;// add favorite
 													select_game_bar=0;is_favorite=1;insert_favorite=game_datas[game_mode-1].ind+1;
 
 													mem_move_chan=game_datas[game_mode-1].png_bmp;game_datas[game_mode-1].png_bmp=NULL;
@@ -1301,64 +1486,125 @@ int main(int argc, char **argv) {
 													else
 														memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
 													
-													game_mode=0;
+													game_mode=0;edit_cfg=0;
 													
 												    for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 												    save_cfg();
 												    load_png=1;
-													} // add favorite
+													} 
 							if(select_game_bar==4) {// del favorite
 												   int n;
 												   select_game_bar=0;is_favorite=1; 
 												   memset(&config_file.id[game_mode-1][0],0,8);
-												   game_mode=0;
+												   game_mode=0;edit_cfg=0;
 												   for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 												   save_cfg();
 												   load_png=1;
 												   } 
-							if(select_game_bar==5) {
+							if(select_game_bar==5 || select_game_bar==1000 || select_game_bar==1001) 
+													{
 													struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
 
 													memcpy(discid,header->id,6); discid[6]=0;
-													select_game_bar=0;
-													Screen_flip();
-													WPAD_Shutdown();
 													
-													save_cfg();
-													fatUnmount("fat:");
-													#ifdef USE_MODPLAYER
-													ASND_End();		// finaliza el sonido
-													#endif
+													if(select_game_bar==5)
+														if(load_cheats(discid)) cheat_mode=1;
 
-													if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; else cios=222;
-													IOS_ReloadIOS(cios);
-													ret = load_disc(discid);
-													//////////////////////////////////
+													if(select_game_bar>=1000) cheat_mode=0;
+													
+													if(select_game_bar==1001) len_cheats=0; // don't apply cheats
+													select_game_bar=0;
+
+													if(!cheat_mode)
+														{
+														select_game_bar=0;
+														Screen_flip();
+														WPAD_Shutdown();
+														
+														save_cfg();
+														
+														#ifdef USE_MODPLAYER
+														ASND_End();		// finaliza el sonido
+														#endif
+
+														if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; else cios=222;
+
+														forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
+
+														langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+														
+														
+														fatUnmount("fat:");
+
+														IOS_ReloadIOS(cios);
+														ret = load_disc(discid);
+														//////////////////////////////////
+													
+														SetTexture(&text_background);
+														DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
+			
 												
-													SetTexture(&text_background);
-													DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
-		
-											
-													SelectFontTexture(1); // selecciona la fuente de letra extra
+														SelectFontTexture(1); // selecciona la fuente de letra extra
 
-													letter_size(8,32);
-															
-													PX=0; PY= SCR_HEIGHT/2; color= 0xff000000; bkcolor=0;
-															
-													bkcolor=0;
-													autocenter=1;
-													SetTexture(NULL);
+														letter_size(8,32);
+																
+														PX=0; PY= SCR_HEIGHT/2; color= 0xff000000; bkcolor=0;
+																
+														bkcolor=0;
+														autocenter=1;
+														SetTexture(NULL);
 
-													DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-													DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+														DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
+														DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
 
-													s_printf("ERROR FROM THE LOADER: %i\n", ret);
-													Screen_flip();
+														s_printf("ERROR FROM THE LOADER: %i\n", ret);
+														Screen_flip();
 
 
-													//////////////////////////////////
-													break;
+														//////////////////////////////////
+														break;
+														}
 												   } // load game
+
+							if(select_game_bar==10 || select_game_bar==11) { // return from config (saving)
+												   edit_cfg=0;
+												  
+												   // si no existe crea uno
+												   if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
+														{
+														temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;
+														temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
+														temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
+														}
+													
+													
+												   temp_data[4]=0;
+												   if(select_game_bar==11) temp_data[4]=game_datas[game_mode-1].config;
+												   else
+														{
+														if(cios==249) temp_data[4]|=1;
+														temp_data[4]|=(forcevideo & 3)<<2;
+														temp_data[4]|=(langsel & 15)<<4;
+														}
+
+												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
+
+												   WBFS_SetProfileDatas(discid, temp_data);
+												   
+												   }
+							if(select_game_bar>=100 && select_game_bar<=111)
+												   {
+												   langsel= select_game_bar-100;
+												   }
+							if(select_game_bar>=200 && select_game_bar<=202)
+												   {
+												   forcevideo= select_game_bar-200;
+												   }
+							if(select_game_bar>=300 && select_game_bar<=301)
+												   {
+												   cios= (select_game_bar-300) ? 249 : 222;
+												   }
+
 							}
 						
 						}
@@ -1370,15 +1616,45 @@ int main(int argc, char **argv) {
 						{
 						
 						int n;
-						if(game_mode)
-							{
-							for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-												   
-							load_png=1;
-							}
 						
-						game_mode=0;
-						insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
+						if(cheat_mode)
+							{
+							}
+						else
+						if(edit_cfg)
+							{// return from config (saving)
+							edit_cfg=0;
+	
+						    // si no existe crea uno
+						    if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
+								{
+								temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;
+								temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
+								temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
+								}
+							
+							
+						    temp_data[4]=0;
+						    if(cios==249) temp_data[4]|=1;
+						    temp_data[4]|=(forcevideo & 3)<<2;
+						    temp_data[4]|=(langsel & 15)<<4;
+
+						    game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
+
+						    WBFS_SetProfileDatas(discid, temp_data);
+							}
+						else
+							{
+							if(game_mode)
+								{
+								for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
+													   
+								load_png=1;
+								}
+							
+							game_mode=0;edit_cfg=0;
+							insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
+							}
 						}
 
 					if(new_pad & WPAD_BUTTON_1) // swap favorites/page
@@ -1505,6 +1781,7 @@ error:
     return ret;
 }
 
+
 int load_disc(u8 *discid)
 {
         static struct DiscHeader Header ALIGNED(0x20);
@@ -1515,6 +1792,7 @@ int load_disc(u8 *discid)
         memset(&Header, 0, sizeof(Header));
         memset(&Descriptor, 0, sizeof(Descriptor));
         memset(&Partition_Info, 0, sizeof(Partition_Info));
+
 
         //printf("Loading disc %s\n",discid);
 
@@ -1604,12 +1882,85 @@ int load_disc(u8 *discid)
         void*	Address = 0;
         int		Section_Size;
         int		Partition_Offset;
+
+		switch(langsel)
+                {
+                        case 0:
+                                configbytes[0] = 0xCD;
+                        break;
+
+                        case 1:
+                                configbytes[0] = 0x00;
+                        break;
+
+                        case 2:
+                                configbytes[0] = 0x01;
+                        break;
+
+                        case 3:
+                                configbytes[0] = 0x02;
+                        break;
+
+                        case 4:
+                                configbytes[0] = 0x03;
+                        break;
+
+                        case 5:
+                                configbytes[0] = 0x04;
+                        break;
+
+                        case 6:
+                                configbytes[0] = 0x05;
+                        break;
+
+                        case 7:
+                                configbytes[0] = 0x06;
+                        break;
+
+                        case 8:
+                                configbytes[0] = 0x07;
+                        break;
+
+                        case 9:
+                                configbytes[0] = 0x08;
+                        break;
+
+                        case 10:
+                                configbytes[0] = 0x09;
+                        break;
+                }
+
+	
+   
+		hooktype = 0;
+		
+		if(len_cheats)
+			{ 
+			/*HOOKS STUFF - FISHEARS*/
+			memset((void*)0x80001800,0,kenobiwii_size);
+			memcpy((void*)0x80001800,kenobiwii,kenobiwii_size);
+			memcpy((void*)0x80001800, (char*)0x80000000, 6);	// For WiiRD
+			DCFlushRange((void*)0x80001800,kenobiwii_size);
+			memcpy((void*)0x800027E8, buff_cheats, len_cheats);
+            *(vu8*)0x80001807 = 0x01;
+			hooktype = 1;
+			}
         //printf("Loading game");
         while (Load(&Address, &Section_Size, &Partition_Offset))
         {
                 if (!Address) return 5;
                 DI_Read(Address, Section_Size, Partition_Offset << 2);
-                DCFlushRange(Address, Section_Size);
+                
+				/*HOOKS STUFF - FISHEARS*/
+				dogamehooks(Address, Section_Size);
+
+				/*LANGUAGE PATCH - FISHEARS*/
+				langpatcher(Address, Section_Size);
+
+				vidolpatcher(Address, Section_Size);
+				/*HOOKS STUFF - FISHEARS*/
+
+				DCFlushRange(Address, Section_Size);
                 //printf(".");
         }
         // Patch in info missing from apploader reads
@@ -1626,7 +1977,11 @@ int load_disc(u8 *discid)
         void* Entry = Exit();
 
         // Set Video Mode based on Configuration
-        Set_VideoMode();
+		if (vmode)
+			Set_VideoMode();
+		
+
+		
 
         // Flush application memory range
         DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded values
@@ -1657,3 +2012,41 @@ int load_disc(u8 *discid)
                         );
 	return 0;
 }
+
+int load_cheats(u8 *discid)
+{
+char file_cheats[]="fat:/codes/000000.gct";
+FILE *fp;
+int ret;
+
+memcpy(&file_cheats[11],(char *) discid, 6);
+len_cheats=0;
+
+fp = fopen(file_cheats, "rb");
+	if (!fp) {
+		
+		return 0;
+	}
+
+	fseek(fp, 0, SEEK_END);
+	len_cheats = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	
+	buff_cheats =  malloc (len_cheats);
+	if(buff_cheats == 0){
+		fclose(fp);
+		return 0;
+	}
+
+	ret = fread(buff_cheats, 1, len_cheats, fp);
+	fclose(fp);
+
+	if(ret != len_cheats){
+		len_cheats=0;
+		free(buff_cheats);
+		return 0;
+		}
+
+return 1;
+}
+

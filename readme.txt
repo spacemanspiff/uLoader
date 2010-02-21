@@ -11,6 +11,9 @@ Features:
 
 - Screen text in Spanish and English (auto-detect)
 
+- Support for video mode forced, language selection and Ocarina
+
+
 CONTROLS
 ---------
 
@@ -22,7 +25,13 @@ CONTROLS
 
 - +/- Button: Next page/Previous page
 
-- 1 o Yellow button: Go to favorites page/back to last page
+- 1 or Yellow button: Go to favorites page/back to last page
+
+CONFIGURE BUTTON
+-------------------
+
+You can change from here the video, language and cIOS for the game
+
 
 ICONS
 ------
@@ -58,7 +67,14 @@ RUNNING GAMES
 
 Running games screen will allow you to select custom IOS (if cIOS 222 is not available, cIOS 249 will be used), add to favorites and launch the game immediately.
 
+OCARINA
+-------
 
+Cheats codes must be in the "codes" folder of the SD with .gct as extension and the name equal to the disc ID.
+
+Example:
+
+:/codes/RB4P08.gct -> Cheats codes for Resident Evil 4 Wii
 
 Notes about wbfs_win
 --------------------

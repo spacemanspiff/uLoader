@@ -2,7 +2,7 @@
 #include <malloc.h>
 #include <ogcsys.h>
 
-#include "usbstorage.h"
+#include "usbstorage2.h"
 #include "utils.h"
 
 #include "libwbfs/libwbfs.h"
@@ -124,7 +124,7 @@ s32 __WBFS_ReadUSB(void *fp, u32 lba, u32 count, void *iobuf)
 			sectors = MAX_NB_SECTORS;
 
 		/* USB read */
-		ret = USBStorage_ReadSectors(lba + cnt, sectors, ptr);
+		ret = USBStorage2_ReadSectors(lba + cnt, sectors, ptr);
 		if (ret < 0)
 			return ret;
 
@@ -150,7 +150,7 @@ s32 __WBFS_WriteUSB(void *fp, u32 lba, u32 count, void *iobuf)
 			sectors = MAX_NB_SECTORS;
 
 		/* USB write */
-		ret = USBStorage_WriteSectors(lba + cnt, sectors, ptr);
+		ret = USBStorage2_WriteSectors(lba + cnt, sectors, ptr);
 		if (ret < 0)
 			return ret;
 
@@ -167,12 +167,12 @@ s32 WBFS_Init(void)
 	s32 ret;
 
 	/* Initialize USB storage */
-	ret = USBStorage_Init();
+	ret = USBStorage2_Init();
 	if (ret < 0)
 		return ret;
 
 	/* Get USB capacity */
-	nb_sectors = USBStorage_GetCapacity(&sector_size);
+	nb_sectors = USBStorage2_GetCapacity(&sector_size);
 	if (!nb_sectors)
 		return -1;
 
