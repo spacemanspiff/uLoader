@@ -4428,9 +4428,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v3.1");
+			s_printf("v3.1B");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v3.1");
+			s_printf("v3.1B");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -7823,6 +7823,28 @@ void __Patch_Error001(void *buffer, u32 len)
 	}
 }
 
+
+void __Patch_NSMB(void *buffer, u32 len)
+{
+   const u8 oldcode1[] = { 0x94, 0x21, 0xFF, 0xD0, 0x7C, 0x08, 0x02, 0xA6, 0x90, 0x01, 0x00, 0x34, 0x39, 0x61, 0x00, 0x30, 0x48, 0x12 };
+   const u8 oldcode2[] = { 0x7C, 0x7B, 0x1B, 0x78, 0x7C, 0x9C, 0x23, 0x78, 0x7C, 0xBD, 0x2B, 0x78 };
+
+   const u8 newcode[] = { 0x4E, 0x80, 0x00, 0x20};
+   u32 cnt;
+
+   /* Find code and patch it */
+   for (cnt = 0; cnt < (len - sizeof(oldcode1) - sizeof(oldcode2)-2); cnt++) {
+      u8 *ptr = buffer + cnt;
+
+      /* Replace code if found */
+      if (!memcmp(ptr, oldcode1, sizeof(oldcode1)) && !memcmp(ptr+sizeof(oldcode1)+2, oldcode2, sizeof(oldcode2))) {
+         memcpy(ptr, newcode, sizeof(newcode));
+         
+      }
+   }
+
+}
+
 #if 0
 
 int load_file_dol(char *name)
@@ -7882,6 +7904,9 @@ void patch_dol(void *Address, int Section_Size, int mode)
 {
 	//if(mode)
 	__Patch_Error001((void *) Address, Section_Size);
+	
+    __Patch_NSMB((void *) Address, Section_Size);	
+	
 
 	__Patch_CoverRegister(Address, Section_Size);
 	

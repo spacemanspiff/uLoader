@@ -1,4 +1,4 @@
-uLoader v3.1 - by Hermes (www.elotrolado.net)
+uLoader v3.1B - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (3.0 required). Now you can select the IOS used to install
@@ -10,6 +10,8 @@ to launch backups from USB mass storage devices with a graphical user interface 
 
 Features:
 ---------
+
+- New Super Mario protection fix
 
 - Support to load games from DVD with alternative DOL (press '2' without USB device or press the DVD icon from the upper-right corner 
   in the selection game screen)
