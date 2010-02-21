@@ -2,7 +2,7 @@
 <app>
 	<name> uLoader </name>
 	<coder>Hermes</coder>
-	<version>2.8</version>
+	<version>2.8C</version>
 <short_description>USB Loader</short_description>
 <long_description>Loader based on the work of Kwiirk and Waninkoko with Ocarina, video and language forced</long_description>
 </app>

@@ -3993,9 +3993,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.8");
+			s_printf("v2.8C");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.8");
+			s_printf("v2.8C");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
