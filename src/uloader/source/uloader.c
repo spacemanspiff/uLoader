@@ -40,6 +40,7 @@
 #include "wbfs.h"
 
 #include <wiiuse/wpad.h>
+#include <sdcard/wiisd_io.h>
 
 #include "patchcode.h"
 #include "kenobiwii.h"
@@ -389,7 +390,7 @@ return 0;
 /* GUI routines and datas*/
 //---------------------------------------------------------------------------------
 
-int scroll_text=0;
+int scroll_text=-20;
 
 GXTlutObj palette_icon;
 GXTexObj text_icon[2];
@@ -415,7 +416,28 @@ len=strlen(text);
 
 for(n=0;n<17;n++)
 	{
-	m=(n+scroll_text) % (len+4);
+    if(scroll_text<0) m=n;
+	else
+		m=(n+scroll_text) % (len+4);
+
+	if(m<len)
+		s_printf("%c",text[m]);
+	else
+		s_printf(" ");
+	}
+}
+
+void draw_box_text(char *text)
+{
+int n,m,len,len2;
+
+len=strlen(text);
+len2=len/68;
+
+for(n=0;n<68;n++)
+	{
+	if(len<=68 || scroll_text<0) m=n;
+	else m=(n+scroll_text) % (len+4); //m=n+68*((scroll_text>>5)  % len2);
 
 	if(m<len)
 		s_printf("%c",text[m]);
@@ -589,25 +611,30 @@ struct _config_file
 }
 config_file;
 
+int sd_ok=0;
 
 void load_cfg()
 {
-FILE *fp;
+FILE *fp=0;
 int n=0;
 
 	config_file.magic=0;
 
-	fp=fopen("fat:/apps/uloader/uloader.cfg","rb"); // lee el fichero de texto
+	if(sd_ok)
+	{
+
+	fp=fopen("sd:/apps/uloader/uloader.cfg","rb"); // lee el fichero de texto
 	if(!fp)
-		fp=fopen("fat:/uloader/uloader.cfg","rb"); // lee el fichero de texto
+		fp=fopen("sd:/uloader/uloader.cfg","rb"); // lee el fichero de texto
 	if(!fp)
-		fp=fopen("fat:/uloader.cfg","rb"); // lee el fichero de texto
+		fp=fopen("sd:/uloader.cfg","rb"); // lee el fichero de texto
 
 	if(fp!=0)
 		{
 		n=fread(&config_file,1, sizeof (config_file) ,fp);
 		fclose(fp);
 		}
+	}
 
 	if(n!=sizeof (config_file) || !fp || config_file.magic!=0xcacafea1)
 		{
@@ -620,13 +647,15 @@ void save_cfg()
 FILE *fp;
 
 
+if(!sd_ok) return;
+
 	config_file.magic=0xcacafea1;
 
-	fp=fopen("fat:/apps/uloader/uloader.cfg","wb"); // escribe el fichero de texto
+	fp=fopen("sd:/apps/uloader/uloader.cfg","wb"); // escribe el fichero de texto
 	if(!fp)
-		fp=fopen("fat:/uloader/uloader.cfg","wb"); // escribe el fichero de texto
+		fp=fopen("sd:/uloader/uloader.cfg","wb"); // escribe el fichero de texto
 	if(!fp)
-		fp=fopen("fat:/uloader.cfg","wb"); // escribe el fichero de texto
+		fp=fopen("sd:/uloader.cfg","wb"); // escribe el fichero de texto
 
 	if(fp!=0)
 		{
@@ -635,6 +664,27 @@ FILE *fp;
 		}
 
 }
+
+#define MAX_LIST_CHEATS 25
+int txt_cheats=0;
+
+int num_list_cheats=0;
+int actual_cheat=0;
+
+void create_cheats();
+
+struct _data_cheats
+{
+void *title;
+void *description;
+
+int apply;
+u8 *values;
+int len_values;
+
+} data_cheats[MAX_LIST_CHEATS];
+
+
 
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
@@ -709,8 +759,11 @@ int main(int argc, char **argv) {
 			}
 			
 		}
+		
 
-		fatInit(8, true);
+		//fatInit(8, true);
+		__io_wiisd.startup();
+		sd_ok = fatMountSimple("sd", &__io_wiisd);
 
 		
 		
@@ -751,9 +804,9 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.1");
+			s_printf("v1.2");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.1");
+			s_printf("v1.2");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -985,20 +1038,114 @@ int main(int argc, char **argv) {
 		bkcolor=0;
 		if(cheat_mode)
 		{
-		
-        PX= 26; PY=ylev+108*2-64; color= 0xff000000;
 
-		letter_size(16,64);
-		autocenter=1;
-		bkcolor=0xb0f0f0f0;
-		s_printf("%s", &letrero[idioma][10][0]);
-		bkcolor=0;
-		autocenter=0;
-		letter_size(16,32);
+		if(txt_cheats)
+			{
+			int f=0;
+			PX= 26; PY=ylev+16; color= 0xff000000;
+			letter_size(16,32);
+			autocenter=1;
+			bkcolor=0xb0f0f0f0;
+			s_printf("%s", &letrero[idioma][10][0]);
+			bkcolor=0;
+			autocenter=0;
+			letter_size(8,32);
+
+			for(n=0;n<5;n++)
+				{
+				if((actual_cheat+n)>=num_list_cheats) break;
+				if(!data_cheats[actual_cheat+n].title) break;
+				if(Draw_button2(30+16, ylev+56+56*n, data_cheats[actual_cheat+n].title,data_cheats[actual_cheat+n].apply)) 
+					{
+					if(select_game_bar!=(500+actual_cheat+n)) scroll_text=-10;
+
+					select_game_bar=500+actual_cheat+n;
+					f=1;
+					}
+				}
+			
+			if(f==0) select_game_bar=-1;
+
+			if(num_list_cheats)
+					{
+					SetTexture(NULL);
+					if(actual_cheat>=5)
+						{
+						if(px>=0 && px<=80 && py>=ylev+220-40 && py<=ylev+220+40)
+							{
+							DrawFillEllipse(40, ylev+220, 50, 50, 0, 0xc0f0f0f0);
+							letter_size(32,64);
+							PX= 40-16; PY= ylev+220-32; color= 0xff000000; bkcolor=0;
+							s_printf("-");
+							DrawEllipse(40, ylev+220, 50, 50, 0, 6, 0xc0f0f000);
+							select_game_bar=-1;
+							test_gfx_page=-1;
+							}
+						else
+						if(frames2 & 32)
+							{
+							DrawFillEllipse(40, ylev+220, 40, 40, 0, 0xc0f0f0f0);
+							letter_size(32,48);
+							PX= 40-16; PY= ylev+220-24; color= 0xff000000; bkcolor=0;
+							s_printf("-");
+							DrawEllipse(40, ylev+220, 40, 40, 0, 6, 0xc0000000);
+							}
+						}
+
+						if((actual_cheat+5)<num_list_cheats)
+						{
+						if(px>=SCR_WIDTH-82 && px<=SCR_WIDTH-2 && py>=ylev+220-40 && py<=ylev+220+40)
+							{
+							DrawFillEllipse(SCR_WIDTH-42, ylev+220, 50, 50, 0, 0xc0f0f0f0);
+							letter_size(32,64);
+							PX= SCR_WIDTH-42-16; PY= ylev+220-32; color= 0xff000000; bkcolor=0;
+							s_printf("+");
+							DrawEllipse(SCR_WIDTH-42, ylev+220, 50, 50, 0, 6, 0xc0f0f000);
+							select_game_bar=-1;
+							test_gfx_page=1;
+							}
+						else
+						if(frames2 & 32)
+							{
+							DrawFillEllipse(SCR_WIDTH-42, ylev+220, 40, 40, 0, 0xc0f0f0f0);
+							letter_size(32,48);
+							PX= SCR_WIDTH-42-16; PY= ylev+220-24; color= 0xff000000; bkcolor=0;
+							s_printf("+");
+							DrawEllipse(SCR_WIDTH-42, ylev+220, 40, 40, 0, 6, 0xc0000000);
+							}
+						}
+						
+					}
+
+			
+			}
+		else
+			{
+			PX= 26; PY=ylev+108*2-64; color= 0xff000000;
+			letter_size(16,64);
+			autocenter=1;
+			bkcolor=0xb0f0f0f0;
+			s_printf("%s", &letrero[idioma][10][0]);
+			bkcolor=0;
+			autocenter=0;
+			letter_size(16,32);
+			}
 													
-
-		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][11][0])) select_game_bar=1000;
-		if(Draw_button(600-32-strlen(&letrero[idioma][12][0])*8, ylev+108*4-64, &letrero[idioma][12][0])) select_game_bar=1001;
+		if(select_game_bar>=500 && select_game_bar<500+num_list_cheats && data_cheats[select_game_bar-500].description)
+				{
+					PX=40;PY=ylev+108*4-64+16;
+					DrawRoundFillBox(20, ylev+108*4-64, 148*4, 56, 0, 0xffcfcf00);
+					DrawRoundBox(20, ylev+108*4-64, 148*4, 56, 0, 4, 0xffcf0000);
+					letter_size(8,32);
+				
+					draw_box_text(data_cheats[select_game_bar-500].description);
+				
+				}
+		else
+			{
+			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][11][0])) select_game_bar=1000;
+			if(Draw_button(600-32-strlen(&letrero[idioma][12][0])*8, ylev+108*4-64, &letrero[idioma][12][0])) select_game_bar=1001;
+			}
 
 		}
 		else
@@ -1275,7 +1422,7 @@ int main(int argc, char **argv) {
 	if(!scroll_mode)
 		{
 		frames++;
-		if(frames>=8) {frames=0;scroll_text++;}
+		if(frames>=8) {frames=0;if(txt_cheats) scroll_text+=2; else scroll_text++;}
 
 		temp_pad= wiimote_read(); 
 		new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
@@ -1343,11 +1490,25 @@ int main(int argc, char **argv) {
 					 else
 					   {px=-100;py=-100;}
 
-					 if(!game_mode && !insert_favorite) //limit left/right
+					 if(cheat_mode && txt_cheats)
+						{
+						if(new_pad & WPAD_BUTTON_MINUS)
+							{
+								actual_cheat-=5;if(actual_cheat<0) actual_cheat=0;
+							}
+						
+						if(new_pad & WPAD_BUTTON_PLUS)
+							{
+							if((actual_cheat+5)<num_list_cheats) actual_cheat+=5;
+							}
+						}
+
+					 if(!game_mode && !insert_favorite && !cheat_mode) //limit left/right
 						{
 						
 						if(new_pad & WPAD_BUTTON_MINUS)
 							{
+
 								scroll_mode=1;
 								px=py=-100;
 							}
@@ -1363,6 +1524,18 @@ int main(int argc, char **argv) {
 						{
 						if(test_gfx_page)
 							{
+							 if(cheat_mode && txt_cheats)
+								{
+								if(test_gfx_page<0)
+									{
+										actual_cheat-=5;if(actual_cheat<0) actual_cheat=0;
+									}
+								if(test_gfx_page>0)
+									{
+										actual_cheat+=5;if(actual_cheat>=num_list_cheats) actual_cheat=num_list_cheats-5;
+									}
+								}
+							else
 							if(insert_favorite==0)
 								{
 								if(test_gfx_page<0)
@@ -1500,7 +1673,11 @@ int main(int argc, char **argv) {
 												   for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 												   save_cfg();
 												   load_png=1;
-												   } 
+												   }
+							if(select_game_bar>=500 && select_game_bar<500+MAX_LIST_CHEATS)
+													{
+													data_cheats[select_game_bar-500].apply^=1;
+													}
 							if(select_game_bar==5 || select_game_bar==1000 || select_game_bar==1001) 
 													{
 													struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
@@ -1511,8 +1688,11 @@ int main(int argc, char **argv) {
 														if(load_cheats(discid)) cheat_mode=1;
 
 													if(select_game_bar>=1000) cheat_mode=0;
+
+													if(select_game_bar==1000) create_cheats();
 													
 													if(select_game_bar==1001) len_cheats=0; // don't apply cheats
+						
 													select_game_bar=0;
 
 													if(!cheat_mode)
@@ -1534,7 +1714,8 @@ int main(int argc, char **argv) {
 														langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 														
 														
-														fatUnmount("fat:");
+														fatUnmount("sd");
+														__io_wiisd.shutdown();
 
 														IOS_ReloadIOS(cios);
 														ret = load_disc(discid);
@@ -1661,6 +1842,8 @@ int main(int argc, char **argv) {
 						{
 						int n;
 
+						scroll_text=-20;
+
 						if(!game_mode && !insert_favorite)
 							{
 							if(is_favorite)
@@ -1691,13 +1874,12 @@ int main(int argc, char **argv) {
 			int n,g;
 			if(scroll_mode<0)
 				{
-				
 				if(is_favorite) {is_favorite=0;actual_game=0;if(last_game>=0) {actual_game=last_game;last_game=-1;}} 
 				else {actual_game+=16;if(actual_game>=gameCnt) {actual_game=0;is_favorite=1;}}
 				}
 			if(scroll_mode>0)
 				{
-				// juasjuas
+				
 				if(!is_favorite)
 					{
 					actual_game-=16; 
@@ -1720,10 +1902,11 @@ int main(int argc, char **argv) {
 						if(!flag) {actual_game=((gameCnt-1)/16)*16;is_favorite=0;}
 						}
 					}
+					else {actual_game=((gameCnt-1)/16)*16;is_favorite=0;}
 				}
 
 			scroll_mode=0;
-			scroll_text=0;
+			scroll_text=-20;
 
 			for(n=0;n<16;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 			load_png=1;
@@ -2013,18 +2196,121 @@ int load_disc(u8 *discid)
 	return 0;
 }
 
+
+
+char buff_rcheat[256];
+
+int gettype_line(u8 *b, u8 *v, int *nv)
+{
+
+int n;
+
+while(*b==32 || *b==10) b++;
+
+if(*b==0) return 0; // linea separadora
+
+for(n=0;n<8;n++)
+	{
+	if((b[n]>='0' &&  b[n]<='9') || (b[n]>='A' &&  b[n]<='F') || (b[n]>='a' &&  b[n]<='f'))
+		{
+		v[n>>1]<<=4; v[n>>1]|=(b[n])-48-7*(b[n]>='A')-41*(b[n]>='a');
+		}
+	else return 1; // cadena
+	}
+
+b+=8;
+
+*nv=1;
+while(*b==32 || *b==10) b++;
+if(*b==0) return 2; // numero
+
+for(n=0;n<8;n++)
+	{
+	if((b[n]>='0' &&  b[n]<='9') || (b[n]>='A' &&  b[n]<='F') || (b[n]>='a' &&  b[n]<='f'))
+		{
+		v[4+(n>>1)]<<=4; v[4+(n>>1)]|=(b[n])-48-7*(b[n]>='A')-41*(b[n]>='a');
+		}
+	else return -1; // error en numero
+	}
+
+*nv=2;
+return 2; // numero
+}
+
+void create_cheats()
+{
+int n,m,f;
+
+u8 data_head[8] = {
+	0x00, 0xD0, 0xC0, 0xDE, 0x00, 0xD0, 0xC0, 0xDE
+};
+u8 data_end[8] = {
+	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+if(!txt_cheats) return;
+
+	len_cheats=0;
+	buff_cheats =  malloc (16384);
+	if(buff_cheats == 0){
+		return;
+	}
+
+	f=0;
+	memcpy(buff_cheats,data_head,8);
+	m=0;
+	for(n=0;n<MAX_LIST_CHEATS;n++)
+		{
+		if(data_cheats[n].title && data_cheats[n].apply)
+			{
+			if(f==0) m+=8;f=1;
+			memcpy(buff_cheats+m,data_cheats[n].values,data_cheats[n].len_values);
+			m+=data_cheats[n].len_values;
+			}
+		}
+	if(f)
+		{
+		memcpy(buff_cheats+m,data_end,8);m+=8;
+		len_cheats=m;
+		}
+
+
+}
+
 int load_cheats(u8 *discid)
 {
-char file_cheats[]="fat:/codes/000000.gct";
+char file_cheats[]="sd:/codes/000000.txt";
+
+u8 data_readed[8] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+u8 sub_head[32]="";
+u8 temp_sub_head[32]="";
+
 FILE *fp;
 int ret;
+int n,m;
+int mode=0;
 
-memcpy(&file_cheats[11],(char *) discid, 6);
+if(!sd_ok) return 0;
+
+actual_cheat=0;
+num_list_cheats=0;
+memcpy(&file_cheats[10],(char *) discid, 6);
 len_cheats=0;
 
+txt_cheats=1;
+memset(data_cheats,0,sizeof(struct _data_cheats)*MAX_LIST_CHEATS);
 fp = fopen(file_cheats, "rb");
 	if (!fp) {
+		txt_cheats=0;
+		file_cheats[17]='g';file_cheats[18]='c';file_cheats[19]='t';
+		fp = fopen(file_cheats, "rb");
 		
+	}
+
+	if (!fp) {
 		return 0;
 	}
 
@@ -2032,19 +2318,140 @@ fp = fopen(file_cheats, "rb");
 	len_cheats = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
 	
-	buff_cheats =  malloc (len_cheats);
+	buff_cheats =  malloc (16384);
 	if(buff_cheats == 0){
 		fclose(fp);
 		return 0;
 	}
 
-	ret = fread(buff_cheats, 1, len_cheats, fp);
-	fclose(fp);
+	if(txt_cheats)
+		{
+		
+		n=m=0;
+		mode=0;
 
-	if(ret != len_cheats){
-		len_cheats=0;
-		free(buff_cheats);
-		return 0;
+		while(1)
+			{
+			int force_exit=0;
+		
+			if(fgets(buff_rcheat,256,fp)) 
+				{
+				int g=0,ret, ndatas;
+				while(buff_rcheat[g]!=0 && buff_rcheat[g]!=10 && buff_rcheat[g]!=13) g++;
+				buff_rcheat[g]=0;
+
+				ret=gettype_line((u8 *) buff_rcheat, data_readed, &ndatas);
+
+				switch(mode)
+					{
+					case 0: // get ID
+						if(ret==1)
+							{
+							if(strncmp((char *) discid, (char *) buff_rcheat,6)!=0) force_exit=1; // error! código no coincide
+							mode++;
+							}
+						break;
+
+					case 1: // get name
+						if(ret==0)
+							mode++;
+						break;
+
+					case 2: // get entry name
+						if(ret!=0)
+							{
+							int sub;
+							if(ret!=1) force_exit=1;
+
+							memcpy(temp_sub_head, buff_rcheat, (g>31) ? 31 : g);temp_sub_head[(g>31) ? 31 : g]=0;
+
+							sub=strlen((char *) sub_head);
+
+							if(g>(63-sub)) 
+								{
+								if(g>39) 
+									g=39;
+								if((63-g)<sub) sub=63-g;
+								}
+
+							memset(buff_cheats+m,32,63); // rellena de espacios
+							buff_cheats[m+63]=0;
+							
+							
+                            memcpy(buff_cheats+m+(63-(g+sub))/2,sub_head,sub);// centra nombre
+							if(sub>0) buff_cheats[m+(63-(g+sub))/2+sub-1]='>';
+							memcpy(buff_cheats+m+(63-(g+sub))/2+sub,buff_rcheat,g);// centra nombre
+							g=63;
+
+							data_cheats[n].title=buff_cheats+m;
+							m+=g+1;
+							data_cheats[n].values=buff_cheats+m;
+							data_cheats[n].len_values=0;
+							data_cheats[n].description=NULL;
+							mode++;
+							}
+						break;
+					case 3: // get entry codes
+					case 4:
+					    if(ret==0 || ret==1) 
+							{
+						    if(mode==4) 
+								{	
+								if(ret==1)
+									{
+									memcpy(buff_cheats+m,buff_rcheat,g+1);
+									data_cheats[n].description=buff_cheats+m;
+									m+=g+1;
+									}
+								n++; 
+								}
+							else 
+								{
+								int sub;
+								if(data_cheats[n].title)
+								  {memcpy(sub_head,temp_sub_head,31);sub_head[31]=0;
+								   sub=strlen((char *) sub_head); if(sub<31) {sub_head[sub]='>';sub_head[sub+1]=0;}
+								   data_cheats[n].title=NULL;}
+							    }
+							mode=2;if(n>=MAX_LIST_CHEATS) force_exit=1;
+							}
+						else
+						if(ret==2)
+							{
+							memcpy(buff_cheats+m,data_readed,ndatas*4);
+							data_cheats[n].len_values+=ndatas*4;
+							m+=ndatas*4;
+							mode=4;
+							}
+						else
+						if(ret<0) {data_cheats[n].title=NULL;data_cheats[n].len_values=0;force_exit=1;}
+						break;
+					
+					}
+				}
+			 else {
+				  if(mode==4) n++; else data_cheats[n].title=NULL;n++;
+				  break;
+				  }
+			
+			if(force_exit) break;
+			}
+		fclose(fp);
+
+		for(n=0;n<MAX_LIST_CHEATS;n++)
+			if(data_cheats[n].title!=NULL) num_list_cheats=n+1; else break;
+		
+		}
+	else
+		{
+		ret = fread(buff_cheats, 1, len_cheats, fp);
+		fclose(fp);
+
+		if(ret != len_cheats){
+			len_cheats=0;
+			free(buff_cheats);
+			return 0;
+			}
 		}
 
 return 1;

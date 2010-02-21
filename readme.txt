@@ -1,4 +1,8 @@
-uLoader is a work based on Kwiirk's YAL and Waninkoko's usbloader that tries to give support to both custom IOS (cIOS222 and cIOS249) to launch backups from USB mass storage devices with a graphical user interface similar to Wii channels.
+uLoader v1.2 BETA - by Hermes (www.elotrolado.net)
+---------------------------------------------------
+
+uLoader is a work based on Kwiirk's YAL and Waninkoko's usbloader that tries to give support to both custom IOS (cIOS222 and cIOS249) 
+to launch backups from USB mass storage devices with a graphical user interface similar to Wii channels.
 
 Features:
 ---------------
@@ -51,9 +55,11 @@ fat:/uloader.cfg
 
 in preference order.
 
-To do that, press A on game icon's and you'll access a screen that will give you the options to add/erase the game from favorites screen (erase action only appears when you access from favorites)
+To do that, press A on game icon's and you'll access a screen that will give you the options to add/erase the game
+from favorites screen (erase action only appears when you access from favorites)
 
-After adding you'll reach favorites screen and you'll see the icon shaded, attached to the cursor: you only have to drop it in any of the channels to REPLACE IT with the new.
+After adding you'll reach favorites screen and you'll see the icon shaded, attached to the cursor: you only have to drop it 
+in any of the channels to REPLACE IT with the new.
 
 If you want to swap channels, keep pressing B and then press A, and the shaded icon will appear. Drop it where you want to SWAP IT.
 
@@ -65,7 +71,8 @@ Remember that you can go back from favorites to last page pressing 1.
 RUNNING GAMES
 -------------
 
-Running games screen will allow you to select custom IOS (if cIOS 222 is not available, cIOS 249 will be used), add to favorites and launch the game immediately.
+Running games screen will allow you to select custom IOS (if cIOS 222 is not available, cIOS 249 will be used), add to favorites and
+launch the game immediately.
 
 OCARINA
 -------
@@ -76,6 +83,34 @@ Example:
 
 :/codes/RB4P08.gct -> Cheats codes for Resident Evil 4 Wii
 
+
+Now you can personalize the cheats including it as .txt file:
+
+
+Example:
+
+:/codes/RB4P08.txt -> trucos de Resident Evil 4 Wii
+
+
+Within of the .txt must be:
+
+RB4P08 /-> ID of the game (always. Same name of the file)
+Resident Evil 4 Wii edition /-> Nombre del juego (optional, immediate line of the ID, one line of text)
+
+In Game /-> Group (optional. Separated with one line)
+
+Unlimited Ammo for all guns [Dr.Pepper] /-> Cheat name (always, one line)
+48000000 8031F44C /-> Cheat codes
+DE000000 80008180
+12000008 000000FF
+E0000000 80008000
+Ammo infinite for you /-> commentaries (optional, one line)
+
+Unlimited Pitas/Money [Dr.Pepper] /-> Second Cheat name to display (always, one line)
+14337D58 000FFFFF /-> Cheat code
+
+Note: The group name and the Cheat name cannot have more of 63 characters (the cheat name have max. of 39 characters)
+
 Notes about wbfs_win
 --------------------
 
@@ -83,7 +118,8 @@ wbfs_win is a command line utility that can be used both from GUI and WBFS Gui:
 
 http://www.elotrolado.net/hilo_yal-juegos-sin-usbloader-desde-homebrew-channel_1213714
 
-The utility have some changes that allows to extract a .ciso by default (if you rename it to .iso it will also work on another GUIs that force file type), so we can save some GB in the disc; upload both .iso and .ciso, and the possibility to add an icon to the uploaded iso.
+The utility have some changes that allows to extract a .ciso by default (if you rename it to .iso it will also work on another GUIs that
+ force file type), so we can save some GB in the disc; upload both .iso and .ciso, and the possibility to add an icon to the uploaded iso.
 
 It also supports iso extraction using "isoextract" command (see readme_new.txt)
 
@@ -101,15 +137,12 @@ Where:
 
 PNG file size must be less than 200KB, but it's much better if it's less than 100KB, because it will directly affect main screen's load times.
 
-Both width and height are better if divisible by 16 to avoid problems with textures, and lot better if dimensions are at most 256x192. My recommendation is a size of 128x96 average.
+Both width and height are better if divisible by 16 to avoid problems with textures, and lot better if dimensions are at most 256x192. 
+My recommendation is a size of 128x96 average.
 
 If you have doubts, please ask in the forums.
 
 
-
-
-
-wbfs_win.exe Z png RSPP01 HBC_icon_WiiSports.png
 
 
 

@@ -1,4 +1,4 @@
-uLoader v1.1 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.2 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
@@ -7,7 +7,8 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 Caracteristicas:
 ---------------
 
-- Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe que adjunto (ver mas abajo "Notas sobre wbfs_win").
+- Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe 
+  que adjunto (ver mas abajo "Notas sobre wbfs_win").
 
 - Dispone de una pantalla de Juegos Favoritos (hasta 16 juegos)
 
@@ -28,7 +29,7 @@ CONTROLES
 
 - Boton +/-: Pagina Siguiente/Anterior
 
-- Boton 1 o Boton Amarillo: Ir a la pagina de favoritos/volver a la ultima 			   pagina
+- Boton 1 o Boton Amarillo: Ir a la pagina de favoritos/volver a la ultima pagina
 
 
 BOTON DE CONFIGURAR
@@ -77,8 +78,36 @@ Los codigos de trucos deben estar en la carpeta "codes" de la SD con extensión .
 
 Ejemplo:
 
-:/codes/RB4P08.gct -> trucos de Resident Evil 4 Wii 
+:/codes/RB4P08.gct -> trucos de Resident Evil 4 Wii
 
+Ahora dispones tambien una forma de personalizar los trucos, incluyendolos en un fichero de extensión .txt
+
+
+Ejemplo:
+
+:/codes/RB4P08.txt -> trucos de Resident Evil 4 Wii
+
+
+Dentro del .txt debe haber:
+
+RB4P08 /-> ID del juego (obligatorio, mismo nombre que el fichero)
+Resident Evil 4 Wii edition /-> Nombre del juego (opcional, linea inmediata a la ID, una sola linea)
+
+In Game /-> Grupo (opcional, separado por una linea y compuesto por una sola linea)
+
+Unlimited Ammo for all guns [Dr.Pepper] /-> Nombre del truco (siempre y evidentemente, una sola linea)
+48000000 8031F44C /-> Codigos del truco
+DE000000 80008180
+12000008 000000FF
+E0000000 80008000
+Ammo infinite for you /-> Comentario (opcional, una sola linea)
+
+Unlimited Pitas/Money [Dr.Pepper] /-> Nombre del segundo truco
+14337D58 000FFFFF /-> codigos del truco
+
+
+
+Nota: el nombre de grupo y el nombre de truco, no deben sobrepasar los 63 caracteres (el nombre del truco tiene un maximo de 39 caracteres)
 
 Notas sobre wbfs_win
 --------------------
