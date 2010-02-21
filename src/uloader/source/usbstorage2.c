@@ -39,9 +39,10 @@ distribution.
 #define USB_IOCTL_UMS_WRITE_SECTORS	(UMS_BASE+0x4)
 #define USB_IOCTL_UMS_READ_STRESS	(UMS_BASE+0x5)
 #define USB_IOCTL_UMS_SET_VERBOSE	(UMS_BASE+0x6)
+#define USB_IOCTL_UMS_WATCHDOG			(UMS_BASE+0x80)
 
 #define WBFS_BASE (('W'<<24)|('F'<<16)|('S'<<8))
-#define USB_IOCTL_WBFS_SPEED_LIMIT			(WBFS_BASE+0x123)
+#define USB_IOCTL_WBFS_SPEED_LIMIT			(WBFS_BASE+0x80)
 
 #define UMS_HEAPSIZE			0x10000
 
@@ -52,12 +53,26 @@ static s32 hid = -1, fd = -1;
 static u32 sector_size;
 
 
-s32 USBStorage2_WFS_Speed_Fix(u32 speed)
+s32 USBStorage2_WBFS_Speed_Fix(u32 speed)
 {
 	if (fd >= 0) {
 		s32 ret;
 
 		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_WBFS_SPEED_LIMIT, "i:", speed);
+
+		return ret;
+	}
+
+	return IPC_ENOENT;
+}
+
+
+s32 USBStorage2_Watchdog(u32 on_off)
+{
+	if (fd >= 0) {
+		s32 ret;
+
+		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WATCHDOG, "i:", on_off);
 
 		return ret;
 	}

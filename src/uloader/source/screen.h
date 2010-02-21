@@ -61,6 +61,8 @@ extern unsigned color;	  // color for letters (s_printf)
 
 extern unsigned PX,PY;    // pixel coordinates for s_printf
 
+extern int s_printf_z; // Z for s_printf (obvious)
+
 extern unsigned char font_b[28672];
 
 #define INTERNAL_EXTFONT &font_b[0] // pointer to the internal font used as secondary (external) font. This font is loaded by default

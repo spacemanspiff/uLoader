@@ -8,4 +8,6 @@ void USBStorage2_Deinit(void);
 s32  USBStorage2_ReadSectors(u32, u32, void *);
 s32  USBStorage2_WriteSectors(u32, u32, void *);
 
+s32 USBStorage2_Watchdog(u32 on_off);
+
 #endif

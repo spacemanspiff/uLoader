@@ -67,6 +67,102 @@
 
 #include "files.h"
 
+#include "ehcmodule.h"
+#include "dip_plugin.h"
+#include "mload.h"
+
+
+
+static u32 ios_36[16] ATTRIBUTE_ALIGN(32)=
+{
+	0, // DI_EmulateCmd
+	0,
+	0x2022DDAC, // dvd_read_controlling_data
+	0x20201010+1, // handle_di_cmd_reentry (thumb)
+	0x20200b9c+1, // ios_shared_alloc_aligned (thumb)
+	0x20200b70+1, // ios_shared_free (thumb)
+	0x20205dc0+1, // ios_memcpy (thumb)
+	0x20200048+1, // ios_fatal_di_error (thumb)
+	0x20202b4c+1, // ios_doReadHashEncryptedState (thumb)
+	0x20203934+1, // ios_printf (thumb)
+};
+
+static u32 ios_38[16] ATTRIBUTE_ALIGN(32)=
+{
+	0, // DI_EmulateCmd
+	0,
+	0x2022cdac, // dvd_read_controlling_data
+	0x20200d38+1, // handle_di_cmd_reentry (thumb)
+	0x202008c4+1, // ios_shared_alloc_aligned (thumb)
+	0x20200898+1, // ios_shared_free (thumb)
+	0x20205b80+1, // ios_memcpy (thumb)
+	0x20200048+1, // ios_fatal_di_error (thumb)
+	0x20202874+1, // ios_doReadHashEncryptedState (thumb)
+	0x2020365c+1, // ios_printf (thumb)
+};
+
+
+
+
+u32 patch_datas[8] ATTRIBUTE_ALIGN(32);
+
+
+int load_ehc_module()
+{
+int is_ios=0;
+
+
+	if(mload_module(ehcmodule, size_ehcmodule)<0) return -1;
+	usleep(250*1000);
+	
+
+	// Test for IOS
+
+	mload_seek(0x20207c84, SEEK_SET);
+	mload_read(patch_datas, 4);
+	if(patch_datas[0]==0x6e657665) is_ios=38;
+	else
+		{
+		mload_seek(0x20207ff0, SEEK_SET);
+		mload_read(patch_datas, 4);
+		if(patch_datas[0]==0x6e657665) is_ios=36;
+		}
+
+	if(is_ios==36)
+		{
+		// IOS 36
+		memcpy(ios_36, dip_plugin, 4);		// copy the entry_point
+		memcpy(dip_plugin, ios_36, 4*10);	// copy the adresses from the array
+		
+		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+		mload_write(dip_plugin,size_dip_plugin);
+
+		// enables DIP plugin
+		mload_seek(0x20209040, SEEK_SET);
+		mload_write(ios_36, 4);
+		 
+		}
+	if(is_ios==38)
+		{
+		// IOS 38
+
+		memcpy(ios_38, dip_plugin, 4);	    // copy the entry_point
+		memcpy(dip_plugin, ios_38, 4*10);   // copy the adresses from the array
+		
+		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+		mload_write(dip_plugin,size_dip_plugin);
+
+		// enables DIP plugin
+		mload_seek(0x20208030, SEEK_SET);
+		mload_write(ios_38, 4);
+
+		}
+
+	
+
+return 0;
+}
+
 #define USE_MODPLAYER 1
 
 #ifdef USE_MODPLAYER
@@ -128,7 +224,7 @@ s8 sound_effects[2][2048] ALIGNED(0x20);
 
 int idioma=0;
 
-char letrero[2][40][64]=
+char letrero[2][50][64]=
 	{
 	{"Return", "Configure", "Delete Favorite", "Add Favorite", "Load Game", "Add to Favorites", "Favorites", "Page", "Ok" ,"Discard",
 	" Cheats Codes found !!! ", "Apply Codes ", "Skip Codes ", "Format WBFS", "Selected", "You have one WBFS partition", "Are You Sure You Can Format?",
@@ -137,6 +233,9 @@ char letrero[2][40][64]=
 	"Return", "Add New Game", "Add PNG Bitmap", "Delete Game", "Format Disc", "Return to Wii Menu", "","","","",
 //32
 	"Are you sure you want delete this?", "Press A to accept or B to cancel", 
+// 34
+"Insert the game DVD disc...", "ERROR! Aborted", "Press B to Abort","Opening DVD disc...", "ERROR: Not a Wii disc!!",
+"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done"
 	},
     // spanish
 	{"Retorna", "Configurar", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", "Hecho", "Descartar",
@@ -145,7 +244,10 @@ char letrero[2][40][64]=
 //22	
 	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Juego", "Formatear Disco", "Retorna al Menu de Wii", "","","","",
 //32
-	"¿Estás seguro de que quieres borrar éste?", "Pulsa A para aceptar o B para cancelar", 
+	"¿Estás seguro de que quieres borrar éste?", "Pulsa A para aceptar o B para cancelar",
+// 34
+"Inserta el DVD del juego ...", "ERROR! Abortado", "Pulsa B para Abortar","Abriendo el disco DVD...", "ERROR: No es un disco de Wii!!",
+"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado"
 
 	},
 	};
@@ -301,6 +403,7 @@ s32 GetCerts(signed_blob** Certs, u32* Length)
 }
 
 
+
 int cios = CIOS;
 
 //---------------------------------------------------------------------------------
@@ -418,6 +521,9 @@ GXTlutObj palette_icon;
 GXTexObj text_icon[2];
 
 GXTexObj text_button[4], default_game_texture, text_background,text_game_empty[4];
+GXTexObj text_screen_fx;
+
+u32 *screen_fx=NULL;
 
 GXTexObj text_move_chan;
 
@@ -432,6 +538,12 @@ struct _game_datas
 	GXTexObj texture;
 	u32 config;
 } game_datas[16];
+
+
+void DrawIcon(int px,int py, u32 frames2)
+{
+	DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-24,py-24, 48, 48, 0, 0xffffffff);
+}
 
 void draw_text(char *text)
 {
@@ -975,13 +1087,12 @@ while(1)
 	SetTexture(NULL);
 
 	it_have_wbfs=0;
+
 	for(n=0;n<num_partitions;n++)
 		{
 		if(type[partition_type[n].type>>8][0]>1) {it_have_wbfs=1;break;}
 		}
 
-
-    
 	if(level>=100)
 		{
 		bkcolor=0;
@@ -1163,7 +1274,7 @@ while(1)
 						px=wmote_datas->ir.x;py=wmote_datas->ir.y;
 						
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						}
 					 else 
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
@@ -1184,7 +1295,7 @@ while(1)
 
 						
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						
 						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
 						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
@@ -1329,9 +1440,9 @@ char str_id[7];
 		cabecera(frames2, &letrero[idioma][23][0]);
 	
 		PX=0;PY=ylev+352/2-16;
-		s_printf("Insert the game DVD disc...");
+		s_printf("%s",&letrero[idioma][34][0]);
 		PX=0;PY+=64;
-		s_printf("Press B to Abort");
+		s_printf("%s",&letrero[idioma][36][0]);
 	
 		WPAD_ScanPads(); // esto lee todos los wiimotes
 		temp_pad= wiimote_read(); 
@@ -1343,7 +1454,8 @@ char str_id[7];
 			{
 			cabecera(frames2, &letrero[idioma][23][0]);
 			PX=0;PY=ylev+352/2-16;
-			s_printf("ERROR! Aborted");
+
+			s_printf("%s",&letrero[idioma][35][0]);
 			snd_fx_no();
 			Screen_flip();
 			autocenter=0;
@@ -1368,7 +1480,8 @@ char str_id[7];
 
 	cabecera(frames2, &letrero[idioma][23][0]);
 	PX=0;PY=ylev+352/2-16;
-	s_printf("Opening DVD disc...");
+
+	s_printf("%s",&letrero[idioma][37][0]);
 	Screen_flip();	
 
 		/* Open disc */
@@ -1383,14 +1496,14 @@ char str_id[7];
 		sleep(4);
 		goto out;
 	}
-
+  
 	/* Check disc */
 	ret = Disc_IsWii();
 	if (ret < 0) {
 
 		cabecera(frames2, &letrero[idioma][23][0]);
 		PX=0;PY=ylev+352/2-16;
-		s_printf("ERROR: Not a Wii disc!!", ret);
+		s_printf("%s",&letrero[idioma][38][0]);
 		Screen_flip();
 		snd_fx_no();
 		autocenter=0;
@@ -1411,7 +1524,8 @@ char str_id[7];
 	if (ret) {
 		cabecera(frames2, &letrero[idioma][23][0]);
 		PX=0;PY=ylev+352/2-16;
-		s_printf("ERROR: Game already installed!!!", ret);
+		
+		s_printf("%s",&letrero[idioma][39][0]);
 		Screen_flip();
 		snd_fx_no();
 		autocenter=0;
@@ -1420,19 +1534,66 @@ char str_id[7];
 
 	}
 
+/////////////////////
+
+
+    while(1)
+		{
+	
+		WPAD_ScanPads(); // esto lee todos los wiimotes
+		temp_pad= wiimote_read(); 
+		new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+		
+		cabecera(frames2, &letrero[idioma][23][0]);
+
+		if(strlen(header.title)<=37) letter_size(16,32);
+		else if(strlen(header.title)<=45) letter_size(12,32);
+		else letter_size(8,32);		
+
+		PX=0;PY=ylev+352/2-32; color= 0xff000000; 
+				
+		bkcolor=0;
+		
+		s_printf("%s",header.title);
+		
+		letter_size(12,32);
+
+		PX=0;PY=ylev+352/2+32; 
+
+		s_printf(&letrero[idioma][33][0]);
+
+		Screen_flip();
+
+	    if(new_pad & (WPAD_GUITAR_HERO_3_BUTTON_RED | WPAD_BUTTON_B))
+			{
+			cabecera(frames2, &letrero[idioma][23][0]);
+			PX=0;PY=ylev+352/2-16;
+			s_printf("%s",&letrero[idioma][35][0]);
+			snd_fx_no();
+			Screen_flip();
+			autocenter=0;
+			sleep(4);
+			goto out;
+			}
+		if(new_pad & (WPAD_GUITAR_HERO_3_BUTTON_GREEN | WPAD_BUTTON_A)) {snd_fx_yes();break;}
+		}
+    
+
+////////////////////
 	cabecera(frames2, &letrero[idioma][23][0]);
 	PX=0;PY=ylev+352/2-16;
-	s_printf("Installing game, please wait... ");
+	
+	s_printf("%s",&letrero[idioma][40][0]);
 	snd_fx_yes();
 	Screen_flip();	
     sleep(1);
 
-//	printf("    %s\n",           header.title);
-//	printf("    (%c%c%c%c)\n\n", header.id[0], header.id[1], header.id[2], header.id[3]);
-
+	USBStorage2_Watchdog(0); // to increase the speed
 
 	/* Install game */
 	ret = WBFS_AddGame(0);
+
+	USBStorage2_Watchdog(1); // to avoid hdd sleep
 
 	if(exit_by_reset) {exit_by_reset=0;}
 
@@ -1451,7 +1612,8 @@ char str_id[7];
 	cabecera(frames2, &letrero[idioma][23][0]);
 	PX=0;PY=ylev+352/2-16;
 
-	s_printf("Done");
+	
+	s_printf("%s",&letrero[idioma][41][0]);
 	snd_fx_yes();
 	Screen_flip();
 	sleep(4);
@@ -1539,7 +1701,7 @@ while(1)
 						px=wmote_datas->ir.x;py=wmote_datas->ir.y;
 						
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						}
 					 else 
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
@@ -1560,7 +1722,7 @@ while(1)
 
 						
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						
 						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
 						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
@@ -1691,7 +1853,7 @@ char buff[64];
 						px=wmote_datas->ir.x;py=wmote_datas->ir.y;
 						
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						}
 					 else 
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
@@ -1712,7 +1874,7 @@ char buff[64];
 
 						
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						
 						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
 						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
@@ -1768,7 +1930,39 @@ char buff[64];
 return 0;
 }
 
+void set_tex_pix_fx(int x, int y, unsigned color)
+{
+if(x<0 || x>127 || y<0 || y>127) return;
 
+	screen_fx[x+(y<<7)]=color;
+}
+void set_text_screen_fx()
+{
+int n,m;
+static int pos=256;
+unsigned color1=0x80ffffff;
+
+if(pos<-128) pos=1024;
+memset(screen_fx,0,128*128*4);
+
+for(n=0;n<128;n++)
+	{
+
+	color1=0x40ffffc0;
+    for(m=0;m<4;m++)
+		set_tex_pix_fx(pos-(n>>1)+m,n,color1);
+	color1=((0x50-m)<<24) | 0xffffd0;
+	for(m=8;m<20;m++)
+		set_tex_pix_fx(pos-(n>>1)+m,n,color1);
+	color1=0x40ffffc0;
+	for(m=24;m<28;m++)
+		set_tex_pix_fx(pos-(n>>1)+m,n,color1);
+	
+	}
+
+CreateTexture(&text_screen_fx, TILE_SRGBA8, screen_fx, 128, 128, 0);
+pos-=6;
+}
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
@@ -1795,7 +1989,9 @@ int main(int argc, char **argv) {
 		int force_ios249=0;
 		static int old_temp_sel=-1;
 		f32 f_size=0.0f;
-		
+		int last_select=-1;
+
+		int force_ingame_ios=0;
 
         return_reset=1;
 
@@ -1819,7 +2015,8 @@ int main(int argc, char **argv) {
 			}
 
 		sleep(1);
-        // 5 reintentos (por si el demonio mete la pata XD )
+		load_ehc_module();
+        
 		
 
         // sound pattern generator
@@ -1854,7 +2051,7 @@ int main(int argc, char **argv) {
 		{
 			ret2 = USBStorage2_Init(); 
 			if(!ret2) break;
-			usleep(200);
+			usleep(200*1000);
 		}
 	
 		
@@ -1919,15 +2116,19 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.4");
+			s_printf("v1.5");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.4");
+			s_printf("v1.5");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
 
 		sleep(3);
 	   
+	   
+
+		screen_fx=memalign(32, 128*128*4);
+
 		CreatePalette(&palette_icon, TLUT_SRGB5A1, 0, icon_palette, icon_palette_colors); // crea paleta 0
 		CreateTexture(&text_icon[0], TILE_CI8, icon_sprite_1, icon_sprite_1_sx, icon_sprite_1_sy, 0);
 		CreateTexture(&text_icon[1], TILE_CI8, icon_sprite_2, icon_sprite_2_sx, icon_sprite_2_sy, 0);
@@ -1942,7 +2143,7 @@ int main(int argc, char **argv) {
 		
 		for(n=0;n<128*64*3;n++)
 			{
-			switch((rand()>>3) & 3)
+			switch((rand()>>3) & 7)
 				{
 				case 0:
 					game_empty[n]=0xfff0f0f0;break;
@@ -1952,8 +2153,17 @@ int main(int argc, char **argv) {
 					game_empty[n]=0xffd0d0d0;break;
 				case 3:
 					game_empty[n]=0xffc0c0c0;break;
+				case 4:
+					game_empty[n]=0xffc0a000;break;
+				case 5:
+					game_empty[n]=0xff404040;break;
+				case 6:
+					game_empty[n]=0xffd0d0d0;break;
+				case 7:
+					game_empty[n]=0xffc0c0c0;break;
 				}
 			}
+
 
 		CreateTexture(&text_game_empty[0], TILE_SRGBA8, &game_empty[0], 128, 64, 0);
 		CreateTexture(&text_game_empty[1], TILE_SRGBA8, &game_empty[128*64], 128, 64, 0);
@@ -1986,7 +2196,16 @@ int main(int argc, char **argv) {
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
-			s_printf("ERROR: Could not initialize USB subsystem! (ret = %d)\n", ret2);
+			s_printf("ERROR: Could not initialize USB subsystem! (ret = %d)", ret2);
+
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
+			
+			PY+=80;
+			s_printf("Maybe you need plug the device on USB port 0...");
+
+
+
 			Screen_flip();
 			goto error;
 			}
@@ -2163,6 +2382,7 @@ get_games:
 //	if((frames2 & 255)==0) ASND_SetVoice(1, VOICE_MONO_8BIT, 15000,0, &sound_effects[1][0], 2048, 255, 255, NULL);
 
 	SetTexture(&text_background/*NULL*/);
+	set_text_screen_fx();
    
 	ConfigureForTexture(10);
 	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
@@ -2238,6 +2458,8 @@ get_games:
 				if(Draw_button2(30+16, ylev+56+56*n, data_cheats[actual_cheat+n].title,data_cheats[actual_cheat+n].apply)) 
 					{
 					if(select_game_bar!=(500+actual_cheat+n)) scroll_text=-10;
+					//if(select_game_bar!=500+actual_cheat+n)  snd_fx_tick();
+
 
 					select_game_bar=500+actual_cheat+n;
 					f=1;
@@ -2339,6 +2561,7 @@ get_games:
 			{
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][11][0])) select_game_bar=1000;
 			if(Draw_button(600-32-strlen(&letrero[idioma][12][0])*8, ylev+108*4-64, &letrero[idioma][12][0])) select_game_bar=1001;
+
 			}
 
 		}
@@ -2352,6 +2575,8 @@ get_games:
 			forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
 
 			langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+
+			force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
 
 			if(forcevideo==1) s_printf(" Forced to PAL");
 			if(forcevideo==2) s_printf(" Forced to NTSC");
@@ -2419,6 +2644,8 @@ get_games:
 			if(Draw_button2(472, m+56, " cIOS 249 ",cios==249)) select_game_bar=301;
 
 
+			if(Draw_button2(36, m+56, " Skip IOS ", force_ios249 ? -1 : force_ingame_ios!=0)) select_game_bar=302;
+
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
 			if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
 
@@ -2429,6 +2656,7 @@ get_games:
 	else
 		{ // modo panel
 		int set_set=0;
+		int selected_panel=-1;
 		select_game_bar=0;
 
 		PX= 0; PY=ylev-32; color= 0xff000000; 
@@ -2464,6 +2692,7 @@ get_games:
 		for(n=0;n<4;n++)
 			{
 			
+
 			if(gameList==NULL) cnt=gameCnt+10;
 			else
 			if(is_favorite) 
@@ -2505,25 +2734,41 @@ get_games:
 					WBFS_GetProfileDatas(discid, temp_data);
 					create_game_png_texture((m<<2)+n);
 					}
+				letter_size(8,24);
 				
+				if(!(px>=20+n*150 && px<20+n*150+148 && py>=ylev+m*110 && py<ylev+m*110+108))
+					{
+					PX= 26+n*150+scroll_mode; PY= 64-24+30+8+ylev+m*110; color= 0xff000000; 
+					
+					bkcolor=0xc0f0f000;
+
+					s_printf_z=4;
+					if(!game_datas[(m<<2)+n].png_bmp) 
+									draw_text(header->title);
+					s_printf_z=0;
+					bkcolor=0;
+					}
+				else if(scroll_mode==0)
+					{
+					selected_panel=(m<<2)+n;
+		
+					}
+
 				SetTexture(NULL);
-				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 0, 0xffafafaf);
+				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 0xffafafaf);
 
 				if(game_datas[(m<<2)+n].png_bmp) 
 					SetTexture(&game_datas[(m<<2)+n].texture);
 				else SetTexture(&default_game_texture);
 				
 				
-				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 0, 0xffffffff);
-					
+				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 0xffffffff);
 
-				letter_size(8,24);
+				SetTexture(&text_screen_fx);
+				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 0xffffffff);
+				SetTexture(NULL);
+
 				
-				PX= 26+n*150+scroll_mode; PY= 64-24+30+8+ylev+m*110; color= 0xff000000; 
-				
-				bkcolor=0xc0f0f000;
-				draw_text(header->title);
-				bkcolor=0;
 				set_set=1;
 
 				cnt++;
@@ -2534,7 +2779,11 @@ get_games:
 				//SetTexture(STRIPED_PATTERN);
 				game_datas[(m<<2)+n].ind=-1;
 				SetTexture(&text_game_empty[(frames2>>2) & 3]);
-				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 0, 0xffffffff);
+				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 0xffffffff);
+
+				SetTexture(&text_screen_fx);
+				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 0xffffffff);
+				SetTexture(NULL);
 				}
 			
 			SetTexture(NULL);
@@ -2547,10 +2796,10 @@ get_games:
 					old_temp_sel=(m<<2)+n;
 					}
 				if(set_set || insert_favorite) temp_sel=(m<<2)+n; else temp_sel=-1;
-				DrawRoundBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 0, 6, 0xfff08000/*0xff00a0a0*/);
+				DrawRoundBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 6, 0xfff08000/*0xff00a0a0*/);
 				}
 			else
-				DrawRoundBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 0, 4, 0xff303030);
+				DrawRoundBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 4, 0xff303030);
 
 			// scroll mode
 				if(scroll_mode<0)
@@ -2633,6 +2882,26 @@ get_games:
 					}
 			}
 
+			if(selected_panel>=0 && scroll_mode==0)
+				{struct discHdr *header = &gameList[game_datas[selected_panel].ind];
+		
+					SetTexture(NULL);
+					DrawRoundFillBox(20, ylev+ ((selected_panel>=12) ? 0 : 3*110), 150*4, 108, 0, 0xcfcfffff);
+					DrawRoundBox(20, ylev+ ((selected_panel>=12) ? 0 : 3*110), 150*4, 108, 0, 6, 0xcff08000);
+		
+					if(strlen(header->title)<=37) letter_size(16,32);
+					else if(strlen(header->title)<=45) letter_size(12,32);
+					else letter_size(8,32);		
+
+					PX= 0; PY=ylev+ ((selected_panel>=12) ? 0 : 3*110)+(108-32)/2; color= 0xff000000; 
+							
+					bkcolor=0;
+					
+					autocenter=1;
+					s_printf("%s",header->title);
+					autocenter=0;
+				}
+
 		
 		
 		} // modo panel
@@ -2640,8 +2909,19 @@ get_games:
 
 	load_png=0;
 	frames2++;
-
 	
+	
+		{
+		if(select_game_bar>=0)
+			{
+			if(select_game_bar!=last_select)
+				{
+				snd_fx_tick();
+				last_select=select_game_bar;
+				}
+			}
+		else last_select=-1;
+		}
 
 	if(!scroll_mode)
 		{
@@ -2668,7 +2948,7 @@ get_games:
 							
 							}
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						}
 					 else 
 					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
@@ -2693,7 +2973,7 @@ get_games:
 							DrawRoundFillBox(px-148/2, py-108/2, 148, 108, 0, 0x8060af60);
 							}
 						SetTexture(NULL);
-						DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-31,py-31, 64, 64, 0, 0xffffffff);
+						DrawIcon(px,py,frames2);
 						
 						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
 						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
@@ -2887,6 +3167,8 @@ get_games:
 
 												   langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
+												   force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
+
 												   edit_cfg=1;
 												   }
 
@@ -2958,7 +3240,8 @@ get_games:
 														forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
 
 														langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
-														
+
+														force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
 														
 														fatUnmount("sd");
 														__io_wiisd.shutdown();
@@ -2969,9 +3252,28 @@ get_games:
 														#ifdef USE_MODPLAYER
 														ASND_End();		// finaliza el sonido
 														#endif
+														if(cios!=222)
+															{
+															IOS_ReloadIOS(cios);
+															sleep(1);
+															load_ehc_module();
+															for(n=0;n<25;n++)
+																{
+																	ret2 = USBStorage2_Init(); 
+																	if(!ret2) break;
+																	usleep(200*1000);
+																}
+															USBStorage2_Deinit();
+															}
 
-														IOS_ReloadIOS(cios);
-														sleep(1);
+														// enables fake ES_ioctlv (to skip IOS_ReloadIOS(ios))
+														if(force_ingame_ios)
+															{
+															patch_datas[0]=*((u32 *) (dip_plugin+16*4));
+															mload_set_ES_ioctlv_vector((void *) patch_datas[0]);
+															}
+															
+														mload_close();
 
 														ret = load_disc(discid);
 
@@ -3019,13 +3321,20 @@ get_games:
 														}
 													
 													
-												   temp_data[4]=0;
-												   if(select_game_bar==11) temp_data[4]=game_datas[game_mode-1].config;
+												   temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
+												   if(select_game_bar==11) 
+														{
+													    temp_data[4]=game_datas[game_mode-1].config & 255;
+														temp_data[5]=(game_datas[game_mode-1].config>>8) & 255;
+														temp_data[6]=(game_datas[game_mode-1].config>>16) & 255;
+														temp_data[7]=(game_datas[game_mode-1].config>>24) & 255;
+														}
 												   else
 														{
 														if(cios==249) temp_data[4]|=1;
 														temp_data[4]|=(forcevideo & 3)<<2;
 														temp_data[4]|=(langsel & 15)<<4;
+														temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
 														}
 
 												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
@@ -3048,6 +3357,12 @@ get_games:
 												   cios= (select_game_bar-300) ? 249 : 222;
 												   snd_fx_yes();
 												   }
+							if(select_game_bar==302)
+												   {
+												   force_ingame_ios=(force_ingame_ios==0);
+												   snd_fx_yes();
+												   }
+												   
 
 							}
 						
@@ -3077,10 +3392,11 @@ get_games:
 								}
 							
 							
-						    temp_data[4]=0;
+						    temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
 						    if(cios==249) temp_data[4]|=1;
 						    temp_data[4]|=(forcevideo & 3)<<2;
 						    temp_data[4]|=(langsel & 15)<<4;
+							temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
 
 						    game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
 
@@ -3248,6 +3564,9 @@ get_games:
 
 	}// while
 	exit_ok:
+
+	mload_set_ES_ioctlv_vector(NULL);
+	mload_close();
 	#ifdef USE_MODPLAYER
 		ASND_End();		// finaliza el sonido
 	#endif
@@ -3260,6 +3579,9 @@ get_games:
 		SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
 	return 0;
 error_w:
+
+	mload_set_ES_ioctlv_vector(NULL);
+	mload_close();
 	 #ifdef USE_MODPLAYER
 		ASND_End();		// finaliza el sonido
 	#endif
@@ -3305,14 +3627,18 @@ int load_disc(u8 *discid)
         if(WDVD_SetUSBMode(discid)!=0) return 1;
 
         WDVD_Reset();
+		//return -456;
+		
         memset(Disc_ID, 0, 0x20);
         WDVD_ReadDiskId(Disc_ID);
+		
 
         if (*Disc_ID==0x10001 || *Disc_ID==0x10001)
                 return 2;
-        
+      
         Determine_VideoMode(*Disc_Region);
         WDVD_UnencryptedRead(&Header, sizeof(Header), 0);
+
 
 		if(strncmp((char *) &Header, (char *) discid, 6)) 
 		    return 666; // if headerid != discid (on hdd) error
@@ -3365,6 +3691,8 @@ int load_disc(u8 *discid)
         WDVD_UnencryptedRead(Ticket_Buffer, 0x800, Partition_Info.Offset << 2);
         Ticket		= (signed_blob*)(Ticket_Buffer);
         T_Length	= SIGNED_TIK_SIZE(Ticket);
+
+		
 
         // Open Partition and get the TMD buffer
        
@@ -3481,6 +3809,8 @@ int load_disc(u8 *discid)
 
         // Enable online mode in games
         memcpy(Online_Check, Disc_ID, 4);
+
+		
         
         // Retrieve application entry point
         void* Entry = Exit();
@@ -3498,6 +3828,7 @@ int load_disc(u8 *discid)
         // Cleanup loader information
         WDVD_Close();
 
+		#if 1
         // Identify as the game
         if (IS_VALID_SIGNATURE(Certs) 	&& IS_VALID_SIGNATURE(Tmd) 	&& IS_VALID_SIGNATURE(Ticket) 
             &&  C_Length > 0 				&& MD_Length > 0 			&& T_Length > 0)
@@ -3506,6 +3837,7 @@ int load_disc(u8 *discid)
                 if (ret < 0)
                         return ret;
         }
+		#endif
 
        // debug_printf("start %p\n",Entry);
 	   settime(secs_to_ticks(time(NULL) - 946684800));
