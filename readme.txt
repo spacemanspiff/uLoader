@@ -1,4 +1,4 @@
-uLoader v1.9 BETA - by Hermes (www.elotrolado.net)
+uLoader v2.0 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (1.6 required)
@@ -28,7 +28,8 @@ Features:
 
 - Possibility to use the alternative cIOS 223 (only to launch games)
 
-- Option to add or delete PNG icons from the SD to the game directly (PNG is added in the HDD)
+- Option to add or delete PNG icons/covers from the SD to the game directly (PNG is added in the HDD)
+  Now you can download Covers from Internet!
 
 - New USB code and more
 
@@ -57,25 +58,19 @@ CONFIGURE BUTTON
 You can change from here the video, language and cIOS for the game
 
 
-ICONS
-------
+ICONS/COVERS
+------------
 
 If the game doesn't have an icon, a default one is added. See below "Notes about wbfs_win" to know how to add and icon.
+
+Covers must be <200KB and 160x224 pixels
 
 Favorites
 ---------
 
 If you don't add one game at least, you won't see the screen at booting.
 
-Configuration requires 256 bytes on SD card that will be used on:
-
-fat:/apps/uloader/uloader.cfg
-fat:/uloader/uloader.cfg
-fat:/uloader.cfg
-
-in preference order.
-
-NOTE: the last releases add the .cfg to the HDD and don't need the SD for it
+Configuration requires a custom file in the HDD 
 
 To do that, press A on game icon's and you'll access a screen that will give you the options to add/erase the game
 from favorites screen (erase action only appears when you access from favorites)

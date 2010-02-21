@@ -1,4 +1,4 @@
-uLoader v1.9 BETA - por Hermes (www.elotrolado.net)
+uLoader v2.0 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (1.6 requerido)
@@ -29,7 +29,8 @@ Caracteristicas:
 
 - Posibilidad de usar el cIOS alternativo 223 para lanzar juego.
 
-- Posibilidad de añadir/borrar iconos desde la SD a los juegos, directamente (el PNG  es añadido al HDD directamente)
+- Posibilidad de añadir/borrar iconos/caratulas desde la SD a los juegos, directamente (el PNG  es añadido al HDD directamente).
+  Ahora puedes descargar caratulas desde Internet
 
 - Código USB mejorado y más cosas
 
@@ -56,25 +57,20 @@ BOTON DE CONFIGURAR
 
 Aqui puedes acceder a la pantalla de seleccion de idioma, video y cIOS del juego
 
-ICONOS
-------
+ICONOS/CARATULAS
+----------------
 
 Si el juego no tiene icono, por defecto se añade uno. Ver mas abajo "Notas sobre wbfs_win" para saber como añadir un icono a tu gusto.
+
+Las caratulas deben ser <200 KB y de 160x224 pixels
 
 Favoritos
 ---------
 
 Por defecto no verás la pantalla al arrancar, hasta que no haya sido añadido al menos un juego.
 
-la configuración requiere 256 bytes en la SD que se guardarán en:
+la configuración requiere un fichero especial en el HDD
 
-fat:/apps/uloader/uloader.cfg
-fat:/uloader/uloader.cfg
-fat:/uloader.cfg
-
-NOTA: el fichero cfg ahora se alamacena dentro del disco duro
-
-En orden de preferencia.
 
 Para hacerlo, pulsa A sobre el icono del juego y accederás a una pantalla que te permitirá añadir/borrar el juego desde favoritos (borrar solo aparece si accedes desde favoritos)
 
