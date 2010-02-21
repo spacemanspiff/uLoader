@@ -52,6 +52,7 @@
 #include <network.h>
 
 
+//#define MEM_PRINT 1
 
 #define CIOS 222
 
@@ -67,7 +68,7 @@
 #include "button1.h"
 #include "button2.h"
 #include "button3.h"
-#include "background.h"
+//#include "background.h"
 #include "icon.h"
 
 #include "files.h"
@@ -78,6 +79,159 @@
 
 
 extern int pintor();
+
+#define RGB(r,g,b) ((r) |(g<<8) | (b<<16))
+
+static float InterPol(float a, float b, float x)
+{
+return a+(b-a)*x*x*(3-2*x);
+}
+
+static float InterLin(float a, float b, float x)
+{
+return a+(b-a)*x;
+}
+
+static float IntNoise(register int x)
+{
+	x = (x<<13)^x;
+
+return (((x * (x * x * 15731 + 789221) + 1376312589) & 0x7fffffff) / 2147483648.0);
+}
+
+
+static float Cellular(float x,float y,int width,int tam_cas, int seed)
+{
+double primero=2*tam_cas, segundo=2*tam_cas,tercero=2*tam_cas,dist_aux;
+int casilla_pto;
+double xpunto, ypunto;
+int n_casillas=(int) (width/tam_cas)+1;
+int casillax=(int)(x/tam_cas);
+int casillay=(int)(y/tam_cas);
+int casilla=n_casillas*casillay+casillax;
+int j,i;
+
+	for(j=-1;j<2;j++)
+		{
+		for(i=-1;i<2;i++)
+			{
+			casilla_pto=casilla+i+j*n_casillas;
+			xpunto=(casillax+i)*tam_cas+IntNoise(casilla_pto+seed)*tam_cas;
+			ypunto=(casillay+j)*tam_cas+IntNoise(casilla_pto+10+seed)*tam_cas;
+			dist_aux=sqrt((x-xpunto)*(x-xpunto)+(y-ypunto)*(y-ypunto));
+
+			if (primero>dist_aux)
+				{
+				tercero=segundo;
+				segundo=primero;
+				primero=dist_aux;
+				}
+			else 
+				{
+				if (segundo>dist_aux) 
+					{
+					tercero= segundo;
+					segundo=dist_aux;
+					} 
+				else 
+					{
+					if(tercero>dist_aux)
+						{tercero=dist_aux;}
+					}
+				} 
+			}
+		}
+
+return primero*primero/(segundo*tercero);
+}
+
+
+static float PerlinNoise(float x,float y,int width,int octaves,int seed){
+
+double a,b,valor=0.0f,freq,cachox,cachoy;
+int casilla,num_pasos,pasox,pasoy;
+int amplitud=256;
+int periodo=256;
+int s;
+
+	if(octaves>12) {octaves=12;}
+
+	for(s=0;s<octaves;s++)
+		{
+
+		amplitud>>=1;
+		periodo>>=1;
+		freq=1/(float) (periodo);
+		num_pasos=(int)(width*freq);
+		pasox=(int)(x*freq);
+		pasoy=(int)(y*freq);
+		cachox=x*freq-pasox;
+		cachoy=y*freq-pasoy;
+		casilla=pasox+pasoy*num_pasos;
+		a=InterPol(IntNoise(casilla+seed),IntNoise(casilla+1+seed),cachox);
+		b=InterPol(IntNoise(casilla+num_pasos+seed),IntNoise(casilla+1+num_pasos+seed),cachox);
+		valor+=InterPol(a,b,cachoy)*amplitud;
+
+		}
+
+return valor;
+}
+
+static int color_agua(float valor)
+{
+
+int r=InterLin(20, 91, valor);
+int g=InterLin(68, 187, valor);
+int b=InterLin(82, 251, valor);
+
+	if(r>255) r=255;
+	if(g>255) g=255;
+	if(b>255) b=255;
+
+return RGB(r,g,b);
+}
+
+
+static float rango(float v,float a,float b)
+{
+	if(v<a) v=a;
+	if(v>b) v=b;
+
+return v;
+}
+
+void create_background_text(int width,int height,unsigned *t)
+{
+int seed = 666;
+
+int dispx,dispy;
+double colr,colr1;
+unsigned color;
+int j,i;
+
+for(j=0; j<height; j++)
+	{
+    for(i=0; i< width; i++)
+		{
+	
+		dispx= PerlinNoise(i,j,width,3,seed)/3;
+		dispy= PerlinNoise(i,j+5,width,3,seed)/3;
+		colr = Cellular(i*0.6+dispx,j+dispy,width,64/8,seed);
+		colr *= (colr);
+		colr1 = Cellular(i*0.6+dispy,j+dispx,width,48/8,seed);
+		colr1 *= (colr1);
+		colr=(colr*0.60+colr1*0.30);
+		
+		colr=rango(colr,0.0f,1.0f)+0.9f;
+		color=color_agua(colr);
+		
+		t[i+j*width]=color | 0xff000000;
+
+		}
+   
+    }
+
+}
 
 //#include "logmodule.h"
 
@@ -171,12 +325,7 @@ if(sd_ok && !external_ehcmodule)
 		}
 	}
 
-/*
-// bloquea el flag de disco dentro desde el PPC
-*((volatile u32 *) 0xcd0000c4)=*((volatile u32 *) 0xcd0000c4) | (1<<7);
-*((volatile u32 *) 0xcd0000c0)=(*((volatile u32 *) 0xcd0000c8))| (1<<7);
 
-*((volatile u32 *) 0xcd0000d4)=(*((volatile u32 *) 0xcd0000d4)) & ~(1<<6);*/
 /*
 	if(mload_init()<0) return -1;
 	mload_elf((void *) logmodule, &my_data_elf);
@@ -669,7 +818,7 @@ int scroll_text=-20;
 GXTlutObj palette_icon;
 GXTexObj text_icon[3];
 
-GXTexObj text_button[4], default_game_texture, text_background,text_game_empty[4];
+GXTexObj text_button[4], default_game_texture, text_background, text_background2,text_game_empty[4];
 GXTexObj text_screen_fx;
 
 u32 *screen_fx=NULL;
@@ -1073,7 +1222,7 @@ void display_spinner(int mode, int percent, char *str)
 //Screen_flip();
 
 	autocenter=1;
-	SetTexture(&text_background);
+	SetTexture(&text_background2);
 	DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 
 	SetTexture(NULL);
@@ -1111,7 +1260,7 @@ void my_perror(char * err)
 {
 	Screen_flip();
 	autocenter=1;
-	SetTexture(&text_background);
+	SetTexture(&text_background2);
 	DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 
 	SetTexture(NULL);
@@ -3817,7 +3966,7 @@ extern u32 load_dol();
 void splash_scr()
 {
 			autocenter=1;
-			SetTexture(&text_background);
+			SetTexture(&text_background2);
 			DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 			PX=0; PY= 16; color= 0xff000000; 
 			letter_size(32,64);
@@ -3844,9 +3993,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.7");
+			s_printf("v2.8");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.7");
+			s_printf("v2.8");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -3854,7 +4003,7 @@ void splash_scr()
 		
 }
 
-#if 0
+#ifdef MEM_PRINT
 void save_log()
 {
 FILE *fp;
@@ -3873,7 +4022,7 @@ FILE *fp;
 
 		if(fp!=0)
 			{
-			fwrite(temp_data,1, strlen(temp_data) ,fp);
+			fwrite(temp_data,1, strlen((void *)temp_data) ,fp);
 				
 			fclose(fp);
 			}
@@ -3979,7 +4128,20 @@ int main(int argc, char **argv) {
 		InitScreen();  // Inicialización del Vídeo
 
 		
-		create_png_texture(&text_background, background, 1);
+		//create_png_texture(&text_background, background, 1);
+        if(1) // new background
+		{
+		u32 *t=memalign(32,128*128*4);
+
+		create_background_text(128, 128, t);
+		CreateTexture(&text_background, TILE_SRGBA8 , t, 128, 128, 1);
+		GX_InitTexObj(&text_background2, t, 128, 128, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);	
+
+		GX_InitTexObjLOD(&text_background2, // objeto de textura
+						 GX_LINEAR, // filtro Linear para cerca
+						 GX_LINEAR, // filtro Linear para lejos
+						 0, 0, 0, 0, 0, GX_ANISO_1);
+		}
 		
 		bkcolor=0;
 
@@ -4016,6 +4178,28 @@ int main(int argc, char **argv) {
         game_empty=memalign(32,128*64*3*4);
 		
 		load_ehc_module();
+
+		if(external_ehcmodule)
+			{
+			splash_scr();
+			SelectFontTexture(1); // selecciona la fuente de letra extra
+
+			letter_size(8,32);
+					
+			PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+					
+			bkcolor=0;
+			autocenter=1;
+			SetTexture(NULL);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa000ff00);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+			
+			s_printf("External ehcmodule.elf loaded\n");
+			Screen_flip();
+			usleep(300*1000);
+			
+			}
+
 	
 	   
 	////////////////////////////////////
@@ -4209,8 +4393,9 @@ int main(int argc, char **argv) {
 	
 		}
 
-		
-		//save_log();
+		#ifdef MEM_PRINT
+		save_log();
+		#endif
 
 		if(ret2<0)  goto error;
 
@@ -4387,7 +4572,7 @@ get_games:
 		buffer=NULL;
 	    
 
-		SetTexture(&text_background);
+		SetTexture(&text_background2);
 		DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 		letter_size(16,32);
 		PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
@@ -4449,7 +4634,7 @@ get_games:
 			else goto exit_ok;
 
 			Screen_flip();
-			SetTexture(&text_background);
+			SetTexture(&text_background2);
 			DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 			letter_size(16,32);
 			PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
@@ -4931,6 +5116,7 @@ get_games:
 		for(n=0;n<4;n++)
 			{
 			if(partition_cnt[n]<0) continue;
+			SetTexture(NULL);
 
 			if(n==current_partition)
 				DrawRoundFillBox(22+50*n, ylev-32, 48, 32, 0, 0xa000ff00);
@@ -5842,7 +6028,7 @@ get_games:
 
 														//////////////////////////////////
 													
-														SetTexture(&text_background);
+														SetTexture(&text_background2);
 														DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 			
 												
@@ -6097,7 +6283,7 @@ get_games:
 														
 			ret=load_game_routine(discid, game_mode);
 
-			SetTexture(&text_background);
+			SetTexture(&text_background2);
 			DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
 
 

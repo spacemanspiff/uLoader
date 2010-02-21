@@ -4,5 +4,5 @@
 	<coder>Hermes</coder>
 	<version>2.6</version>
 <short_description>cIOS for uLoader</short_description>
-<long_description>custom IOS based in dev/mload engine to use with uLoader 1.6</long_description>
+<long_description>custom IOS based in dev/mload engine to use with uLoader 2.6</long_description>
 </app>

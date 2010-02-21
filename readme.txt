@@ -1,4 +1,4 @@
-uLoader v2.7 BETA - by Hermes (www.elotrolado.net)
+uLoader v2.8 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (2.6 required). Now you can select the IOS used to install
