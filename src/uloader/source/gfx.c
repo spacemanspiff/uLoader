@@ -109,10 +109,10 @@ void splash_scr()
 			letter_size(8,16);
 			SelectFontTexture(1);
 			#ifndef ALTERNATIVE_VERSION
-			s_printf("v3.3");
+			s_printf("v3.5");
 		    #endif
 			PX=SCR_WIDTH-20-32;
-			s_printf("v3.3");
+			s_printf("v3.5");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000;
@@ -712,6 +712,8 @@ int ylev=(SCR_HEIGHT-440);
 	
 	if(n==0) color=0xffffffff; else color=0x27ffffff;
 
+	if(mode_disc & 2) color=(color & 0xff000000) | 0x20ff6f;
+
 	SetTexture(&text_icon[3]);
 	ConfigureForTexture(10);
 	GX_Begin(GX_TRIANGLESTRIP,  GX_VTXFMT0, 5);
@@ -867,6 +869,8 @@ int ylev=(SCR_HEIGHT-440);
 
 	
 	if(n==0) color=0xffffffff; else color=0x27ffffff;
+
+	if(mode_disc & 2) color=(color & 0xff000000) | 0x20ff6f;
 
 	SetTexture(&text_icon[3]);
 	ConfigureForTexture(10);

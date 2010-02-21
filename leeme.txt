@@ -1,4 +1,4 @@
-uLoader v3.3 - por Hermes (www.elotrolado.net)
+uLoader v3.5 - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (3.0 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -10,6 +10,13 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 
 Caracteristicas:
 ---------------
+
+
+- Soporte para dispositivos DVD USB: Ello solo puede correr backups de DVD desde .iso (los juegos originales no funcionan debido a que los lectores
+  de DVD no soportan el formato Wii). Recuerda que debes insertar un DVD al empezar el programa para trabajar. Mira "Modo DVD USB" abajo en este leeme.txt
+  para mas detalles
+
+- Soporte añadido para salvar CFG, alternative dol, control parental, configuración de los juegos, etc desde modo DVD.
 
 - Soporte para datos BCA. Puedes añadirlos en la .ISO, offset 0x100 (64 bytes). Si esta area está rellena con ceros it use un BCA por defecto (NSMB compatible).
   Nueva funcion ioctl 0xda soportada en dip_plugin y añadida nueva opcion para el modo DVD para leer los datos BCA Datas desde el DVD original.
@@ -259,4 +266,21 @@ Modo Operacional del driver EHCI
 - Soporte por interrupciones para liberar como USB 1.1 el resto de puertos (recuerda que el puerto 0 es siempre para USB 2.0)
 
 
+Modo DVD USB
+------------
 
+Al inicio:
+
+- Arranca uLoader con un lector DVD conectado al puerto USB e introduce un disco.
+  
+  1- Mientras el disco es montado aparece el siguiente mensaje "ERROR: Can't Mount Device". 
+ 
+  2- Si persiste con el DVD dentro, tal vez el lector no puede montar el disco porque no lo reconoce: cambia el disco o intenta reconectar el lector
+
+  3- Si aparece un error "ERROR: DVD Device Sector Size must be 2048 bytes", significa que el disco no es del tipo apropiado (por ejemplo, CD Audio XD)
+
+En la pantalla de carga de DVD:
+
+- Funciona exactamente igual que con el lector de Wii: puedes expulsar y cambiar de disco, etc desde el nuevo dispositivo
+
+NOTA: en este modo, no se pueden cargar discos desde el lector de Wii, obviamente

@@ -126,7 +126,8 @@ s32 USBStorage2_GetCapacity(u32 *_sector_size)
 
 s32 USBStorage2_Init(void)
 {
-	s32 ret;
+	s32 ret,ret2;
+	static u32 sector_size=0;
 
 	/* Already open */
 	if (fd >= 0)
@@ -149,16 +150,28 @@ s32 USBStorage2_Init(void)
 	/* Initialize USB storage */
 	ret=IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_INIT, ":");
 	if(ret<0) goto err;
+	if(ret>1) ret=0;
+	ret2=ret;
 
 	/* Get device capacity */
-	ret = USBStorage2_GetCapacity(NULL);
+	ret = USBStorage2_GetCapacity(&sector_size);
 	if (!ret)
 		{
 		ret=-1;
 		goto err;
 		}
+	if(ret2==0 && sector_size!=512) // check for HD sector size 512 bytes
+		{
+		ret=-20001;
+		goto err;
+		}
+	if(ret2==1 && sector_size!=2048) // check for DVD sector size 2048 bytes
+		{
+		ret=-20002;
+		goto err;
+		}
 	mounted=1;
-	return 0;
+	return ret2; // 0->HDD, 1->DVD
 
 err:
 	/* Close USB device */

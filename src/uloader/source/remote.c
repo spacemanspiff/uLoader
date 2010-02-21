@@ -41,6 +41,8 @@ void (*func)(void);
 
 	}
 
+	LWP_CloseQueue(remote_queue);
+
 return NULL;
 }
 

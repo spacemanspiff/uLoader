@@ -23,4 +23,4 @@ copy *.h ..\source\port1\*.h
 del *.c
 del *.h
 
-pause
+

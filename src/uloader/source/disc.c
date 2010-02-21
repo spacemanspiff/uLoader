@@ -95,6 +95,20 @@ s32 Disc_Wait(void)
 	return 0;
 }
 
+s32 Disc_USB_DVD_Wait(void)
+{
+	u32 cover = 0;
+	s32 ret;
+
+		/* Get cover status */
+		ret = WDVD_GetCoverStatus_USB_DVD(&cover);
+		if (ret < 0)
+			return ret;
+		if(!(cover & 0x2)) return 1;
+
+	return 0;
+}
+
 
 s32 Disc_ReadHeader(void *outbuf)
 {

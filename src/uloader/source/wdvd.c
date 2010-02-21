@@ -294,6 +294,29 @@ s32 WDVD_GetCoverStatus(u32 *status)
 	return -ret;
 }
 
+s32 WDVD_GetCoverStatus_USB_DVD(u32 *status)
+{
+	s32 ret;
+
+	memset(inbuf, 0, sizeof(inbuf));
+
+	/* Get cover status */
+	inbuf[0] = 0x13/*IOCTL_DI_GETCOVER*/ << 24;
+
+	ret = IOS_Ioctl(di_fd, 0x13/*IOCTL_DI_GETCOVER*/, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+	if (ret < 0)
+		return ret;
+
+	if (ret == 1) {
+		/* Copy cover status */
+		memcpy(status, outbuf, sizeof(u32));
+
+		return 0;
+	}
+
+	return -ret;
+}
+
 s32 WDVD_DisableReset(u8 val)
 {
 	s32 ret;

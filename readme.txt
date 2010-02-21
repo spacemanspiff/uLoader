@@ -1,4 +1,4 @@
-uLoader v3.3 - by Hermes (www.elotrolado.net)
+uLoader v3.5 - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (3.0 required). Now you can select the IOS used to install
@@ -10,6 +10,13 @@ to launch backups from USB mass storage devices with a graphical user interface 
 
 Features:
 ---------
+
+
+- Support for DVD USB Devices: It can run only DVD backups from .iso (original don't work
+  because DVD drivers don´t support the Wii format). Remember you must insert a DVD
+  to work at start the program. See "Mode DVD USB" below in this readme for more details
+
+- Added support to save CFG, alternative dol, parental control and game configuration for DVD mode.
 
 - Support for BCA datas. You can add it from .ISO offset 0x100 (64 bytes). If this area is filled with zeroes it use one BCA by default (NSMB compatible).
   New ioctl 0xda function supported in dip_plugin and new option added for DVD mode to read the BCA Datas from the original DVD.
@@ -258,3 +265,24 @@ Operational Mode for EHCI Driver
 - Device mismatch (different device): fast frontal LED blinking
 
 - Interrupt support to free devices as USB 1.1 for others ports (remember you port 0 is always for USB 2.0 operations)
+
+Mode DVD USB
+------------
+
+At Start:
+
+- Run uLoader with a DVD device connected in the USB port and put a disc.
+  
+  1- while the device is waiting to be mounted it display the next message "ERROR: Can't Mount Device". 
+ 
+  2- if it use expensive time to get the DVD, maybe the DVD device can´t read the disc (unknown format or other problem). Try reconnect the DVD device
+     or change the disc by other.
+
+  3- if it display "ERROR: DVD Device Sector Size must be 2048 bytes" you are using a bad format disc (for example CD audio XD)
+
+
+In the DVD screen loader:
+
+- It work exactly as DVD Wii device: You can eject and change the disc as you want from the new device
+
+NOTE: in this mode you can´t load disc from the DVD Wii device how it is obvious

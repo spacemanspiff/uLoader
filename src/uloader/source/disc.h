@@ -38,6 +38,7 @@ struct discHdr
 s32  Disc_Init(void);
 s32  Disc_Open(void);
 s32  Disc_Wait(void);
+s32  Disc_USB_DVD_Wait(void);
 s32  Disc_SetWBFS(u32, u8 *);
 s32  Disc_ReadHeader(void *);
 s32  Disc_IsWii(void);
