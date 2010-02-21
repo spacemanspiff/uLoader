@@ -9,7 +9,7 @@ extern int ndirs;
 extern int have_device; //(1->SD | 2 -> USB)
 extern int current_device;
 
-#define MAX_ENTRY 512
+#define MAX_ENTRY 2048
 
 
 

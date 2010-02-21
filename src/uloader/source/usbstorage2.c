@@ -52,11 +52,11 @@ static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb/ehc";
  
 static s32 hid = -1, fd = -1;
 static u32 sector_size;
-
+static int mounted=0;
 
 s32 USBStorage2_Umount(void)
 {
-	if (fd >= 0) {
+	if (fd >= 0 && mounted) {
 		s32 ret;
 
 		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_UMOUNT, ":");
@@ -106,7 +106,6 @@ s32 USBStorage2_GetCapacity(u32 *_sector_size)
 	return IPC_ENOENT;
 }
 
-static int mounted=0;
 
 s32 USBStorage2_Init(void)
 {

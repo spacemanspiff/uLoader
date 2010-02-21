@@ -1,10 +1,12 @@
-uLoader v2.0 BETA - por Hermes (www.elotrolado.net)
+uLoader v2.1B BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
-ATENCION: ejecuta primero cios_installer.dol (1.6 requerido)
+ATENCION: ejecuta primero cios_installer.dol (1.6 requerido). Ahora puedes seleccionar el IOS usado para instalar
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
 para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii
+
+************************************************************************************************************************************************************
 
 Caracteristicas:
 ---------------
@@ -23,7 +25,8 @@ Caracteristicas:
 
 - Textos en Inglés y Español (autodetecta)
 
-- Soporta Forzado de video, seleccion de idioma y Ocarina
+- Soporta Forzado de video, seleccion de idioma y Ocarina (nota: usa "Auto" para cambiar los juegos de PAL a NTSC o NTSC a PAL o usa "Force PAL 60"
+   para cambiar de NTSC a PAL60)
 
 - Soporte de hasta 4 particiones WBFS
 
@@ -32,7 +35,21 @@ Caracteristicas:
 - Posibilidad de añadir/borrar iconos/caratulas desde la SD a los juegos, directamente (el PNG  es añadido al HDD directamente).
   Ahora puedes descargar caratulas desde Internet
 
+- Ahora puedes cargar juegos como Red Steel usando un .dol alternativo (mira NOTAS DE DOL ALTERNATIVO en este documento)
+
 - Código USB mejorado y más cosas
+
+************************************************************************************************************************************************************
+
+INICIO USB 2.0
+--------------
+
+Si obtienes algun error espera unos segundo e intenta el metodo de desenchufar/enchufar
+
+Puedes salir del bucle en caso de error pulsando RESET o el boton HOME en el Wiimote
+
+
+************************************************************************************************************************************************************
 
 CONTROLES
 ---------
@@ -51,11 +68,14 @@ CONTROLES
 
 - HOME (apuntando a juego): Menu especial completo
 
+************************************************************************************************************************************************************
 
 BOTON DE CONFIGURAR
 -------------------
 
 Aqui puedes acceder a la pantalla de seleccion de idioma, video y cIOS del juego
+
+************************************************************************************************************************************************************
 
 ICONOS/CARATULAS
 ----------------
@@ -63,6 +83,8 @@ ICONOS/CARATULAS
 Si el juego no tiene icono, por defecto se añade uno. Ver mas abajo "Notas sobre wbfs_win" para saber como añadir un icono a tu gusto.
 
 Las caratulas deben ser <200 KB y de 160x224 pixels
+
+************************************************************************************************************************************************************
 
 Favoritos
 ---------
@@ -82,11 +104,15 @@ Solo se pueden mover los iconos de la pantalla de favoritos
 
 Recuerda que puedes volver desde favoritos a la pagina de procedencia, pulsando el boton 1.
 
+************************************************************************************************************************************************************
+
 
 LANZAR JUEGOS
 -------------
 
 La pantalla de lanzar juegos te permite seleccionar el custom IOS a lanzar (si cIOS 222 no está disponible, se bloqueará en cIOS 249), añadir a favoritos y obviamente, cargar el juego sin más dilación
+
+************************************************************************************************************************************************************
 
 OCARINA
 -------
@@ -126,6 +152,8 @@ Unlimited Pitas/Money [Dr.Pepper] /-> Nombre del segundo truco
 
 Nota: el nombre de grupo y el nombre de truco, no deben sobrepasar los 63 caracteres (el nombre del truco tiene un maximo de 39 caracteres)
 
+************************************************************************************************************************************************************
+
 Notas sobre wbfs_win
 --------------------
 
@@ -163,6 +191,31 @@ http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
 (salva la pagina por entero para obtener todos los iconos rapidamente)
 
 
+************************************************************************************************************************************************************
 
+
+NOTAS DE DOL ALTERNATIVO
+------------------------
+
+
+Primero necesitas crear un directorio "games" en raiz de la SD.
+
+
+El fichero dol es cargado de forma automatica usando la id del juego como nombre de fichero
+
+Por ejemplo REDP41.dol para Red Steel: sd:/games/REDP41.dol
+
+
+Como extraer el dichero dol para Red Steel.
+
+- Usa wiiscrubber y abre la iso de red steel y selecciona la particion 1
+
+- Extrae redsteel.dol y renombralo como REDP41.dol
+
+- Mete el fichero dol file en el directorio "games" de la SD
+
+- Por supuesto: instala la iso de red steel iso en el hdd.
+
+NOTA: no quites o cambies el main.dol original
 
 

@@ -1,13 +1,15 @@
-uLoader v2.0 BETA - by Hermes (www.elotrolado.net)
+uLoader v2.1B BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
-WARNING: run at first cios_installer.dol (1.6 required)
+WARNING: run at first cios_installer.dol (1.6 required). Now you can select the IOS used to install
 
 uLoader is a work based on Kwiirk's YAL and Waninkoko's usbloader that tries to give support to both custom IOS (cIOS222 and cIOS249) 
 to launch backups from USB mass storage devices with a graphical user interface similar to Wii channels.
 
+************************************************************************************************************************************************************
+
 Features:
----------------
+---------
 
 - Parental control added: by default the password is 00000 (the last 0 is the 'ENTER', so you can program a new password as XXXX0 ). 
  You can change it from special menu pressing HOME. You can exits from the  password box pressing B. Parental control list the last 8 games launched
@@ -22,7 +24,8 @@ Features:
 
 - Screen text in Spanish and English (auto-detect)
 
-- Support for video mode forced, language selection and Ocarina
+- Support for video mode forced, language selection and Ocarina (note: use "Auto" to change PAL to NTSC or NTSC to PAL games or use "Force PAL 60"
+   to change  NTSC to PAL60 games)
 
 - Support for multiples WBFS partitions (max 4).
 
@@ -31,8 +34,20 @@ Features:
 - Option to add or delete PNG icons/covers from the SD to the game directly (PNG is added in the HDD)
   Now you can download Covers from Internet!
 
+- Now you can load games as Red Steel using one alternative .dol (see ALTERNATIVE DOL NOTES in this document)
+
 - New USB code and more
 
+************************************************************************************************************************************************************
+
+USB 2.0 INIT
+------------
+
+if you obtain some error wait some seconds and try unplug/plug method
+
+In case of error you can exits from the loop pressing RESET or the HOME BUTTON in the wiimote
+
+************************************************************************************************************************************************************
 
 CONTROLS
 ---------
@@ -52,11 +67,14 @@ CONTROLS
 
 - HOME (pointing one game): Complete Special Menu
 
+************************************************************************************************************************************************************
+
 CONFIGURE BUTTON
 -------------------
 
 You can change from here the video, language and cIOS for the game
 
+************************************************************************************************************************************************************
 
 ICONS/COVERS
 ------------
@@ -64,6 +82,8 @@ ICONS/COVERS
 If the game doesn't have an icon, a default one is added. See below "Notes about wbfs_win" to know how to add and icon.
 
 Covers must be <200KB and 160x224 pixels
+
+************************************************************************************************************************************************************
 
 Favorites
 ---------
@@ -90,6 +110,8 @@ RUNNING GAMES
 
 Running games screen will allow you to select custom IOS (if cIOS 222 is not available, cIOS 249 will be used), add to favorites and
 launch the game immediately.
+
+************************************************************************************************************************************************************
 
 OCARINA
 -------
@@ -127,6 +149,8 @@ Unlimited Pitas/Money [Dr.Pepper] /-> Second Cheat name to display (always, one 
 14337D58 000FFFFF /-> Cheat code
 
 Note: The group name and the Cheat name cannot have more of 63 characters (the cheat name have max. of 39 characters)
+
+************************************************************************************************************************************************************
 
 Notes about wbfs_win
 --------------------
@@ -167,6 +191,33 @@ Some elotrolado.net users have uploaded a lot of icons from here:
 http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
 
 (save the page content to get alls icons quickly)
+
+
+************************************************************************************************************************************************************
+
+ALTERNATIVE DOL NOTES
+---------------------
+
+You needs to create a "games" folder in the root of the SD.
+
+The dol file is loaded in automatic form using the game id as filename 
+
+For example REDP41.dol for Red Steel: sd:/games/REDP41.dol
+
+How to extract the dol file for Red Steel.
+
+- Use wiiscrubber and open the red steel iso and select the partition 1
+
+- Extract redsteel.dol and rename it as REDP41.dol
+
+- Put the dol file in the "games" folder in the SD
+
+- Of course: install red steel iso in the hdd.
+
+NOTE: don´t remove or modify the original main.dol
+
+
+
 
 
 

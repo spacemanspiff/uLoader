@@ -76,6 +76,7 @@
 
 //#include "logmodule.h"
 
+extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
 
 static u32 ios_36[16] ATTRIBUTE_ALIGN(32)=
 {
@@ -263,6 +264,7 @@ char languages[11][22] =
 /* Global definitions */
 //---------------------------------------------------------------------------------
 
+int force_ios249=0;
 
 unsigned char *buff_cheats;
 int len_cheats=0;
@@ -418,6 +420,13 @@ void Determine_VideoMode(char Region)
                 progressive = (CONF_GetProgressiveScan() > 0) && VIDEO_HaveComponentCable();
                 vmode     = (progressive) ? &TVNtsc480Prog : &TVNtsc480IntDf;
                 break;
+
+		case 3:
+				// PAL 50
+				_Video_Mode = PAL;
+				progressive = (CONF_GetProgressiveScan() > 0) && VIDEO_HaveComponentCable();
+				vmode     = (progressive) ? &TVNtsc480Prog : &TVPal528IntDf;
+				break;
 		
 		}		
 
@@ -586,14 +595,13 @@ void snd_fx_scroll()
 #endif
 }
 
-
-
 void snd_fx_fx(int percent)
 {
 #ifdef USE_MODPLAYER
 	ASND_SetVoice(2, VOICE_MONO_8BIT, 5000+percent*250,0, &sound_effects[0][0], 128, 64, 64, NULL);
 #endif
 }
+
 //---------------------------------------------------------------------------------
 /* GUI routines and datas*/
 //---------------------------------------------------------------------------------
@@ -1021,8 +1029,6 @@ SYS_SetResetCallback(reset_call);
 if(mode)
 	sleep(4);
 
-
- 
 }
 void my_perror(char * err)
 {
@@ -2749,169 +2755,17 @@ for(n=0;n<=gameCnt;n++)
 
 sleep(1);
 }
-//---------------------------------------------------------------------------------
-int main(int argc, char **argv) {
-//---------------------------------------------------------------------------------
-        u8 discid[7];
 
-		int ret,ret2;
-		int cnt,cnt2, len;
-		struct discHdr *buffer = NULL;
-		int frames=0,frames2=0;
-		int load_png=1;
-		int scroll_mode=0;
-		int game_mode=0;
-		int edit_cfg=0;
-		int cheat_mode=0;
-		int select_game_bar=0;
+int load_game_routine(u8 *discid, int game_mode);
 
-		int is_favorite=1;
-		int insert_favorite=0;
-		int actual_game=0;
-		int last_game=-1;
+extern void *dol_data;
+extern int dol_len;
 
-		int test_favorite=0;
-		int n;
-		int force_ios249=0;
-		static int old_temp_sel=-1;
-		f32 f_size=0.0f;
-		int last_select=-1;
+extern u32 load_dol();
+int load_file_dol(char *name);
 
-		int force_ingame_ios=0;
-		int game_locked_cfg=0;
-
-		int direct_launch=0;
-
-		int parental_mode=0;
-		char parental_str[4]={0,0,0,0};
-
-        return_reset=1;
-
-		if(argc<1) return_reset=2;
-
-		else 
-			if(*((char *) argv[0])=='s') return_reset=2;
-
-		current_partition=0;
-
-        if(argc>1)
-			if(argv[1])
-				{
-				char *t=argv[1];
-				if(t[0]=='#')
-					{
-					t++;
-					direct_launch=1;
-					memcpy(discid,t,6);
-					t+=6;
-					if(t[0]=='-') current_partition=t[1]-48;
-					current_partition&=3;
-					}
-				}
-
-        SYS_SetResetCallback(reset_call); // esto es para que puedas salir al pulsar boton de RESET
-		SYS_SetPowerCallback(power_call); // esto para apagar con power
-		
-        discid[6]=0;
-	
-		ret2=-1;
-	
-	    
-		ret=IOS_ReloadIOS(cios);
-		//ret=-1;	
-
-		if(ret!=0)
-			{
-			force_ios249=1;
-			cios=249;
-			ret=IOS_ReloadIOS(cios);
-			}
-
-		sleep(1);
-
-		temp_data=memalign(32,256*1024);
-        // texture of white-noise animation generated here
-        game_empty=memalign(32,128*64*3*4);
-
-		load_ehc_module();
-        
-	
-
-        // sound pattern generator
-		for(n=0;n<2;n++)
-		{
-		int m,l;
-		switch(n)
-			{
-			case 0:
-				l=64;
-				for(m=0;m<2048;m++)
-				 {
-			     sound_effects[0][m]=((m) & l) ? 127 : -128;
-				 if((m & 255)==0) l>>=1; if(l<16) l=16;
-				 }
-			break;
-
-			case 1:
-				l=127;
-				for(m=0;m<2048;m++)
-				 {
-			     sound_effects[1][m]=((m) & 8) ? l : -l;
-				 if((m & 7)==0) l--; if(l<0) l=0;
-				 }
-			break;
-
-			}
-		}
-		
-	ret2=-1;
-		for(n=0;n<3;n++)
-		{
-			ret2 = USBStorage2_Init(); 
-			if(!ret2) break; else ret2=-1;
-			usleep(500*1000);
-		}
-	
-		
-
-		if(CONF_Init()==0)
-		{
-			switch(CONF_GetLanguage())
-			{
-			case CONF_LANG_SPANISH:
-						idioma=1;break;
-			default:
-						idioma=0;break;
-			}
-			
-		}
-		
-		
-		__io_wiisd.startup();
-		sd_ok = fatMountSimple("sd", &__io_wiisd);
-		
-		/*
-		// mount ums test
-		__io_usbstorage2.startup();
-		sd_ok = fatMountSimple("sd", &__io_usbstorage2);
-		*/
-		
-		InitScreen();  // Inicialización del Vídeo
-		
-		create_png_texture(&text_background, background, 1);
-		
-		bkcolor=0;
-       
-		if(ret2>=0) 
-			{
-		    ret2=WBFS_Init();
-			if(ret2>=0) ret2=Disc_Init();
-			}
-		
-		
-   
-		for(n=0;n<3;n++)
-			{
+void splash_scr()
+{
 			autocenter=1;
 			SetTexture(&text_background);
 			DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
@@ -2940,17 +2794,300 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.0");
+			s_printf("v2.1B");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.0");
+			s_printf("v2.1B");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
-			s_printf("%s","Happy Birthday Edition: 40 Years Old - 25 Years Programming (11-06-1969)");
+			s_printf("%s","40 Years Old - 25 Years Programming (11-06-1969)");
 		
-			
-			if(n!=2) Screen_flip();
+}
+
+//---------------------------------------------------------------------------------
+int main(int argc, char **argv) {
+//---------------------------------------------------------------------------------
+        u8 discid[7];
+
+		int ret,ret2;
+		int cnt,cnt2, len;
+		struct discHdr *buffer = NULL;
+		int frames=0,frames2=0;
+		int load_png=1;
+		int scroll_mode=0;
+		int game_mode=0;
+		int edit_cfg=0;
+		int cheat_mode=0;
+		int select_game_bar=0;
+
+		int is_favorite=1;
+		int insert_favorite=0;
+		int actual_game=0;
+		int last_game=-1;
+
+		int test_favorite=0;
+		int n;
+		
+		static int old_temp_sel=-1;
+		f32 f_size=0.0f;
+		int last_select=-1;
+
+		int force_ingame_ios=0;
+		int game_locked_cfg=0;
+
+		int direct_launch=0;
+
+		int parental_mode=0;
+		char parental_str[4]={0,0,0,0};
+
+		int launch_counter=9;
+		int partial_counter;
+
+        return_reset=1;
+
+		if(argc<1) return_reset=2;
+
+		else 
+			if(*((char *) argv[0])=='s') return_reset=2;
+
+		current_partition=0;
+
+        if(argc>1)
+			if(argv[1])
+				{
+				char *t=argv[1];
+				if(t[0]=='#')
+					{
+					t++;
+					direct_launch=1;
+					memcpy(discid,t,6);
+					t+=6;
+					if(t[0]=='-') current_partition=t[1]-48;
+					current_partition&=3;
+					}
+				}
+
+
+        SYS_SetResetCallback(reset_call); // esto es para que puedas salir al pulsar boton de RESET
+		SYS_SetPowerCallback(power_call); // esto para apagar con power
+		
+        discid[6]=0;
+	
+		ret2=-1;
+	   
+	   
+		ret=IOS_ReloadIOS(cios);
+		if(ret!=0)
+			{
+			cios++;
+			ret=IOS_ReloadIOS(cios);
 			}
+		//ret=-1;	
+
+		if(ret!=0)
+			{
+			force_ios249=1;
+			cios=249;
+			ret=IOS_ReloadIOS(cios);
+			}
+
+		InitScreen();  // Inicialización del Vídeo
+
+		
+		create_png_texture(&text_background, background, 1);
+		
+		bkcolor=0;
+
+		sleep(1);
+		
+	    
+
+		if(ret!=0) 
+			{
+			splash_scr();
+			SelectFontTexture(1); // selecciona la fuente de letra extra
+
+			letter_size(8,32);
+					
+			PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+					
+			bkcolor=0;
+			autocenter=1;
+			SetTexture(NULL);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+
+			s_printf("ERROR: You need cIOS222 and/or cIOS249 to work!!!\n");
+			Screen_flip();
+			goto error_0;
+			}
+
+		temp_data=memalign(32,256*1024);
+        // texture of white-noise animation generated here
+        game_empty=memalign(32,128*64*3*4);
+
+		load_ehc_module();
+
+		WPAD_Init();
+		WPAD_SetIdleTimeout(60*5); // 5 minutes 
+
+		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
+		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
+
+		//__io_usbstorage.startup();
+
+        // sound pattern generator
+		for(n=0;n<2;n++)
+		{
+		int m,l;
+		switch(n)
+			{
+			case 0:
+				l=64;
+				for(m=0;m<2048;m++)
+				 {
+			     sound_effects[0][m]=((m) & l) ? 127 : -128;
+				 if((m & 255)==0) l>>=1; if(l<16) l=16;
+				 }
+			break;
+
+			case 1:
+				l=127;
+				for(m=0;m<2048;m++)
+				 {
+			     sound_effects[1][m]=((m) & 8) ? l : -l;
+				 if((m & 7)==0) l--; if(l<0) l=0;
+				 }
+			break;
+
+			}
+		}
+
+		
+		
+		ret2=-1;
+		for(n=0;n<10;n++)
+		{
+		WPAD_ScanPads();
+
+		splash_scr();
+		SelectFontTexture(1); // selecciona la fuente de letra extra
+
+		letter_size(8,32);
+				
+		PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+				
+		bkcolor=0;
+		autocenter=1;
+		SetTexture(NULL);
+
+			ret2 = USBStorage2_Init(); 
+			
+			if(ret2==-100) 
+				{n=0;
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+
+				s_printf("ERROR: USB Device Disconnected (try unplug/plug)");
+
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
+				
+				PY+=80;
+				s_printf("Maybe you need plug the device on USB port 0...");
+
+				}
+			else
+			if(ret2==-101) 
+				{n=0;
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+
+				s_printf("%s","ERROR: USB Device don´t work as USB 2.0 (try unplug/plug)");
+
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
+				
+				PY+=80;
+				s_printf("Maybe you need plug the device on USB port 0...");
+
+				}
+			else
+			if(ret2<0) 
+				{
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+
+				s_printf("ERROR: Could not initialize USB subsystem! (ret = %d)", ret2);
+
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
+				
+				PY+=80;
+				s_printf("Retries: %i",n);
+				}
+			
+			if(exit_by_reset || (new_pad & WPAD_BUTTON_HOME)) 
+				{
+				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 0, 0xff0000ff);
+				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 0, 4, 0xa0000000);
+				
+				letter_size(16,32);
+				s_printf("Exiting...");
+				Screen_flip();
+				ret=-1;
+			    break;
+				}
+
+			Screen_flip();
+			if(ret2<0 && ret!=-100 && ret!=-101) usleep(250*1000);
+			if(!ret2) break;
+
+			temp_pad= wiimote_read(); 
+			new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+			
+
+	
+		}
+
+		if(ret2<0)  goto error;
+
+		splash_scr();
+
+		if(CONF_Init()==0)
+		{
+			switch(CONF_GetLanguage())
+			{
+			case CONF_LANG_SPANISH:
+						idioma=1;break;
+			default:
+						idioma=0;break;
+			}
+			
+		}
+		
+		
+		__io_wiisd.startup();
+		sd_ok = fatMountSimple("sd", &__io_wiisd);
+		
+		/*
+		// mount ums test
+		__io_usbstorage2.startup();
+		sd_ok = fatMountSimple("sd", &__io_usbstorage2);
+		*/
+		
+		
+       
+	   #if 1
+		if(ret2>=0) 
+			{
+		    ret2=WBFS_Init();
+			if(ret2>=0) ret2=Disc_Init();
+			}
+		
+		#endif
+   
+		
 
 		if(!direct_launch) sleep(2);
 	   
@@ -3009,7 +3146,7 @@ int main(int argc, char **argv) {
 		autocenter=1;
 		SetTexture(NULL);
 
-		if(ret!=0) 
+		/*if(ret!=0) 
 			{
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
@@ -3018,14 +3155,14 @@ int main(int argc, char **argv) {
 			Screen_flip();
 			goto error;
 			}
-		
+		*/
         
 		//ret = WBFS_Init();
 		if (ret2 < 0) {
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
-			s_printf("ERROR: Could not initialize USB subsystem! (ret = %d)", ret2);
+			s_printf("ERROR: Could not initialize WBFS subsystem! (ret = %d)", ret2);
 
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
@@ -3048,11 +3185,7 @@ int main(int argc, char **argv) {
 		#if 1
 		/* Get list length */
 
-		WPAD_Init();
-		WPAD_SetIdleTimeout(60*5); // 5 minutes 
-
-		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
-		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
+		
 
 		#ifdef USE_MODPLAYER
 		ASND_Init();
@@ -3260,7 +3393,7 @@ get_games:
 				if(config_file.parental[0]==0 && config_file.parental[1]==0 && config_file.parental[2]==0 && config_file.parental[3]==0) parental_control_on=0;
 
 				if(parental_control_on)
-					if((game_datas[game_mode-1].config & (1<<30))!=0) parental_mode=1024+game_mode;
+					{if((game_datas[game_mode-1].config & (1<<30))!=0) parental_mode=1024+game_mode;direct_launch=0;}
 
 				break;
 				}
@@ -3277,13 +3410,23 @@ get_games:
 	// destroy favorite #15
 	config_file.id[15][0]=0;
 
-	
+
+	partial_counter=50+10*(SCR_HEIGHT<=480);
 
 	while(1)
 	{
 	int temp_sel=-1;
 	int test_gfx_page=0;
 	int go_home=0;
+	if(direct_launch && game_mode==1 && gameList!=NULL)
+		{
+		partial_counter--;
+		if(partial_counter<=0) 
+			{
+			partial_counter=50+10*(SCR_HEIGHT<=480);
+			if(launch_counter>0) {launch_counter--;snd_fx_tick();}
+			}
+		}
 
 	if(config_file.parental[0]==0 && config_file.parental[1]==0 && config_file.parental[2]==0 && config_file.parental[3]==0) parental_control_on=0;
 
@@ -3503,7 +3646,7 @@ get_games:
 			
 			else {if(game_datas[game_mode-1].config & 2)  s_printf("cIOS 223"); else s_printf("cIOS 222");}
 			
-			forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
+			forcevideo=(game_datas[game_mode-1].config>>2) & 3;//if(forcevideo==3) forcevideo=0;
 
 			langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
@@ -3513,8 +3656,9 @@ get_games:
 			PX=608-6*16; s_printf("%c%c%c%c%c%c", header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
 
 			PX= 26; PY=ylev+12+48;
-			if(forcevideo==1) s_printf("F. PAL");
+			if(forcevideo==1) s_printf("F. PAL60");
 			if(forcevideo==2) s_printf("F. NTSC");
+			if(forcevideo==3) s_printf("F. PAL50");
 			
 			PX=608-6*16; s_printf("%.2fGB", f_size);
 		 
@@ -3531,7 +3675,8 @@ get_games:
 					DrawFillBox(600-24, ylev+352-48, 16, 24, 0, 0xffffffff);
 					}
 
-		
+		    
+
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
 			if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
 			
@@ -3544,7 +3689,6 @@ get_games:
 				}
 
 			
-
 			if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) select_game_bar=5;
 			}
 		else
@@ -3579,9 +3723,12 @@ get_games:
 			bkcolor=0;
 			m+=28;
             
-			if(Draw_button2(36, m, " Autodetect ",(forcevideo==0))) select_game_bar=200;
-			if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
-			if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;
+			if(Draw_button2(36, m, " Auto ",(forcevideo==0))) select_game_bar=200;
+			/*if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
+			if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;*/
+			if(Draw_button2(x_temp+12, m, " PAL50 ",(forcevideo==3))) select_game_bar=203;
+			if(Draw_button2(x_temp+12, m, " PAL60 ",(forcevideo==1))) select_game_bar=201;
+			if(Draw_button2(x_temp+12, m, " NTSC ",(forcevideo==2))) select_game_bar=202;
 
 			if(game_locked_cfg)
 				{
@@ -4107,6 +4254,32 @@ get_games:
 		////////////////////////////
 		} 
 	
+	if(direct_launch && game_mode==1 && gameList!=NULL) 
+		{
+        PX=0;PY=(SCR_HEIGHT-440)+(352-256)/2;
+		letter_size(192,256);
+		switch(frames2 & 3)
+			{
+			case 0:
+			case 2:
+				color=0xff00ffff; break;
+			case 1:
+				color=0xff0000ff; break;
+			case 3:
+				color=0xff00ff00; break;	
+			}
+
+		bkcolor=0;
+		autocenter=1;
+		SelectFontTexture(1);
+		s_printf("%i", launch_counter);
+		SelectFontTexture(0);
+		color=0xff000000;
+		letter_size(16,24);
+		bkcolor=0;
+		autocenter=0;
+
+		}
 
 	load_png=0;
 	frames2++;
@@ -4234,11 +4407,12 @@ get_games:
 							}
 						} // limit left_right
 
-
+                   
 					if((new_pad & WPAD_BUTTON_A) && gameList!=NULL)
 						{
 						if(parental_mode)
 							{
+							direct_launch=0;
 							if(select_game_bar>=20000 && select_game_bar<20010)
 								{
 								for(n=0;n<4;n++) if(parental_str[n]==0) break;
@@ -4403,12 +4577,13 @@ get_games:
 													for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 												   
 													load_png=1;
-													
+													direct_launch=0;
 													} 
 
 							if(select_game_bar==2) 
 												  { // Configuration (load)
 							                       struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+												   direct_launch=0;
 
 												   memcpy(discid,header->id,6); discid[6]=0;
 
@@ -4423,7 +4598,7 @@ get_games:
 												   if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
 												   else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
 
-												   forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
+												   forcevideo=(game_datas[game_mode-1].config>>2) & 3;//if(forcevideo==3) forcevideo=0;
 
 												   langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
@@ -4434,6 +4609,7 @@ get_games:
 												   }
 
 							if(select_game_bar==3) {int n;// add favorite
+													direct_launch=0;
 													select_game_bar=0;is_favorite=1;insert_favorite=game_datas[game_mode-1].ind+1;
 
 													snd_fx_yes();
@@ -4456,6 +4632,7 @@ get_games:
 
 							if(select_game_bar==4) {// del favorite
 												   int n;
+												   direct_launch=0;
 												   select_game_bar=0;is_favorite=1; 
 
 												   snd_fx_yes();
@@ -4475,6 +4652,7 @@ get_games:
 							if(select_game_bar==5 || select_game_bar==1000 || select_game_bar==1001) 
 													{
 													struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+													direct_launch=0;
 
 													snd_fx_yes();
 
@@ -4494,75 +4672,8 @@ get_games:
 													if(!cheat_mode)
 														{
 														select_game_bar=0;
-														Screen_flip();
-														WPAD_Shutdown();
 														
-														add_game_log(discid);
-
-														save_cfg();
-
-														if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
-															else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
-
-
-														forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
-
-														langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
-
-														force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
-														game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
-														
-														fatUnmount("sd");
-														__io_wiisd.shutdown();
-
-														USBStorage2_Deinit();
-														WDVD_Close();
-														
-														#ifdef USE_MODPLAYER
-														ASND_End();		// finaliza el sonido
-														#endif
-														if(cios!=222 && force_ios249==0)
-															{
-															cabecera2(frames3, "Loading...");
-															frames3+=16;
-															Screen_flip();
-															ret2=IOS_ReloadIOS(cios);
-
-															if(ret2<0)
-																{
-																cios=222;
-																IOS_ReloadIOS(cios);
-																}
-														
-															sleep(1);
-															cabecera2(frames3, "Loading...");
-															frames3+=16;
-															Screen_flip();
-															load_ehc_module();
-															for(n=0;n<3;n++)
-																{
-																cabecera2(frames3, "Loading...");
-																frames3+=16;
-																Screen_flip();
-
-																	ret2 = USBStorage2_Init(); 
-																	if(!ret2) break;
-																	usleep(500*1000);
-																}
-															USBStorage2_Deinit();
-															}
-
-														// enables fake ES_ioctlv (to skip IOS_ReloadIOS(ios))
-														if(force_ingame_ios)
-															{
-															patch_datas[0]=*((u32 *) (dip_plugin+16*4));
-															mload_set_ES_ioctlv_vector((void *) patch_datas[0]);
-															}
-															
-														mload_close();
-
-														ret = load_disc(discid);
-														
+														ret=load_game_routine(discid, game_mode);
 
 														//////////////////////////////////
 													
@@ -4637,7 +4748,7 @@ get_games:
 												   langsel= select_game_bar-100;
 												   snd_fx_yes();
 												   }
-							if(select_game_bar>=200 && select_game_bar<=202)
+							if(select_game_bar>=200 && select_game_bar<=203)
 												   {
 												   forcevideo= select_game_bar-200;
 												   snd_fx_yes();
@@ -4680,6 +4791,9 @@ get_games:
 						{
 						
 						int n;
+
+						direct_launch=0;
+
 						if(parental_mode)
 							{
 							for(n=0;n<4;n++) parental_str[n]=0;
@@ -4769,6 +4883,55 @@ get_games:
 			} 
 			else {px=-100;py=-100;}
 		}
+
+	if(direct_launch && game_mode==1 && gameList!=NULL) 
+		{
+
+		if(launch_counter<=0)
+			{
+			struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+
+			snd_fx_yes();
+
+			memcpy(discid,header->id,6); discid[6]=0;
+														
+			if(load_cheats(discid)) cheat_mode=1;
+
+			create_cheats();
+														
+			ret=load_game_routine(discid, game_mode);
+
+			SetTexture(&text_background);
+			DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
+
+
+			SelectFontTexture(1); // selecciona la fuente de letra extra
+
+			letter_size(8,32);
+					
+			PX=0; PY= SCR_HEIGHT/2; color= 0xff000000; bkcolor=0;
+					
+			bkcolor=0;
+			autocenter=1;
+			SetTexture(NULL);
+
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+			
+			if(ret==666)s_printf("ERROR FROM THE LOADER: Disc ID is not equal!\n"); 
+			else 
+				s_printf("ERROR FROM THE LOADER: %i\n", ret);
+
+			Screen_flip();
+
+
+			//////////////////////////////////
+			break;
+			}
+		//
+		}
+	else direct_launch=0;
+
 	if(scroll_mode) // scroll mode
 		{
 		if(scroll_mode==-1 || scroll_mode==1)
@@ -4855,7 +5018,7 @@ get_games:
 			wiimote_rumble(0);
 			WPAD_ScanPads();
 			
-			SelectFontTexture(0); // selecciona la fuente de letra extra
+			SelectFontTexture(0);
 			}
 
 	Screen_flip();
@@ -4866,17 +5029,6 @@ get_games:
 		if(temp_sel>=0)
 			{//
 			int g;
-			/*if(is_favorite) 
-				{
-				
-				if(config_file.id[temp_sel][0]!=0)
-					{
-					id=&config_file.id[temp_sel][0]
-					}
-				}
-			else
-				{
-				}*/
 
 			g=game_datas[temp_sel].ind;
 			if(g>=0)
@@ -4915,7 +5067,7 @@ get_games:
 		ASND_End();		// finaliza el sonido
 	#endif
 	WPAD_Shutdown();
-
+	USBStorage2_Umount();
 	sleep(1);
     
 	if(exit_by_reset==2)
@@ -4930,20 +5082,401 @@ error_w:
 	 #ifdef USE_MODPLAYER
 		ASND_End();		// finaliza el sonido
 	#endif
-	WPAD_Shutdown();
-
+	
 error:
+	WPAD_Shutdown();
+error_0:
     sleep(4);
+
+	USBStorage2_Umount();
 
 	if(return_reset==2)
 		SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 
+
     return ret;
 }
 
+int load_game_routine(u8 *discid, int game_mode)
+{
+int n, ret,ret2;
+int force_ingame_ios=0;
+
+	Screen_flip();
+	wiimote_rumble(0); 
+	usleep(100);
+	WPAD_Shutdown();
+
+	add_game_log(discid);
+
+	save_cfg();
+
+	if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
+		else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
+
+
+	forcevideo=(game_datas[game_mode-1].config>>2) & 3;//if(forcevideo==3) forcevideo=0;
+
+	langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+
+	force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
+	//game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
+	
+	// load alternative DOL
+	sprintf((char *) temp_data,"sd:/games/%s.dol",(char *) discid);
+	load_file_dol((char *) temp_data);
+	
+	fatUnmount("sd");
+	__io_wiisd.shutdown();
+
+	USBStorage2_Deinit();
+	WDVD_Close();
+	
+	#ifdef USE_MODPLAYER
+	ASND_End();		// finaliza el sonido
+	#endif
+	if((cios!=222 && force_ios249==0))
+		{
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+		Screen_flip();
+		ret2=IOS_ReloadIOS(cios);
+
+		if(ret2<0)
+			{
+			cios=222;
+			IOS_ReloadIOS(cios);
+			}
+	
+		sleep(1);
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+		Screen_flip();
+		load_ehc_module();
+		for(n=0;n<25;n++)
+			{
+			cabecera2(frames3, "Loading...");
+			frames3+=16;
+			Screen_flip();
+
+				ret2 = USBStorage2_Init(); 
+				if(!ret2) break;
+				usleep(500*1000);
+			}
+		USBStorage2_Deinit();
+		}
+
+	// enables fake ES_ioctlv (to skip IOS_ReloadIOS(ios))
+	if(force_ingame_ios)
+		{
+		patch_datas[0]=*((u32 *) (dip_plugin+16*4));
+		mload_set_ES_ioctlv_vector((void *) patch_datas[0]);
+		}
+		
+	mload_close();
+
+	ret = load_disc(discid);
+return ret;
+}
 
 #include <ogc/lwp_watchdog.h>
 extern void settime(long long);
+
+// from coverflow loader
+
+bool compare_videomodes(GXRModeObj* mode1, GXRModeObj* mode2)
+{
+	if (mode1->viTVMode != mode2->viTVMode || mode1->fbWidth != mode2->fbWidth ||	mode1->efbHeight != mode2->efbHeight || mode1->xfbHeight != mode2->xfbHeight ||
+	mode1->viXOrigin != mode2->viXOrigin || mode1->viYOrigin != mode2->viYOrigin || mode1->viWidth != mode2->viWidth || mode1->viHeight != mode2->viHeight ||
+	mode1->xfbMode != mode2->xfbMode || mode1->field_rendering != mode2->field_rendering || mode1->aa != mode2->aa || mode1->sample_pattern[0][0] != mode2->sample_pattern[0][0] ||
+	mode1->sample_pattern[1][0] != mode2->sample_pattern[1][0] ||	mode1->sample_pattern[2][0] != mode2->sample_pattern[2][0] ||
+	mode1->sample_pattern[3][0] != mode2->sample_pattern[3][0] ||	mode1->sample_pattern[4][0] != mode2->sample_pattern[4][0] ||
+	mode1->sample_pattern[5][0] != mode2->sample_pattern[5][0] ||	mode1->sample_pattern[6][0] != mode2->sample_pattern[6][0] ||
+	mode1->sample_pattern[7][0] != mode2->sample_pattern[7][0] ||	mode1->sample_pattern[8][0] != mode2->sample_pattern[8][0] ||
+	mode1->sample_pattern[9][0] != mode2->sample_pattern[9][0] ||	mode1->sample_pattern[10][0] != mode2->sample_pattern[10][0] ||
+	mode1->sample_pattern[11][0] != mode2->sample_pattern[11][0] || mode1->sample_pattern[0][1] != mode2->sample_pattern[0][1] ||
+	mode1->sample_pattern[1][1] != mode2->sample_pattern[1][1] ||	mode1->sample_pattern[2][1] != mode2->sample_pattern[2][1] ||
+	mode1->sample_pattern[3][1] != mode2->sample_pattern[3][1] ||	mode1->sample_pattern[4][1] != mode2->sample_pattern[4][1] ||
+	mode1->sample_pattern[5][1] != mode2->sample_pattern[5][1] ||	mode1->sample_pattern[6][1] != mode2->sample_pattern[6][1] ||
+	mode1->sample_pattern[7][1] != mode2->sample_pattern[7][1] ||	mode1->sample_pattern[8][1] != mode2->sample_pattern[8][1] ||
+	mode1->sample_pattern[9][1] != mode2->sample_pattern[9][1] ||	mode1->sample_pattern[10][1] != mode2->sample_pattern[10][1] ||
+	mode1->sample_pattern[11][1] != mode2->sample_pattern[11][1] || mode1->vfilter[0] != mode2->vfilter[0] ||
+	mode1->vfilter[1] != mode2->vfilter[1] ||	mode1->vfilter[2] != mode2->vfilter[2] || mode1->vfilter[3] != mode2->vfilter[3] ||	mode1->vfilter[4] != mode2->vfilter[4] ||
+	mode1->vfilter[5] != mode2->vfilter[5] ||	mode1->vfilter[6] != mode2->vfilter[6] )
+	{
+		return false;
+	} else
+	{
+		return true;
+	}
+}
+
+
+void patch_videomode(GXRModeObj* mode1, GXRModeObj* mode2)
+{
+	mode1->viTVMode = mode2->viTVMode;
+	mode1->fbWidth = mode2->fbWidth;
+	mode1->efbHeight = mode2->efbHeight;
+	mode1->xfbHeight = mode2->xfbHeight;
+	mode1->viXOrigin = mode2->viXOrigin;
+	mode1->viYOrigin = mode2->viYOrigin;
+	mode1->viWidth = mode2->viWidth;
+	mode1->viHeight = mode2->viHeight;
+	mode1->xfbMode = mode2->xfbMode;
+	mode1->field_rendering = mode2->field_rendering;
+	mode1->aa = mode2->aa;
+	mode1->sample_pattern[0][0] = mode2->sample_pattern[0][0];
+	mode1->sample_pattern[1][0] = mode2->sample_pattern[1][0];
+	mode1->sample_pattern[2][0] = mode2->sample_pattern[2][0];
+	mode1->sample_pattern[3][0] = mode2->sample_pattern[3][0];
+	mode1->sample_pattern[4][0] = mode2->sample_pattern[4][0];
+	mode1->sample_pattern[5][0] = mode2->sample_pattern[5][0];
+	mode1->sample_pattern[6][0] = mode2->sample_pattern[6][0];
+	mode1->sample_pattern[7][0] = mode2->sample_pattern[7][0];
+	mode1->sample_pattern[8][0] = mode2->sample_pattern[8][0];
+	mode1->sample_pattern[9][0] = mode2->sample_pattern[9][0];
+	mode1->sample_pattern[10][0] = mode2->sample_pattern[10][0];
+	mode1->sample_pattern[11][0] = mode2->sample_pattern[11][0];
+	mode1->sample_pattern[0][1] = mode2->sample_pattern[0][1];
+	mode1->sample_pattern[1][1] = mode2->sample_pattern[1][1];
+	mode1->sample_pattern[2][1] = mode2->sample_pattern[2][1];
+	mode1->sample_pattern[3][1] = mode2->sample_pattern[3][1];
+	mode1->sample_pattern[4][1] = mode2->sample_pattern[4][1];
+	mode1->sample_pattern[5][1] = mode2->sample_pattern[5][1];
+	mode1->sample_pattern[6][1] = mode2->sample_pattern[6][1];
+	mode1->sample_pattern[7][1] = mode2->sample_pattern[7][1];
+	mode1->sample_pattern[8][1] = mode2->sample_pattern[8][1];
+	mode1->sample_pattern[9][1] = mode2->sample_pattern[9][1];
+	mode1->sample_pattern[10][1] = mode2->sample_pattern[10][1];
+	mode1->sample_pattern[11][1] = mode2->sample_pattern[11][1];
+	mode1->vfilter[0] = mode2->vfilter[0];
+	mode1->vfilter[1] = mode2->vfilter[1];
+	mode1->vfilter[2] = mode2->vfilter[2];
+	mode1->vfilter[3] = mode2->vfilter[3];
+	mode1->vfilter[4] = mode2->vfilter[4];
+	mode1->vfilter[5] = mode2->vfilter[5];
+	mode1->vfilter[6] = mode2->vfilter[6];
+}
+
+GXRModeObj* vmodes[] = {
+	&TVNtsc240Ds,
+	&TVNtsc240DsAa,
+	&TVNtsc240Int,
+	&TVNtsc240IntAa,
+	&TVNtsc480IntDf,
+	&TVNtsc480IntAa,
+	&TVNtsc480Prog,
+	&TVMpal480IntDf,
+	&TVPal264Ds,
+	&TVPal264DsAa,
+	&TVPal264Int,
+	&TVPal264IntAa,
+	&TVPal524IntAa,
+	&TVPal528Int,
+	&TVPal528IntDf,
+	&TVPal574IntDfScale,
+	&TVEurgb60Hz240Ds,
+	&TVEurgb60Hz240DsAa,
+	&TVEurgb60Hz240Int,
+	&TVEurgb60Hz240IntAa,
+	&TVEurgb60Hz480Int,
+	&TVEurgb60Hz480IntDf,
+	&TVEurgb60Hz480IntAa,
+	&TVEurgb60Hz480Prog,
+	&TVEurgb60Hz480ProgSoft,
+	&TVEurgb60Hz480ProgAa
+};
+
+GXRModeObj* PAL2NTSC[]={
+	&TVMpal480IntDf,		&TVNtsc480IntDf,
+	&TVPal264Ds,			&TVNtsc240Ds,
+	&TVPal264DsAa,			&TVNtsc240DsAa,
+	&TVPal264Int,			&TVNtsc240Int,
+	&TVPal264IntAa,			&TVNtsc240IntAa,
+	&TVPal524IntAa,			&TVNtsc480IntAa,
+	&TVPal528Int,			&TVNtsc480IntAa,
+	&TVPal528IntDf,			&TVNtsc480IntDf,
+	&TVPal574IntDfScale,	&TVNtsc480IntDf,
+	&TVEurgb60Hz240Ds,		&TVNtsc240Ds,
+	&TVEurgb60Hz240DsAa,	&TVNtsc240DsAa,
+	&TVEurgb60Hz240Int,		&TVNtsc240Int,
+	&TVEurgb60Hz240IntAa,	&TVNtsc240IntAa,
+	&TVEurgb60Hz480Int,		&TVNtsc480IntAa,
+	&TVEurgb60Hz480IntDf,	&TVNtsc480IntDf,
+	&TVEurgb60Hz480IntAa,	&TVNtsc480IntAa,
+	&TVEurgb60Hz480Prog,	&TVNtsc480Prog,
+	&TVEurgb60Hz480ProgSoft,&TVNtsc480Prog,
+	&TVEurgb60Hz480ProgAa,  &TVNtsc480Prog,
+	0,0
+};
+
+GXRModeObj* NTSC2PAL[]={
+	&TVNtsc240Ds,			&TVPal264Ds,
+	&TVNtsc240DsAa,			&TVPal264DsAa,
+	&TVNtsc240Int,			&TVPal264Int,
+	&TVNtsc240IntAa,		&TVPal264IntAa,
+	&TVNtsc480IntDf,		&TVPal528IntDf,
+	&TVNtsc480IntAa,		&TVPal524IntAa,
+	&TVNtsc480Prog,			&TVPal528IntDf,
+	0,0
+};
+
+GXRModeObj* NTSC2PAL60[]={
+	&TVNtsc240Ds,			&TVEurgb60Hz240Ds,
+	&TVNtsc240DsAa,			&TVEurgb60Hz240DsAa,
+	&TVNtsc240Int,			&TVEurgb60Hz240Int,
+	&TVNtsc240IntAa,		&TVEurgb60Hz240IntAa,
+	&TVNtsc480IntDf,		&TVEurgb60Hz480IntDf,
+	&TVNtsc480IntAa,		&TVEurgb60Hz480IntAa,
+	&TVNtsc480Prog,			&TVEurgb60Hz480Prog,
+	0,0
+};
+
+bool Search_and_patch_Video_Modes(void *Address, u32 Size )
+{
+	u8 *Addr = (u8 *)Address;
+	bool found = 0;
+	u32 i;
+	GXRModeObj** Table= NULL;
+
+	switch(_Video_Mode)
+			{
+			case PAL:
+			case MPAL:
+				Table = NTSC2PAL;break;
+
+			case PAL60:
+				Table = NTSC2PAL60;break;
+
+            default:
+				Table = PAL2NTSC;
+				break;
+			}
+
+	while(Size >= sizeof(GXRModeObj))
+	{
+
+
+
+		for(i = 0; Table[i]; i+=2)
+		{
+
+
+			if(compare_videomodes(Table[i], (GXRModeObj*)Addr))
+
+			{
+				found = 1;
+				patch_videomode((GXRModeObj*)Addr, Table[i+1]);
+				Addr += (sizeof(GXRModeObj)-4);
+				Size -= (sizeof(GXRModeObj)-4);
+				break;
+			}
+		}
+
+		Addr += 4;
+		Size -= 4;
+	}
+
+
+	return found;
+}
+
+
+
+void __Patch_Error001(void *buffer, u32 len)
+{
+	const u8 oldcode[] = { 0x40, 0x82, 0x00, 0x0C, 0x38, 0x60, 0x00, 0x01, 0x48, 0x00, 0x02, 0x44, 0x38, 0x61, 0x00, 0x18 };
+	const u8 newcode[] = { 0x40, 0x82, 0x00, 0x04, 0x38, 0x60, 0x00, 0x01, 0x48, 0x00, 0x02, 0x44, 0x38, 0x61, 0x00, 0x18 };
+	u32 cnt;
+
+		
+
+	/* Find code and patch it */
+	for (cnt = 0; cnt < (len - sizeof(oldcode)); cnt++) {
+		u8 *ptr = buffer + cnt;
+
+		/* Replace code if found */
+		if (!memcmp(ptr, oldcode, sizeof(oldcode))) {
+			memcpy(ptr, newcode, sizeof(newcode));
+			
+		}
+	}
+}
+
+
+
+int load_file_dol(char *name)
+{
+
+int ret=0;
+FILE *fp=NULL;
+int n,m, size;
+
+dol_len= 0;
+
+
+	fp=fopen(name,"rb"); // lee el fichero de texto
+	if(fp)
+		{
+		fseek(fp, 0, SEEK_END);
+		size=dol_len = ftell(fp);
+		dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len,32);//0x92000000;//malloc(dol_len);
+		if(!dol_data) {fclose(fp);return -1;}
+
+		fseek(fp, 0, SEEK_SET);
+
+		n=0;
+
+		while(size>0)
+			{
+			m=size;
+			if(m>65536) m=65536;
+
+			frames3+=16;
+		
+			cabecera2(frames3, "Loading Alternative .dol");
+						
+			Screen_flip();
+
+			ret=fread(dol_data+n, 1, m, fp);
+            if(ret!=m) {fclose(fp);dol_data= NULL;dol_len= 0;return -1;}
+			n+=ret;
+			size-=ret;
+		
+			}
+		
+		fclose(fp);
+		
+		}
+
+
+return 0;
+}
+
+void patch_dol(void *Address, int Section_Size)
+{
+	if(dol_data)
+		__Patch_Error001((void *) Address, Section_Size);
+
+	__Patch_CoverRegister(Address, Section_Size);
+	
+	
+	/*HOOKS STUFF - FISHEARS*/
+	dogamehooks(Address, Section_Size);
+
+	/*LANGUAGE PATCH - FISHEARS*/
+	langpatcher(Address, Section_Size);
+
+	if(!forcevideo || forcevideo==1)
+		Search_and_patch_Video_Modes(Address, Section_Size);
+
+	vidolpatcher(Address, Section_Size);
+
+
+	/*HOOKS STUFF - FISHEARS*/
+
+	DCFlushRange(Address, Section_Size);
+}
 
 int load_disc(u8 *discid)
 {
@@ -4959,7 +5492,7 @@ int load_disc(u8 *discid)
 
 		WDVD_Init();
         if(WDVD_SetUSBMode(discid, current_partition)!=0) return 1;
-		//WDVD_SetUSBMode(NULL);
+		//WDVD_SetUSBMode(NULL,0);
 
         WDVD_Reset();
 		//return -456;
@@ -5140,7 +5673,10 @@ int load_disc(u8 *discid)
             *(vu8*)0x80001807 = 0x01;
 			hooktype = 1;
 			}
+
+		
         //printf("Loading game");
+		//if(!dol_data)
         while (Load(&Address, &Section_Size, &Partition_Offset))
         {
 	
@@ -5148,52 +5684,13 @@ int load_disc(u8 *discid)
                 if (!Address) return 5;
 				cabecera2(frames3, "Loading...");
                 WDVD_Read(Address, Section_Size, Partition_Offset << 2);
-
+						
 				Screen_flip();
 
-				__Patch_CoverRegister(Address, Section_Size);
-                
-				/*HOOKS STUFF - FISHEARS*/
-				dogamehooks(Address, Section_Size);
-
-				/*LANGUAGE PATCH - FISHEARS*/
-				langpatcher(Address, Section_Size);
-
-				vidolpatcher(Address, Section_Size);
-				/*HOOKS STUFF - FISHEARS*/
-
-				DCFlushRange(Address, Section_Size);
-                //printf(".");
+				patch_dol(Address, Section_Size);
         }
-        // Patch in info missing from apploader reads
-        *Sys_Magic	= 0x0d15ea5e;
-        *Version	= 1;
-        *Arena_L	= 0x00000000;
-		*BI2		= 0x817E5480;
-        *Bus_Speed	= 0x0E7BE2C0;
-        *CPU_Speed	= 0x2B73A840;
 
-		/* Setup low memory */
-		*(vu32 *)0x80000060 = 0x38A00040;
-		*(vu32 *)0x800000E4 = 0x80431A80;
-		*(vu32 *)0x800000EC = 0x81800000;
-
-        // Enable online mode in games
-        memcpy(Online_Check, Disc_ID, 4);
-
-
-        // Retrieve application entry point
-        void* Entry = Exit();
-
-        // Set Video Mode based on Configuration
-		if (vmode)
-			Set_VideoMode();
-		
-
-        // Flush application memory range
-        DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded values
-
-        // Cleanup loader information
+		// Cleanup loader information
         WDVD_Close();
 
 		#if 1
@@ -5207,6 +5704,56 @@ int load_disc(u8 *discid)
         }
 		#endif
 		
+
+		// Retrieve application entry point
+        void* Entry;
+
+			if(dol_data)
+			{
+			frames3+=16;
+			
+				cabecera2(frames3, "Loading...");
+						
+				Screen_flip();
+				
+				Entry=(void *) load_dol();
+			}
+		else
+			Entry= Exit();
+
+		if(!Entry) return -999;
+
+        // Patch in info missing from apploader reads
+        *Sys_Magic	= 0x0d15ea5e;
+        *Version	= 1;
+        *Arena_L	= 0x00000000;
+		*BI2		= 0x817E5480;
+        *Bus_Speed	= 0x0E7BE2C0;
+        *CPU_Speed	= 0x2B73A840;
+
+		/* Setup low memory */
+		*(vu32 *)0x80000060 = 0x38A00040;
+		*(vu32 *)0x800000E4 = 0x80431A80;
+		*(vu32 *)0x800000EC = 0x81800000;
+
+		*(vu32 *)0x800000F0 = 0x01800000;       // Simulated Memory Size
+
+
+        // Enable online mode in games
+        memcpy(Online_Check, Disc_ID, 4);
+
+		//*(u32 *)0x80003140 = *(u32 *)0x80003188; // removes 002-Error (by WiiPower: http://gbatemp.net/index.php?showtopic=158885&hl=)
+        *(u32 *)0x80003188 = *(u32 *)0x80003140;
+
+	
+
+        // Set Video Mode based on Configuration
+		if (vmode)
+			Set_VideoMode();
+		
+
+        // Flush application memory range
+        DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded values
 		
 	
        // debug_printf("start %p\n",Entry);
