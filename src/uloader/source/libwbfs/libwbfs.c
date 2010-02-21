@@ -609,6 +609,16 @@ u32 wbfs_estimate_disc
 		}
 	}
 
+	if (d)
+		wd_close_disc(d);
+	
+	if (used)
+		wbfs_free(used);
+	
+	if (info)
+		wbfs_iofree(info);
+	
+	return tot * ((p->wbfs_sec_sz / p->hd_sec_sz));
 error:
 	if (d)
 		wd_close_disc(d);
@@ -619,7 +629,7 @@ error:
 	if (info)
 		wbfs_iofree(info);
 	
-	return tot * ((p->wbfs_sec_sz / p->hd_sec_sz) * 512);
+	return 0xffffffff;
 }
 
 int abort_signal=0;

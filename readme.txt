@@ -1,4 +1,4 @@
-uLoader v2.1C BETA - by Hermes (www.elotrolado.net)
+uLoader v2.2 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (1.6 required). Now you can select the IOS used to install
@@ -35,6 +35,9 @@ Features:
   Now you can download Covers from Internet!
 
 - Now you can load games as Red Steel using one alternative .dol (see ALTERNATIVE DOL NOTES in this document)
+
+- Now you can load ehcmodule.elf externally (put it in sd:/apps/uloader/ehcmodule.elf) to use old versions
+  of the module (see "src/uloader/resources")
 
 - New USB code and more
 

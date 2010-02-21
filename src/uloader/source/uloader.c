@@ -130,10 +130,36 @@ data_elf my_data_elf;
 
 int my_thread_id=0;
 
+void *external_ehcmodule= NULL;
+int size_external_ehcmodule=0;
+
+int sd_ok=0;
+
 int load_ehc_module()
 {
 int is_ios=0;
+FILE *fp;
 
+if(sd_ok && !external_ehcmodule)
+	{
+
+	fp=fopen("sd:/apps/uloader/ehcmodule.elf","rb");
+
+	if(fp!=0)
+		{
+		fseek(fp, 0, SEEK_END);
+		size_external_ehcmodule = ftell(fp);
+		external_ehcmodule= memalign(32, size_external_ehcmodule);
+		if(!external_ehcmodule) 
+			{fclose(fp);free(external_ehcmodule); external_ehcmodule=NULL;}
+		fseek(fp, 0, SEEK_SET);
+
+		if(fread(external_ehcmodule,1, size_external_ehcmodule ,fp)!=size_external_ehcmodule)
+			{free(external_ehcmodule); external_ehcmodule=NULL;}
+		
+		fclose(fp);
+		}
+	}
 
 /*
 // bloquea el flag de disco dentro desde el PPC
@@ -148,8 +174,14 @@ int is_ios=0;
 	if(my_thread_id<0) return -1;
 	*/
   
-
-	if(mload_module(ehcmodule, size_ehcmodule)<0) return -1;
+	if(!external_ehcmodule)
+		{
+		if(mload_module(ehcmodule, size_ehcmodule)<0) return -1;
+		}
+	else
+		{
+		if(mload_module(external_ehcmodule, size_external_ehcmodule)<0) return -1;
+		}
 	usleep(350*1000);
 	
 
@@ -883,7 +915,7 @@ if(l_time)
 
 }
 
-int sd_ok=0;
+
 
 void load_cfg()
 {
@@ -2794,9 +2826,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.1C");
+			s_printf("v2.2");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.1C");
+			s_printf("v2.2");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -2900,7 +2932,8 @@ int main(int argc, char **argv) {
 
 		sleep(1);
 		
-	    
+	    __io_wiisd.startup();
+		sd_ok = fatMountSimple("sd", &__io_wiisd);
 
 		if(ret!=0) 
 			{
@@ -2925,7 +2958,7 @@ int main(int argc, char **argv) {
 		temp_data=memalign(32,256*1024);
         // texture of white-noise animation generated here
         game_empty=memalign(32,128*64*3*4);
-
+		
 		load_ehc_module();
 
 		WPAD_Init();
@@ -3082,8 +3115,7 @@ int main(int argc, char **argv) {
 		}
 		
 		
-		__io_wiisd.startup();
-		sd_ok = fatMountSimple("sd", &__io_wiisd);
+		
 		
 		/*
 		// mount ums test
@@ -5102,6 +5134,11 @@ error:
 	WPAD_Shutdown();
 error_0:
     sleep(4);
+	if(sd_ok)
+		{
+		fatUnmount("sd");
+		__io_wiisd.shutdown();sd_ok=0;
+		}
 
 	USBStorage2_Umount();
 
@@ -5141,8 +5178,11 @@ int force_ingame_ios=0;
 	sprintf((char *) temp_data,"sd:/games/%s.dol",(char *) discid);
 	load_file_dol((char *) temp_data);
 	
-	fatUnmount("sd");
-	__io_wiisd.shutdown();
+	if(sd_ok)
+		{
+		fatUnmount("sd");
+		__io_wiisd.shutdown();sd_ok=0;
+		}
 
 	USBStorage2_Deinit();
 	WDVD_Close();

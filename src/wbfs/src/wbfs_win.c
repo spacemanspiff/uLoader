@@ -290,7 +290,7 @@ void wbfs_applet_estimate(wbfs_t *p, char *argv)
 	else
 	{
 		u32 estimation = wbfs_estimate_disc(p, read_wii_disc_sector, handle, ONLY_GAME_PARTITION);
-		fprintf(stderr, "%.2fG\n", estimation / (GB));
+		fprintf(stderr, "%.2fG\n", (estimation / (GB))* 512.0f);
 		CloseHandle(handle);
 	}
 }
@@ -342,7 +342,7 @@ void wbfs_applet_add(wbfs_t *p, char *argv)
 		
 		SetFilePointerEx(handle, large, NULL, FILE_BEGIN);
 
-	    if( ((double)estimation)> ( ((double)count) * ((double)p->wbfs_sec_sz)))
+	    if( ((double)estimation)> ( ((double)count) * ((double) (p->wbfs_sec_sz/512))))
 			{
 			fprintf(stderr, "no space left on device (disc full)");
 			

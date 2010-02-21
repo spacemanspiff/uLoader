@@ -404,21 +404,28 @@ if (!hdd)
 
 return 0;
 }
+
 s32 WBFS_AddGame(int mode)
 {
 	s32 ret;
+	double a,b;
 
 	/* No USB device open */
 	if (!hdd)
 		return -1;
 	u32 count = wbfs_count_usedblocks(hdd);
+
 	u32 estimation = wbfs_estimate_disc(hdd,  __WBFS_ReadDVD,__WBFS_Spinner, (mode==0)  ? ONLY_GAME_PARTITION : ALL_PARTITIONS);
 
-	if( ((double)estimation)> ( ((double)count) * ((double)hdd->wbfs_sec_sz)))
+	a=(double)estimation;
+	b=( ((double)count) * ((double)(hdd->wbfs_sec_sz/512)));
+
+	if( a> b)
 			{
 			my_perror("no space left on device (disc full)");
 			return -666;
 			}
+
 
 	/* Add game to USB device */
 	ret = wbfs_add_disc(hdd, __WBFS_ReadDVD, NULL, __WBFS_Spinner,(mode==0) ? ONLY_GAME_PARTITION : ALL_PARTITIONS, 0);
