@@ -1,3 +1,18 @@
+The New in uLoader 4.1
+-----------------------
+
+- Support for devices > 1 Terabyte in uLoader improved   (max 2 TB)
+
+- Fixed a bug that disables the load games from DVD when the FAT partition is mounted from SD and USB is offline.
+
+- improved .ciso import from wbfs_win.exe and fixed a bug for devices > 1Terabyte
+
+- Added a new option to force SetConfiguration in ehcmodule (uLoader Hacks)
+
+- Added a new option for short regresive time counter to launch games from channels (Loadstructor channel). See uLoader Hacks.
+
+- Added the new open source dip_plugin (source code in http://github.com/spacemanspiff/odip-plugin and cios_mload_source_install_3.6.rar file)
+
 The New in uLoader 4.0
 -----------------------
 
@@ -23,7 +38,7 @@ DIP-PLUGIN:
 
 - Added .ciso support form internal DVD drive (for Multigame DVD or direct use)
 
-- Addede .ciso supprt for FAT devices(or others) with access to os_seek() function as byte(4GB) or as word(16GB)
+- Added .ciso supprt for FAT devices(or others) with access to os_seek() function as byte(4GB) or as word(16GB)
 
 LIBFAT:
 

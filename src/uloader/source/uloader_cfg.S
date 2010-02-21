@@ -13,8 +13,8 @@ no_more_snow:
 automatic_dvd_mode:
 	.byte 0x1
 
-	.global cfg_param2
-cfg_param2:
+	.global launch_short
+launch_short:
 	.byte 0x0
 	
 	.global cfg_param3

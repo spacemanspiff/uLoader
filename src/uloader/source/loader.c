@@ -576,10 +576,11 @@ int load_disc(u8 *discid)
 
 
 		cabecera2( "Loading...");
-		
+		if(discid[6]!=0) is_fat=0;
+
 		if(is_fat)
 			{
-			if(load_fat_module(discid)<0) return 1;
+			if(load_fat_module(discid)<0) return 17;
 			}
 
 		WDVD_Init();
@@ -612,8 +613,6 @@ int load_disc(u8 *discid)
 
         WDVD_Reset();
 
-		
-		//return -456;
 		
         memset(Disc_ID, 0, 0x20);
         WDVD_ReadDiskId(Disc_ID);

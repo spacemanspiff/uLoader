@@ -57,9 +57,9 @@
 #include "cheats.h"
 
 
-char uloader_version[5]="4.0"; // yes, you can change here the current version of the application
+char uloader_version[5]="4.1"; // yes, you can change here the current version of the application
 
-
+extern u8 launch_short;
 
 int frames2=0;
 
@@ -259,8 +259,8 @@ char letrero[2][70][64]=
 //49
 "Delete Alternative .dol", ".dol Search", "Searching for .dol...","Alternative .dol Selected","Alternative .dol Deleted", "Edit CFG #1", "Edit CFG #2",
 // 56 
-"ehcmodule - Use USB Port 1", "ehcmodule - Use Bulk Reset","ehcmodule - Force GetMaxLun", "ehcmodule - Alternative Timeout", 
-"No More Snow, Please!!!", "Automatic DVD/SD Mode", "???", "", "", "",
+"ehcmodule - Use USB Port 1", "ehcmodule - Use Bulk Reset","ehcmodule - Force GetMaxLun", "ehcmodule - Force SetConfiguration", "ehcmodule - Alternative Timeout", 
+"No More Snow, Please!!!", "Automatic DVD/SD Mode", "Short Direct Launch (from Channel)", "???", "",
 	},
     // spanish
 	{"Retorna", "Configurar", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", "Hecho", "Descartar",
@@ -278,8 +278,8 @@ char letrero[2][70][64]=
 //49
 "Borrar .dol Alternativo", "Buscar .dol", "Buscando ficheros .dol...","Alternativo .dol Seleccionado","Alternativo .dol Borrado", "Editar CFG #1", "Editar CFG #2",
 // 56 
-"ehcmodule - Usa Puerto USB 1", "ehcmodule - Usa Reset Bulk", "ehcmodule - Fuerza GetMaxLun", "ehcmodule - Timeout Alternativo",
-"No Mas Nieve, Por Favor!!!", "Modo DVD/SD Automático", "???", "", "", "",
+"ehcmodule - Usa Puerto USB 1", "ehcmodule - Usa Reset Bulk", "ehcmodule - Fuerza GetMaxLun", "ehcmodule - Fuerza SetConfiguration", "ehcmodule - Timeout Alternativo",
+"No Mas Nieve, Por Favor!!!", "Modo DVD/SD Automático", "Lanzamiento Directo Corto (Desde Canal)", "???", "",
 	},
 	};
 
@@ -2312,6 +2312,7 @@ get_games:
 
     if(direct_launch)
 		{
+		if(launch_short) launch_counter=2;
 		
 		for(n=0;n<gameCnt;n++)
 			{

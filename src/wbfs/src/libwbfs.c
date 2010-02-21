@@ -97,10 +97,14 @@ wbfs_t*wbfs_open_partition(rw_sector_callback_t read_hdsector,
         //constants, but put here for consistancy
         p->wii_sec_sz = 0x8000;
         p->wii_sec_sz_s = size_to_shift(0x8000);
-        p->n_wii_sec = (num_hd_sector/0x8000)*hd_sector_size;
+       
         p->n_wii_sec_per_disc = 143432*2;//support for double layers discs..
         p->head = head;
         p->part_lba = part_lba;
+
+		 p->n_wii_sec =(u32) ((u64) num_hd_sector)/ ((u64) 0x8000);
+		 p->n_wii_sec=(u32) ( ((u64) p->n_wii_sec) * ((u64) hd_sector_size) );
+
         // init the partition
         if (reset)
         {
@@ -110,13 +114,23 @@ wbfs_t*wbfs_open_partition(rw_sector_callback_t read_hdsector,
                 head->hd_sec_sz_s = size_to_shift(hd_sector_size);
                 head->n_hd_sec = wbfs_htonl(num_hd_sector);
                 // choose minimum wblk_sz that fits this partition size
+
+				
+			
+				
                 for(sz_s=6;sz_s<11;sz_s++)
                 {
                         // ensure that wbfs_sec_sz is big enough to address every blocks using 16 bits
-                        if(p->n_wii_sec <((1U<<16)*(1<<sz_s)))
+						if(((u32)p->n_wii_sec) <((1U<<16)*(1U<<sz_s)))
                                 break;
                 }
+				
                 head->wbfs_sec_sz_s = sz_s+p->wii_sec_sz_s;
+
+			{
+				printf("sz :%u %u\n", sz_s, num_hd_sector);
+				system("pause");
+			}
         }else
                 read_hdsector(callback_data,p->part_lba,1,head);
         if (head->magic != wbfs_htonl(WBFS_MAGIC))

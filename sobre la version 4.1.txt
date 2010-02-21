@@ -1,3 +1,18 @@
+Lo nuevo en uLoader 4.1
+-----------------------
+
+- Mejorado el soporte para dispositivos > 1 Terabyte en uLoader (limite 2TB)
+
+- Arreglado un bug que imposibilitaba cargar juegos en DVD con particion FAT montada desde SD, sin unidad USB activa
+
+- Mejorada la importacion .ciso en wbfs_win.exe y arreglado el bug de unidades > 1 Terabyte
+
+- Añadida nueva opcion para forzar SetConfiguration en ehcmodule (uLoader Hacks)
+
+- Añadida opcion para acortar el tiempo regresivo al lanzar juego desde canal (canal Loadstructor). Mira uLoader Hacks.
+
+- Añadido dip_plugin open source (codigo fuente http://github.com/spacemanspiff/odip-plugin y en cios_mload_source_install_3.6.rar)
+
 Lo nuevo en uLoader 4.0
 -----------------------
 

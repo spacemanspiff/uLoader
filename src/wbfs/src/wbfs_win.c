@@ -49,38 +49,58 @@ int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
 	HANDLE *handle = (HANDLE *)_handle;
 	LARGE_INTEGER large;
 	DWORD read;
+	u32 read_size;
 	u64 offset = _offset;
+	int finish=0;
+	offset <<= 2ULL;
 	
-	offset <<= 2L;
-	
+	while((int) count>0)
+    {
+    
+	read_size=count;
 
-	if(ciso_mode== (int) _handle)
-	{
-	int off=ciso_map_off[(u32)(offset/(u64)ciso_size)];
-	if(off<0) {memset(buf,0,count);if(off==-2) return 1; return 0;}
-//	printf("coffset %i size %i\n",_offset,count);
-	large.QuadPart = (offset & ((u64)(ciso_size-1)))+(((u64) ((u32)off))* (u64)ciso_size)+32768ULL;
-	}
-	else {large.QuadPart = offset;}
+		if(ciso_mode== (int) _handle)
+		{
+		u64 lba;
+		int off=ciso_map_off[(u32)(offset/(u64)ciso_size)];
+		if(read_size>ciso_size) read_size=ciso_size;
+		if(off<0) {memset(buf,0,read_size);if(off==-2) finish=1; read=read_size; goto skip_1;}
 
-	if (SetFilePointerEx(handle, large, NULL, FILE_BEGIN) == FALSE)
-	{
-		wbfs_error("error seeking in disc file");
-		return 1;
-	}
-	
-	read = 0;
-	if (ReadFile(handle, buf, count, &read, NULL) == FALSE)
-	{
-		wbfs_error("error reading wii disc sector");
-		return 1;
-	}
+		lba=((u64) off) * ((u64) ciso_size);
+		lba+=32768ULL;
+	//	printf("coffset %i size %i\n",_offset,count);
+		large.QuadPart = lba+ (offset &  ((u64)(ciso_size-1)));
+		
+		}
+		else {large.QuadPart = offset;}
 
-	if (read != count)
-	{
-		wbfs_error("error reading wii disc sector (size mismatch)");
-		return 1;
+		if (SetFilePointerEx(handle, large, NULL, FILE_BEGIN) == FALSE)
+		{
+			wbfs_error("error seeking in disc file");
+			return 1;
+		}
+		
+		read = 0;
+		if (ReadFile(handle, buf, read_size, &read, NULL) == FALSE)
+		{
+			wbfs_error("error reading wii disc sector");
+			return 1;
+		}
+
+		if (read != read_size)
+		{
+			if(ciso_mode!= (int) _handle || 1)
+				{
+				wbfs_error("error reading wii disc sector (size mismatch)");
+				return 1;
+				}
+		}
+skip_1:
+	count-=read;
+	buf=((char *) buf)+read;
+	offset+=(u64) read;
 	}
+	if(finish) return 1;
 
 	return 0;
 }

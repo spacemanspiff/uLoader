@@ -1,5 +1,5 @@
 
-filetochar dip_plugin.bin dip_plugin -h -align 32
+filetochar odip_plugin.bin dip_plugin -h -align 32
 
 copy *.c ..\source\*.c
 copy *.h ..\source\*.h
