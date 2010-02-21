@@ -5,6 +5,8 @@
 
 
 #include "libwbfs.h"
+#include <conio.h>
+#include <ctype.h>
 
 #ifndef WIN32
 #define likely(x)       __builtin_expect(!!(x), 1)
@@ -17,7 +19,7 @@
 #define ERR(x) do {wbfs_error(x);goto error;}while(0)
 #define ALIGN_LBA(x) (((x)+p->hd_sec_sz-1)&(~(p->hd_sec_sz-1)))
 
-void set_cios_mode(wiidisc_t*d, int mode);
+void set_ciso_mode(wiidisc_t*d, int mode);
 
 static int force_mode=0;
 
@@ -692,7 +694,7 @@ u32 wbfs_add_disc
 	wbfs_sync(p);
 
 error:
-	set_cios_mode(NULL, 0);
+	set_ciso_mode(NULL, 0);
 	if(d)
 		wd_close_disc(d);
 	if(used)
@@ -708,11 +710,7 @@ error:
 
 u32 wbfs_add_cfg
 	(
-		wbfs_t *p,
-		read_wiidisc_callback_t read_src_wii_disc,
-		void *callback_data,
-		progress_callback_t spinner,
-		partition_selector_t sel
+		wbfs_t *p
 	)
 {
 	int i, discn;
@@ -725,7 +723,7 @@ u32 wbfs_add_cfg
 	u8 *b;
 	int disc_info_sz_lba;
 
-	set_cios_mode(NULL, 0);
+	set_ciso_mode(NULL, 0);
 
 	used = wbfs_malloc(p->n_wii_sec_per_disc);
 	
@@ -808,7 +806,7 @@ u32 wbfs_add_cfg
 	wbfs_sync(p);
 
 error:
-	set_cios_mode(NULL, 0);
+	set_ciso_mode(NULL, 0);
 	if(d)
 		wd_close_disc(d);
 	if(used)
@@ -830,7 +828,7 @@ u32 wbfs_estimate_disc
 	)
 {
 	u8 *b;
-	int disc_info_sz_lba;
+
 	int i;
 	u32 tot;
 	u32 wii_sec_per_wbfs_sect = 1 << (p->wbfs_sec_sz_s-p->wii_sec_sz_s);
@@ -932,9 +930,7 @@ u32 wbfs_trim(wbfs_t*p)
         // os layer will truncate the file.
         return maxbl;
 }
-// REGION PATCH
 
-u8 pal_patch[16]={0x80, 0x80, 0x80, 0x06, 0x07, 0x07, 0x06, 0x07, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
 
 u32 wbfs_add_png(wbfs_disc_t*d, char *png)
 {
@@ -943,7 +939,7 @@ u32 wbfs_add_png(wbfs_disc_t*d, char *png)
         int i;
 		int len;
         int src_wbs_nlb=p->wbfs_sec_sz/p->hd_sec_sz;
-        int dst_wbs_nlb=p->wbfs_sec_sz/p->wii_sec_sz;
+
 
 		FILE *fp=fopen(png,"rb");
 		u8 * mem_png;
@@ -1016,9 +1012,7 @@ u32 wbfs_remove_cfg(wbfs_disc_t*d)
         int i;
 	
         int src_wbs_nlb=p->wbfs_sec_sz/p->hd_sec_sz;
-        int dst_wbs_nlb=p->wbfs_sec_sz/p->wii_sec_sz;
-
-	
+ 
 
         copy_buffer = wbfs_ioalloc(p->wbfs_sec_sz);
         if(!copy_buffer)
@@ -1067,12 +1061,25 @@ u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,v
         wbfs_t *p = d->p;
         u8* copy_buffer = 0;
         int i;
+		u32 tot, cur;
         int src_wbs_nlb=p->wbfs_sec_sz/p->hd_sec_sz;
         int dst_wbs_nlb=p->wbfs_sec_sz/p->wii_sec_sz;
 
         copy_buffer = wbfs_ioalloc(p->wbfs_sec_sz);
         if(!copy_buffer)
                 ERR("alloc memory");
+
+
+        cur=tot=0;
+
+		for( i=0; i< p->n_wbfs_sec_per_disc; i++)
+        {
+                u32 iwlba = wbfs_ntohs(d->header->wlba_table[i]);
+                if (iwlba)
+                {
+				tot++;
+				}
+		}
 
         for( i=0; i< p->n_wbfs_sec_per_disc; i++)
         {
@@ -1081,9 +1088,10 @@ u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,v
                 {
                         
                         if(spinner)
-                                spinner(i,p->n_wbfs_sec_per_disc);
+                                spinner(cur, tot);
                         p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
                         write_dst_wii_sector(callback_data, i*dst_wbs_nlb, dst_wbs_nlb, copy_buffer);
+						cur++;
 				
                 }
 				
@@ -1101,9 +1109,12 @@ u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,
         wbfs_t *p = d->p;
         u8* copy_buffer = 0;
         int i;
+		u32 tot, cur;
         int src_wbs_nlb=p->wbfs_sec_sz/p->hd_sec_sz;
         int dst_wbs_nlb=p->wbfs_sec_sz/p->wii_sec_sz;
+
 		u32 offset=0;
+
 
 
         copy_buffer = wbfs_ioalloc(p->wbfs_sec_sz);
@@ -1123,10 +1134,12 @@ u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,
 		copy_buffer[6]=(i>>16) & 255;
 		copy_buffer[7]=(i>>24) & 255;
 
+		cur=tot=0;
+
 		for( i=0; i< p->n_wbfs_sec_per_disc; i++)
         {
                 u32 iwlba = wbfs_ntohs(d->header->wlba_table[i]);
-                if (iwlba) copy_buffer[i+8]=1;
+                if (iwlba) {copy_buffer[i+8]=1;tot++;}
 				else copy_buffer[i+8]=0;
 					
 		}
@@ -1140,9 +1153,10 @@ u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,
                 if (iwlba)
                 {   
 						 if(spinner)
-                                spinner(i,p->n_wbfs_sec_per_disc);
+                                spinner(cur, tot);
                         p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
                         write_dst_wii_sector(callback_data, offset, dst_wbs_nlb, copy_buffer);
+						cur++;
 
 				offset+=dst_wbs_nlb;
 				

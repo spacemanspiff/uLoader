@@ -351,6 +351,7 @@ s32 WDVD_SetUSBMode(u8 *id, s32 partition)
 		memcpy(&inbuf[2], id, 6);
 		inbuf[5] = partition;
 		}
+	else if(partition) inbuf[5] = partition;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_SETUSBMODE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
 	if(ret!=1)

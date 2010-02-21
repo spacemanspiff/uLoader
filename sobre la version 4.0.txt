@@ -1,0 +1,128 @@
+Lo nuevo en uLoader 4.0
+-----------------------
+
+.ciso: Formato de compactacion que guarda el contenido de una .ISO  de forma similar a como se almacena en una particion WBFS.
+
+NOTA: si eres programador, mira el anexo abajo, dirigido a los programadores.
+
+EHCMODULE.ELF:
+
+- Nuevo ehcmodule configurable externamente (puerto, Reset Bulk, fuerza GetMaxlun y Timeout alternativo).
+
+- Internamente se limitan las lecturas a 64KB, lo cual espero que resuleva ciertos problemas reportados de lectura.
+
+- Añadido soporte de lectura .ciso desde CD/DVD USB (para DVD Multijuego o uso directo)
+
+- Añadido vector SWI 0xcd para exportacion de datos y funciones de interes (por ejemplo, utilizar el monticulo de memoria WBFS para fat-module)
+
+DIP-PLUGING:
+
+- Nuevo compilacion para salvar algunos problemas de la exportacion a .bin
+
+- Arreglados un par de bugs menores
+
+- Añadido soporte DVD .ciso desde lector interno (para DVD Multijuego o uso directo)
+
+- Añadido soporte .ciso para dispositivo FAT (u otro) con acceso a la funcion os_seek() como byte (4GB) o como word (16GB)
+
+LIBFAT:
+
+- Añadida nueva libreria con acceso a 4GB mediante fseek SEEK_SET (internamente convierte s32 a u32 y utiliza comprobaciones de  64 bits en puntos clave)
+
+- Cambios en la gestion de cache para alinearla y tratar de ajustarla a cluster
+
+FAT-MODULE:
+
+ - Los mismos cambios que en LIBFAT, ajustando la cache con una estrategia distinta para entradas FAT y lectura/escritura de datos
+
+ - Compactacion del modulo suprimiendo funciones innecesarias y utilizando el monticulo de memoria WBFS para la cache, importandolo desde ehcmodule
+
+ - El modulo trabaja con los devices sd: y usb: en formato FAT/FAT32
+
+ISOTOCISO:
+  
+  - para exportar .iso to .ciso o .ciso a .iso. Usalo sin parametro o como "isotociso game.iso" o "isotociso game.ciso" en CMD
+
+ WBFS_WIN:
+
+  - Nueva version corrigiendo el nivel de progreso
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ ULOADER:
+
+ - Nueva reordenacion de codigo, correccion de algunos bugs, etc
+
+ - Añadido soporte .ciso para unidades FAT y DVD.
+
+     - FAT: Lista hasta 256 juegos de forma conjunta entre el dispositivo SD (sd:/ciso) y dispositivo USB (primera particion FAT usb:/ciso).
+	    Recuerda que no puedes superar 4GB por juego por lo que solo se recomienda usar FAT en dispsoitivos pequeños tales como Pendrives
+	    y memorias SD. NOTA: se recomienda formatear a 32KB por cluster el dispositivo usando "format unit: /FS:FAT32 /Q /A:32k" y vigilar
+	    la fragmentacion de los archivos (si es necesario, quita todos los archivos/directorios y vuelve a meter los .ciso primero).
+
+	    Si no procedes así la lectura será muy lenta...
+
+	    Desde FAT, puedes incluir las caratulas, tener tus favoritos, renombrar juegos e incluso usar la opcion de dol Alternativo
+
+     - DVD: Puedes grabar una imagen .ciso directamente en un DVD (desde Nero "Todos los archivos", graba como  "mode 1" "2048 bytes" por sector )
+            
+	    Tambien puedes crear un DVD en formato desde Nero UDF (solo UDF) o usando Ultraiso, sin directorios, sin archivos superfluos y con un 
+	    maximo de 8 ficheros .ciso, dado que el soporte UDF implementado es muy limitado. Funciona tanto con DVD USB como DVD interno 
+	    (si tu consola lo soporta).
+
+	    Desde .ciso puedes usar tambien la opcion de dol Alternativo. La seleccion de Multiples juegos se hace pulsando los botones especiales
+	    que aparecen en pantalla.
+
+ - Añadido nuevo menú (pulsando HOME) "uLoader hacks" para configurar el funcionamiento del programa. Requiere el ejecutable de uLoader instalado en
+   sd:/apps/uloader/boot.elf puesto que se parchea a si mismo. A destacar las opciones para configurar ehcmodule.elf (si tienes problemas con tu 
+   dispositivo USB, entra con el dispositivo desconectado, pulsa '2' cuando te lo pida, y en la pantalla del DVD, pulsa HOME y luego selecciona 
+   uLoader Hacks para probar otras configuraciones)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+SECCION DE PROGRAMADORES
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EHCMODULE.ELF:
+
+- En ehc_loop, linea 403, tienes la funcion de tratamiento de "svc 0xcd" (fat-module->syscalls.s ->swi_ehcmodule()). El monticulo de WBFS cuya ID 
+  puede ser obtenida con ayuda de este servicio, mide 136KB en su totalidad, que puedes paorvechar para otros usos.
+
+- En main.c se conecta la funcion que captura la syscall os_message_queue_receive() de dev/di (linea 164). La funcion de tratamiento esta en ehc_loop
+  linea 369. El uso que se le da aqui es desviar las ioctl 0x7a y 0x88 modificando el mensaje para llamar a otras ioctl que se gestionan desde dip_plugin
+  para saltar el Cover error
+
+FAT-MODULE:
+
+- No debe cargarse si se va a utilizar WBFS desde ehcmodule.elf, debido a que comparten el monticulo de memoria y fat-module.elf requiere mucha memoria.
+
+- Dispones de los dispositivos "sd:" y "usb:" que debes montar usando sus respectivas llamadas Ioctlv ( ver load_fat_module() en source->  mload_modules.c)
+
+DIP-PLUGIN:
+
+ - En los fuentes de uloader (source-> loader.c -> load_disc() se pueden observar los diferentes usos de la funcion WDVD_SetUSBMode.
+
+   - Modo dispositivo (FAT): El modo dispositivo requiere que se copie la ruta del dispositivo a la zona reservada para ello en dip_plugin (ver funcion
+     load_fat_module() en source->  mload_modules.c) que está limirada a 256 bytes.
+
+     Se puede activar con WDVD_SetUSBMode((u8 *) "_DEV", 0), pero tambien tienes WDVD_SetUSBMode((u8 *) "_DEVW", 0) en prevision de un dispositivo que 
+     supere el limite de 4GB, trabajando os_seek() con words (file_offset/4).
+
+    - Modo DVD Interno: WDVD_SetUSBMode(NULL, lba) -> el LBA corresponde con el sector donde empieza la imagen .ciso. Si la imagen no es valida, se toma
+      como un DVD normal
+
+    - Modo DVD USB: WDVD_SetUSBMode((u8 *) "_DVD", lba)-> A diferencia  del modo DVD interno, aqui lba=0 se utiliza para DVD Normal, mientras que el inicio
+    de una imagen .ciso se especifica como lba+1. Es decir, si una imagen .ciso comienza en el sector 265, habría que pasar lba=266 para que la tomara.
+
+ NOTA: uLoader se ocupa de interpretar el DVD con UDF de una forma rudimentaria. Conociendo como funcionan estas funciones, puedes crear otros soportes 
+ como ISO 9660 que yo he descartado porque Nero no permite grabar archivos de mas de 2GB. El soporte CISO / UDF  lo puedes encontrar en uloader.c lineas
+ 787 y 811 y como se puede observar, el soporte UDF es primitivo, pero funciona :D.
+
+  Como dato curioso: tengo el honor de ser el primero en jugar a un juego de Wii desde un CD-R, gracias al formato .ciso y, evidentemente, a un lector 
+  externo ;)
+
+Saludos.
+    
+
+
+     
+    

@@ -1,4 +1,4 @@
-uLoader v3.6 - por Hermes (www.elotrolado.net)
+uLoader v4.0 - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (3.0 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -12,6 +12,11 @@ Caracteristicas:
 ---------------
 
 - Soporte para comandos Cover en dip_plugin y ehcmodule. Se suprime el uso del cIOS 249
+
+- Soporte para dispositivos en formato FAT/FAT32 (SD y USB) y DVD Multijuego mediante .ciso (max 8 juegos en DVD UDF)
+  (mira el anexo "sobre la version 4.0.txt" para mas detalle)
+
+- ehcmodule configurable desde el HOME menu "uLoader Hacks"
 
 - Se añade soporte 16:9 y se añade salvapantallas
 

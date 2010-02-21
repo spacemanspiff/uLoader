@@ -1,5 +1,0 @@
-
-make
-
-
-pause

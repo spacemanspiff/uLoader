@@ -1,0 +1,6 @@
+
+Ejecuta el programa sin parametros para usar el visualizador de ficheros
+
+o usa isotociso file.iso / isotociso file.ciso
+
+el fichero es convertido de .iso a .ciso or .ciso a .iso

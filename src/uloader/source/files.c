@@ -7,7 +7,7 @@
 #include <gccore.h>
 #include "ogc/lwp_threads.h"
 #include <wiiuse/wpad.h>
-#include <fat.h>
+#include "fat.h"
 #include <fcntl.h>
 #include "sys/dir.h"
 #include <sys/statvfs.h>

@@ -314,8 +314,21 @@ void CWIIDisc_destroy()
 
 extern s32 WDVD_UnencryptedRead(void *buf, u32 len, u64 offset);
 
+extern int is_fat;
+
+static u32 table_lba[2048];
+static u8 mem_index[2048];
+static u8 buff[32768];
+static int ciso_size;
+
+
+static int one=1;
+static FILE * fp_disc=NULL;
+
+
 int CWIIDisc_io_read (unsigned char  *ptr, size_t size, struct image_file *image, u64 offset)
 {
+	u32 my_offset=(u32) (offset/4);
 	#if 0
 	if (image->fp)
 	{
@@ -344,9 +357,83 @@ int CWIIDisc_io_read (unsigned char  *ptr, size_t size, struct image_file *image
 	else	
 		
 	#else
+
+	if(is_fat)
+		{
+		int ret,l;
+		
+
+		if(one)
+			{
+			u32 lba_glob=(16)<<9;
+
+			fseek(fp_disc, 0, SEEK_SET);
+			
+			ret=fread(buff,1, 32768 ,fp_disc);
+				if(ret<=0) {return 0;}
+				else
+					if(!(buff[0]=='C' && buff[1]=='I' && buff[2]=='S' && buff[3]=='O')) return 0;
+			ciso_size=(((u32)buff[4])+(((u32)buff[5])<<8)+(((u32)buff[6])<<16)+(((u32)buff[7])<<24))/4;
+		
+			memset(mem_index,0,2048);
+
+
+			for(l=0;l<16384;l++)
+				{
+
+				if((l & 7)==0) table_lba[l>>3]=lba_glob;
+				
+				if(buff[(8+l)])
+					{
+					mem_index[l>>3]|=1<<(l & 7);
+					lba_glob+=ciso_size;
+					}
+				}
+            
+			one=0;
+			}
+
+		if(!one)
+			{
+			u32 temp=((u32) my_offset)/ciso_size;
+	
+
+			u32 read_lba=table_lba[temp>>3];
+
+			for(l=0;l<(temp & 7);l++) if((mem_index[temp>>3]>>l) & 1) read_lba+=ciso_size;
+
+			read_lba<<=2;
+
+			read_lba+=(offset) & (((ciso_size)<<2)-1);
+			
+
+			fseek(fp_disc, read_lba, SEEK_SET);
+			ret=fread(ptr,1, size ,fp_disc);
+
+
+			
+			/*if(ret>0)
+				{
+				
+				if(read_lba+ret>=1024 && read_lba<1024*201)
+					{
+					l=1024*201-(read_lba-1024);
+					if(l>ret) l=ret;
+                    
+					memset(ptr+read_lba-1024,0, l);
+					}
+				return ret;
+				}
+			*/
+			return ret;
+		
+			}
+		exit(0);
+		}
 	// from WBFS
 	if (image->d)
 	{
+
 		return size *(wbfs_wiiscrub_read_disc(image->d, offset, size ,(char*)ptr));
 	} 
 	// from DVD DISC
@@ -1473,6 +1560,14 @@ void CWIIDisc_Reset()
 int CWIIDisc_getdols(wbfs_disc_t *d)
 {
 struct image_file *image;
+
+one=1;
+
+if(is_fat)
+	{
+	fp_disc=(void *) d;
+	d=NULL;
+	}
 //printf("Searching...\n");
 CWIIDisc_create();
 

@@ -16,6 +16,8 @@ s32 USBStorage2_Watchdog(u32 on_off);
 
 s32 USBStorage2_TestMode(u32 on_off);
 
+s32 USBStorage2_EHC_Off(void);
+
 #define DEVICE_TYPE_WII_UMS (('W'<<24)|('U'<<16)|('M'<<8)|'S')
 
 extern const DISC_INTERFACE __io_usbstorage2;

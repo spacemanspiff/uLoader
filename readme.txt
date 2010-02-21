@@ -1,4 +1,4 @@
-uLoader v3.6 - by Hermes (www.elotrolado.net)
+uLoader v4.0 - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (3.0 required). Now you can select the IOS used to install
@@ -14,6 +14,11 @@ Features:
 - Support for Cover commands in dip_plugin and ehcmodule. cIOS 249 support are removed in uLoader-
 
 - Support 16:9 and screensaver added
+
+- Support for FAT/FAT32 devices (SD and USB) and Multigame DVD's (max 8 games in UDF DVD) using .ciso files
+  (see "about 4.0 version.txt" for more details)
+
+- configurable ehcmodule from HOME menu "uloader hacks"
 
 - Added alternative menu from game configuration to select BCA mode: From Disc (read it from 0x100 offset), From Database (sd:/bca_database.txt)
 	or Grab from Database (sd:/bca_database.txt -> to offset 0x100 in WBFS disc)

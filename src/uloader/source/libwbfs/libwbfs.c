@@ -346,6 +346,8 @@ int wbfs_disc_read(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
         while(likely(len>=p->hd_sec_sz))
         {
                 u32 nlb = len>>(p->hd_sec_sz_s);
+
+				if(nlb>64) nlb=64; // read protection
                 
                 if(unlikely(lba + nlb > p->wbfs_sec_sz)) // dont cross wbfs sectors..
                         nlb = p->wbfs_sec_sz-lba;
@@ -484,6 +486,8 @@ int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
         while(likely(len>=p->hd_sec_sz))
         {
                 u32 nlb = len>>(p->hd_sec_sz_s);
+
+				if(nlb>64) nlb=64; // write protection
                 
                 if(unlikely(lba + nlb > p->wbfs_sec_sz)) // dont cross wbfs sectors..
                         nlb = p->wbfs_sec_sz-lba;

@@ -1,0 +1,2 @@
+make ogc-install
+pause

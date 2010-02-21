@@ -1049,14 +1049,7 @@ if(PADEVENT) // lectura del PAD por interrupciones :D
 	    {
 		PADEVENT=0; // anula el evento (lectura cada 20ms, recuerda)
 
-		temp_pad= wiimote_read(); 
-	    new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
-		
-		if(new_pad)
-			{
-			time_sleep=5*60;
-			SetVideoSleep(0);
-			}
+		wiimote_read();
         
 		if(exit_by_reset) goto sal_del_juego;
 

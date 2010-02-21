@@ -17,7 +17,7 @@ include $(DEVKITPPC)/wii_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	../source ../source/libpng/pngu ../source/libwbfs ../source/resources ../source/port0
+SOURCES		:=	../source ../source/libpng/pngu ../source/libwbfs ../source/resources
 DATA		:=	../data  
 INCLUDES	:=
 
@@ -33,7 +33,7 @@ LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -T../../rvl.ld
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lfat -lasnd -lmodplay -lscreen -lpng -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
+LIBS	:=	../../lib/libfat.a -lasnd -lmodplay -lscreen -lpng -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
 
 
 #---------------------------------------------------------------------------------

@@ -1,0 +1,111 @@
+The New in uLoader 4.0
+-----------------------
+
+.ciso: Packing format that saves the contents of a .ISO in a similar way that is stored on a WBFS partition.
+
+NOTE:If you are a developer you may be interested on looking the annex addresses to developers.
+
+EHCMODULE.ELF:
+
+- New ehcmodule externaly configurable (port, Reset Bulk, force GetMaxlun and alternative Timeout).
+
+- The readings are limited to 64 KB, that i hope will solve some reported reading problems.
+
+- Added support for .ciso reading from CD/DVD USB (for Multigame DVD or direct use)
+
+- Added 0xcd SWIvector for exporting data and handy functions (Ie :Using the WBFS memory heap for fat-module use)
+
+DIP-PLUGIN:
+
+- New compilation to solve some problems exporting to .bin
+
+- Minor bugfixing
+
+- Added .ciso support form internal DVD drive (for Multigame DVD or direct use)
+
+- Addede .ciso supprt for FAT devices(or others) with access to os_seek() function as byte(4GB) or as word(16GB)
+
+LIBFAT:
+
+- Added new library with 4GB access through fseek SEEK_SET ( internally cast s32 to u32 and uses 64 bits check at key points)
+
+- Management changes on cache to alling and try to adjust of a cluster
+
+FAT-MODULE:
+
+ - Same changes that on LIBFAT, adjusting cache with a different strategy for FAT entries and data R/W
+
+ - module compacting supressing unnecesary functions and using the WBFS memory heap for caching importing it from ehcmodule
+
+ - The module works on FAT/FAT32 with sd: and usb: devices
+
+ISOTOCISO:
+  
+  - to export .iso to .ciso or .ciso a .iso. use it first wihtout parameters or as "isotociso game.iso" or "isotociso game.ciso" on a CMD prompt
+
+ WBFS_WIN:
+
+  - new version fixing the progress level
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ ULOADER:
+
+ - New code rearrangement, some bugfixing, ecetera)
+
+ - Added .ciso support for FAT and DVD deices.
+
+     - FAT:  Joint list up to 256 games from SD device (sd:/ciso) and USB device( first fat partition usb:/ciso).
+	    Remember you cannot exceed the 4GB per game limit because of this its only recommended using FAT on small like pendrives and SD cards. NOTE: Its advised to format the device to 32KB per cluster using the command "format unit: /FS:FAT32 /Q /A:32k" and watching the archives fragmentation (remove all the files and add the .ciso files FIRST if necesary).
+
+	    if you not proceed that way the reading will be VERY SLOW
+
+	    You can include covers, have favorites, rename games and also using the Alternative DOL option on FAT
+
+     - DVD: You can burn a .ciso image directly on a DVD (on Nero "All files, burn as "mode 1" "2048 bytes" per sector )
+            
+	    Also you can create a DVD in UDF format from Nero UDF (UDF Only) or using Ultraiso, no directories, no superfluous files with a max of 8 .ciso files as the current UDF support implemented is very limited. It works on a USB DVD and also on the internal DVD drive (if your console supports it, sorry black wii owners).
+
+	    You can use also the alternative dol feature from .ciso. The multigame selection is done using the special button that show on the screen.
+
+ - Added new "uLoader hacks" menu (pressing HOME) to configure the program inner working. Requires the uLoader executable be in the sd:/apps/uloader/boot.elf path because it patches itself. To show up the echmodule.elf config options if you have troubles with your USB device run the app wiht the device unplugged, press '2'when asked, and in the DVD screen press HOME and then select uLoader Hacks to try other configurations)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+DEVELOPERS SECTION
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+EHCMODULE.ELF:
+
+- At ehc_loop, at line 403, is the "svc 0xcd" function management (fat-module->syscalls.s ->swi_ehcmodule()). The WBFS heap ID can be obtained with the help of this service, it sizes 136KB in whole, that you can use for other purposes.
+
+- On main.c is connected the function who captures the syscall os_message_queue_receive() on dev/di (line 164). The management function is in ehc_loop
+  linea 369.Its used here to redirect ioctl 0x7a and 0x88 modifying the message to call other ioctl that is managed from dip_plugin to workaround the Cover error
+
+FAT-MODULE:
+
+- You must not load this if you are gonna use WBFS from ehcmodule.elf because they share the memory heap and fat-module.elf requires a lot of memory.
+
+- You have at your disposal the "sd:" y "usb:" devices that you must mount using their respective Ioctlv calls ( see load_fat_module() at source->  mload_modules.c)
+
+DIP-PLUGIN:
+
+ - At the uloader sources (source-> loader.c -> load_disc() you can se the different uses of the WDVD_SetUSBMode function.
+
+   - Device mode (FAT): The device mode requires to copy the device path at the reserved zone for this purpose in dip_plugin (see function
+     load_fat_module() in source->  mload_modules.c) who is limited to 256 bytes.
+
+     It can be activated with WDVD_SetUSBMode((u8 *) "_DEV", 0), but you also have WDVD_SetUSBMode((u8 *) "_DEVW", 0) on foresight of a device that exceeds the 4GB limit, working os_seek() on words (file_offset/4).
+
+    - Internal DVD mode: WDVD_SetUSBMode(NULL, lba) -> The LBA corresponds with the sector where starts the .ciso image. If the image is invalid , is treated as a normal DVD.
+
+    - USB DVD mode: WDVD_SetUSBMode((u8 *) "_DVD", lba)-> Unlike the Internal DVD mode , here lba=0 means Normal DVD,  whereas the strart of a .ciso image is specified as lba+1. In plain words, if a .ciso image starts at the 265th sector,  you will have to pass lba=266 to work.
+
+ NOTE: uLoader interprets UDF DVD's in a rudimentary form. Knowing how work these funcions you can create others to support other formats like ISO 9660 i have discarded because Nero doents allow to burn file of more than 2GB. You cand find the CISO / UDF support in uloader.c lines
+ 787 and 811 and as you can see the UDF support is rude but it works :D.
+
+  As a trivia: I have the honour to be the first to play a wii game from a CD-R thanks to the .ciso format and obviously an external optical drive ;)
+
+Regards.
+    
+
+P.S. Sorry for the broken "engrish"    

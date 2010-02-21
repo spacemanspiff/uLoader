@@ -131,6 +131,24 @@ void splash_scr()
 		
 }
 
+void splash_scr_send()
+{
+	splash_scr();
+	Screen_flip();
+}
+
+void splash2_scr()
+{
+
+		draw_background();
+		letter_size(16,32);
+		PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+				
+		bkcolor=0;
+		autocenter=1;
+		SetTexture(NULL);
+
+}
 //---------------------------------------------------------------------------------
 /* procedural texture */
 //---------------------------------------------------------------------------------
@@ -825,22 +843,6 @@ int ylev=(SCR_HEIGHT-440);
 	}
 
 
-	#if 0
-	SetTexture(NULL);	
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, 0, 360, 0x8fffffff);
-	
-
-	SetTexture(MOSAIC_PATTERN);
-	SetTexture(&text_icon[3]);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360, (frames2 % 360)+45, 0xff0000ff);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+90, (frames2 % 360)+45+90, 0xff0000ff);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+180, (frames2 % 360)+45+180, 0xff0000ff);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+270, (frames2 % 360)+45+270, 0xff0000ff);
-
-	//SetTexture(&text_icon[3]);
-	SetTexture(NULL);
-	DrawSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, 4, 0, 360,  0xcf000000);
-	#endif
 	SetTexture(NULL);
 
 
@@ -1032,3 +1034,443 @@ for(n=0;n<128;n++)
 CreateTexture(&text_screen_fx, TILE_SRGBA8, screen_fx, 128, 128, 0);
 pos-=6;
 }
+
+
+void circle_select(int x, int y, char symb, int selected)
+{
+	SetTexture(NULL);
+
+	if(selected)
+		{
+		DrawFillEllipse(x, y, 50, 50, 0, 0xc0f0f0f0);
+		letter_size(32,64);
+		PX= x-16; PY= y-32; color= 0xff000000; bkcolor=0;
+		s_printf("%c", symb);
+		DrawEllipse(x, y, 50, 50, 0, 6, 0xc0f0f000);
+		}
+	else
+		{
+		DrawFillEllipse(x, y, 40, 40, 0, 0xc0f0f0f0);
+		letter_size(32,48);
+		PX= x-16; PY= y-24; color= 0xff000000; bkcolor=0;
+		s_printf("%c", symb);
+		DrawEllipse(x, y, 40, 40, 0, 6, 0xc0000000);
+		}
+
+}
+
+char *down_mess=NULL;
+
+int down_frame=0;
+
+void wait_splash_scr()
+{
+unsigned color2;
+
+int n;
+
+	splash_scr();
+
+	SelectFontTexture(1); // selecciona la fuente de letra extra
+
+	letter_size(12,32);
+					
+	PX=0; PY= SCR_HEIGHT/2-32+64; color= 0xff000000; 
+					
+	bkcolor=0;
+	autocenter=1;
+	SetTexture(NULL);
+	
+	DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32+64, 540, 64, 0, 0xa00000ff);
+	DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32+64, 540, 64, 0, 4, 0xa0000000);
+		
+	if(down_mess)
+		s_printf("%s",down_mess);
+
+	autocenter=0;
+
+	if(down_frame>=0)
+		for(n=0;n<((down_frame>>4) % 10)+1;n++)
+			{
+			color2=((1+(((down_frame>>2)+n) & 3))*64)-1;
+
+			color2=0xd8000000 | (color2<<0) | ((15-n)<<20);
+			DrawFillEllipse(140+n*40,SCR_HEIGHT/2-16+32+80+32, 16, 16, 0, color2);
+			DrawEllipse(140+n*40,SCR_HEIGHT/2-16+32+80+32, 16, 16, 0, 2, (color2 & 0xff000000));
+			}
+
+	draw_snow();
+	Screen_flip();
+
+	if(down_frame>=0) down_frame++;
+}
+
+void down_uload_gfx()
+{
+unsigned color2;
+
+int n;
+	draw_background();
+
+	SelectFontTexture(1); // selecciona la fuente de letra extra
+
+	letter_size(12,32);
+					
+	PX=0; PY= SCR_HEIGHT/2-32; color= 0xff000000; 
+					
+	bkcolor=0;
+	autocenter=1;
+	SetTexture(NULL);
+	
+	DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32, 540, 64, 999, 0xa00000ff);
+	DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32, 540, 64, 999, 4, 0xa0000000);
+		
+	if(down_mess)
+		s_printf("%s",down_mess);
+
+	autocenter=0;
+
+	if(down_frame>=0)
+		for(n=0;n<((down_frame>>4) % 10)+1;n++)
+			{
+			color2=((1+(((down_frame>>2)+n) & 3))*64)-1;
+
+			color2=0xd8000000 | (color2<<0) | ((15-n)<<20);
+			DrawFillEllipse(140+n*40,SCR_HEIGHT/2-16+32+80, 16, 16, 0, color2);
+			DrawEllipse(140+n*40,SCR_HEIGHT/2-16+32+80, 16, 16, 0, 2, (color2 & 0xff000000));
+			}
+
+	draw_snow();
+	Screen_flip();
+
+	if(down_frame>=0) down_frame++;
+}
+
+
+void happy_new_year(int nyear)
+{
+int frame=0;
+int n,m;
+
+u32 color2;
+s16 xx,yy;
+float f;
+
+char year[16];
+char happy[]="Happy New Year!!!";
+char press_any[]="Press Any Button To Exit";
+
+s16 stars[256][2];
+
+struct _fuegos
+	{
+	float x,y;
+	int fuerza;
+	u32 color;
+	}
+fuegos[8];
+
+struct _particles_d
+	{
+	float dx,dy;
+	}
+particles_d[256];
+
+	time_sleep=0;
+	SetVideoSleep(0);
+
+	SelectFontTexture(0);
+	
+	if(nyear>=0)
+		sprintf(year,"%i",nyear+1900);
+
+	srand(1);
+
+	for(m=0;m<8;m++) fuegos[m].fuerza=-1;
+
+
+
+	for(n=0;n<256;n++)
+		{
+		
+		int ang=rand() & 16383;
+
+		stars[n][0]= (rand() % (848+128))-128;
+		stars[n][1]= (rand() % SCR_HEIGHT);
+
+		f=((float)((1+(rand() & 255))*2))/128.0f;
+
+		particles_d[n].dx=f*((float) (seno2((ang) & 16383))/16384.0f);
+		particles_d[n].dy=f*((float) (coseno2((ang) & 16383))/16384.0f);
+		
+		}
+
+	
+	while(frame<60*30 || nyear<0)
+		{
+
+		if(rumble)
+			{
+			if(rumble<=7) wiimote_rumble(0); 
+			rumble--;
+			}
+		else wiimote_rumble(0);
+
+		WPAD_ScanPads(); // esto lee todos los wiimotes
+
+
+		draw_background();
+		DrawFillBox(-128, -32, 848+128, SCR_HEIGHT+32, 900, 0xff100000);
+		
+		SetTexture(NULL);
+
+		ConfigureForColor();
+
+		// dibuja estrellas
+
+		for(n=0;n<256;n++)
+		{
+		
+			xx=(s16) (stars[n][0]);
+			yy=(s16) (stars[n][1]);
+
+			if(n & 1) color2=0xffffffff;
+			else color2=0xffcfcfcf;
+			
+			if((rand() & 31)!=1) // tililar
+				{
+				GX_Begin(GX_TRIANGLES,  GX_VTXFMT0, 3);
+				
+
+				AddColorVertex(xx+1, yy  , 0, color2);
+				AddColorVertex(xx+2, yy+2, 0, color2);
+				AddColorVertex(xx  , yy+2, 0, color2);
+
+				GX_End();
+				}
+		}
+
+		for(m=0;m<8;m++)
+			{
+			
+			if(fuegos[m].fuerza<=-1 && ((rand()>>8) & 15)==0)
+				{
+				fuegos[m].x=SCR_WIDTH/2+(rand() & 511)-255;
+				fuegos[m].y=SCR_HEIGHT/2+(rand() & 255)-127;
+				fuegos[m].fuerza=127;
+				switch((rand()>>8) % 5)
+					{
+					case 0:
+						fuegos[m].color=0xffffff;break;
+					case 1:
+						fuegos[m].color=0x2f2fff;break;
+					case 2:
+						fuegos[m].color=0x2fff2f;break;
+					case 3:
+						fuegos[m].color=0x2fffff;break;
+					case 4:
+						fuegos[m].color=0xff3f3f;break;
+
+
+					}
+
+				snd_explo(m, fuegos[m].x);
+
+				}
+
+
+			f=((float ) (128-fuegos[m].fuerza))/2.0f;
+			
+			if(fuegos[m].fuerza>0)
+				{
+				int alpha;
+				
+					
+				color2=fuegos[m].color;
+				
+				alpha=fuegos[m].fuerza;
+				if(alpha<0) alpha=0;
+				color2|=alpha<<25;
+				
+				for(n=0;n<256;n++)
+					{
+					xx=(s16) (fuegos[m].x+particles_d[n].dx*f);
+					yy=(s16) (fuegos[m].y+particles_d[n].dy*f);
+
+						GX_Begin(GX_TRIANGLESTRIP,  GX_VTXFMT0, 4);
+
+						AddColorVertex(xx+3, yy  , 0, color2);
+						AddColorVertex(xx+6, yy+3, 0, color2);
+						AddColorVertex(xx  , yy+3, 0, color2);
+						AddColorVertex(xx+3, yy+6  , 0, color2);
+						
+						GX_End();	
+					}
+				
+				fuegos[m].fuerza-=2;
+				}
+
+
+			}
+		
+		
+        if(nyear>=0)
+			{
+			letter_size(64,128);	
+
+			PX= 0; 
+			
+						
+			bkcolor=0;
+			PX= SCR_WIDTH/2-(strlen(year)*64)/2;	
+			for(n=0; n<strlen(year); n++)
+				{
+				if(((frame & 32)!=0) ^ (n & 1))
+					color= 0xffffffff; 
+				else
+					color= 0xffcfcfcf; 
+				PY=100+ (8*seno2((((n +((frame>>2) & 15))*2048)) & 16383))/16384;
+				s_printf("%c", year[n]);
+				}
+
+			PX= SCR_WIDTH/2-(strlen(happy)*32)/2; color= 0xffffffff; 
+						
+			bkcolor=0;
+			letter_size(32,64);	
+			autocenter=0;
+		
+			for(n=0; n<strlen(happy); n++)
+				{
+				switch((n+(frame>>2)) & 3)
+					{
+					case 0:
+						color=0xff4fff4f;break;
+					case 1:
+						color=0xffff4f4f;break;
+					case 2:
+						color=0xff4fffff;break;
+					case 3:
+						color=0xff4f4fff;break;
+					}
+
+				PY=280+ (8*seno2((((n +((frame>>2) & 15))*2048)) & 16383))/16384;
+				s_printf("%c", happy[n]);
+				}
+
+			letter_size(12,32);	
+
+			PX= 0; color= 0xffffffff; 
+						
+			bkcolor=0;
+			if(frame>60*10)
+				{
+				PX= SCR_WIDTH/2-(strlen(press_any)*12)/2;	
+				for(n=0; n<strlen(press_any); n++)
+					{
+					PY=430+ (2*seno2((((n +((frame>>2) & 15))*2048)) & 16383))/16384;
+					s_printf("%c", press_any[n]);
+					}
+				}
+			}
+		
+
+		frame++;
+		Screen_flip();
+
+		wiimote_read();
+
+		if(new_pad && frame>10)
+				{
+				time_sleep=60*5;
+				SetVideoSleep(0);
+				break;
+				}
+
+		//if(frame>60*5 && new_pad) 
+		}
+
+	SelectFontTexture(1);
+
+time_sleep=60*5;
+}
+
+extern u32 sd_clusters;
+extern u32 usb_clusters;
+
+void cluster_warning()
+{
+int n=0;
+
+while(n<15*60)
+	{
+	int ylev=(SCR_HEIGHT-440);
+
+	if(rumble)
+			{
+			if(rumble<=7) wiimote_rumble(0); 
+			rumble--;
+			}
+		else wiimote_rumble(0);
+
+		WPAD_ScanPads(); // esto lee todos los wiimotes
+
+	splash_scr();
+
+	SetTexture(NULL);
+    DrawRoundFillBox(20, ylev, 148*4, 352+32, 0, 0xcf600060);
+	DrawRoundBox(20, ylev, 148*4, 352+32, 0, 4, 0xff900090);
+
+	PX= 0; PY=ylev+8; color= 0xff00ffff; 
+				
+	bkcolor=0;
+
+	letter_size(32,64);
+		
+	autocenter=1;
+	s_printf("%s","WARNING!");
+	
+
+	letter_size(12,24);
+	PY+=80;
+    color= 0xffffffff; 
+
+	if(sd_clusters && sd_clusters<32)
+		{
+		s_printf("The SD Device uses %uKB as cluster size", (sd_clusters*512)/1024); 
+		PY+=32;
+		}
+	if(usb_clusters && usb_clusters<32)
+		{
+		s_printf("The USB Device uses %uKB as cluster size", (usb_clusters*512)/1024);
+		PY+=32;
+		}
+	s_printf("To increase the speed using FAT you must use");
+	PY+=32;
+	s_printf("at least 16KB as cluster size and remember you");
+	PY+=32;
+	s_printf("to watch the file fragmentation!!!");
+	PY+=32;
+	s_printf("use 'format unit: /FS:FAT32 /Q /A:32k'");
+	PY+=32;
+	s_printf("from 'CMD' in Windows to resolve it.");
+
+	PY+=32;color= 0xff00ffff; 
+	if(n & 8) s_printf("< Press a button >");
+	
+	
+	autocenter=0;
+	Screen_flip();
+	
+	wiimote_read();
+
+	if(new_pad && n>10)
+				{
+				time_sleep=60*5;
+				SetVideoSleep(0);
+				break;
+				}
+
+    n++;
+	}
+}
+

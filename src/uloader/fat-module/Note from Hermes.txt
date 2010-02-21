@@ -1,0 +1,11 @@
+fat module from Waninkoko git
+
+This module is a modified version to work with 4GB files (thinking in .ciso files > 2GB). 
+
+Normally fseek(fd, x, SEEK_SET) only can access to 2GB files, because it use one s32 as offset, but you can convert s32 to u32 and 
+internally works using s64 or u64 to skip the 2GB limit and works with 4GB (FAT32 support files < 4GB. Windows can fail if you try to put a
+file equal to 4GB, but .ciso compact the file).
+
+Tested with Red Steel .ciso (about 3.82GB) and others
+
+NOTE: This module use the SWI 0xcd (from ehcmodule.elf) to get the heap memory and releases the WBFS memory used

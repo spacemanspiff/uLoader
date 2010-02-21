@@ -477,7 +477,7 @@ void spinner(u64 x, u64 max)
 	h = d / 3600;
 	m = (d / 60) % 60;
 	s = d % 60;
-	percent = 100.0 * x / max;
+	percent = 100.0 * x /  max;
 
 	fprintf(stderr, "%5.2f%% (%c) ETA: %d:%02d:%02d  \r",
 		percent, "/|\\-"[(x/10) % 4], h, m, s);

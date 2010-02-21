@@ -379,8 +379,8 @@ if (!hdd)
 		wbfs_disc_write(disc,(1024>>2), buff, 1024);
 		
 		if(buff[0]=='H' && buff[1]=='D' && buff[2]=='R' && buff[3]!=0)
-			
-			wbfs_disc_write(disc,(2048>>2), buff+1024, ((u32) buff[3])*1024);
+			if(((u32) buff[3])<201) 
+				wbfs_disc_write(disc,(2048>>2), buff+1024, ((u32) buff[3])*1024);
 		/* Close disc */
 		wbfs_close_disc(disc);
 

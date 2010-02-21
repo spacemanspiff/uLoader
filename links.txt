@@ -1,16 +1,4 @@
-uLoader 1.8E
-------------
 
-
-uLoader ICONS:
-
-    http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
-
-(save the page content to get alls icons quickly)
-
-Notes: Use uLoader to add the icons or the included wbs_win.exe
-
----------------------------------------------------------------------
 
 Loadstructor (customs game channels):
 

@@ -10,6 +10,7 @@
 #include "xgetopt.h"
 #include <sys/stat.h>
 
+#include <ctype.h>
 #include <conio.h>
 
 #ifdef WIN32
@@ -32,16 +33,16 @@ int block_ciso=0;
 wbfs_t *wbfs_try_open(char *disc, char *partition, int reset);
 wbfs_t *wbfs_try_open_partition(char *fn, int reset);
 
-u32 wbfs_add_cfg(wbfs_t *p, read_wiidisc_callback_t read_src_wii_disc, void *callback_data, progress_callback_t spinner, partition_selector_t sel);
+u32 wbfs_add_cfg(wbfs_t *p);
 
 void wbfs_integrity_check(wbfs_t* p);
 
 #define GB (1024 * 1024 * 1024.)
 
-int cios_mode=0;
-char cios_map[32768];
-int cios_map_off[32768];
-unsigned cios_size=64*32768;
+int ciso_mode=0;
+char ciso_map[32768];
+int ciso_map_off[32768];
+unsigned ciso_size=64*32768;
 
 int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
 {
@@ -53,12 +54,12 @@ int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
 	offset <<= 2L;
 	
 
-	if(cios_mode== (int) _handle)
+	if(ciso_mode== (int) _handle)
 	{
-	int off=cios_map_off[(u32)(offset/(u64)cios_size)];
+	int off=ciso_map_off[(u32)(offset/(u64)ciso_size)];
 	if(off<0) {memset(buf,0,count);if(off==-2) return 1; return 0;}
 //	printf("coffset %i size %i\n",_offset,count);
-	large.QuadPart = (offset & ((u64)(cios_size-1)))+(((u64) ((u32)off))* (u64)cios_size)+32768ULL;
+	large.QuadPart = (offset & ((u64)(ciso_size-1)))+(((u64) ((u32)off))* (u64)ciso_size)+32768ULL;
 	}
 	else {large.QuadPart = offset;}
 
@@ -84,23 +85,23 @@ int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
 	return 0;
 }
 
-void set_cios_mode(wiidisc_t*d, int mode)
+void set_ciso_mode(wiidisc_t*d, int mode)
 {
-if(!mode) cios_mode=0;
+if(!mode) ciso_mode=0;
 else
 	{
 	int n,o=0,last=0;
-	cios_mode=0;
-	read_wii_disc_sector(d->fp,0, 0x8000,cios_map);
-	cios_mode=(int) d->fp;
-	cios_size=((u32)((u8)cios_map[4]))+(((u32)((u8)cios_map[5]))<<8)+(((u32)((u8)cios_map[6]))<<16)+(((u32)((u8)cios_map[7]))<<24);
+	ciso_mode=0;
+	read_wii_disc_sector(d->fp,0, 0x8000,ciso_map);
+	ciso_mode=(int) d->fp;
+	ciso_size=((u32)((u8)ciso_map[4]))+(((u32)((u8)ciso_map[5]))<<8)+(((u32)((u8)ciso_map[6]))<<16)+(((u32)((u8)ciso_map[7]))<<24);
 
     for(n=0;n<32760;n++)
 		{
-		if(cios_map[n+8]) {cios_map_off[n]=o;o++;last=n;} else cios_map_off[n]=-1;
+		if(ciso_map[n+8]) {ciso_map_off[n]=o;o++;last=n;} else ciso_map_off[n]=-1;
 		}
 
-	for(n=last+1;n<32760;n++) cios_map_off[n]=-2;
+	for(n=last+1;n<32760;n++) ciso_map_off[n]=-2;
 	
 	}
 }
@@ -276,7 +277,7 @@ void wbfs_applet_init(wbfs_t *p)
 {
 	// nothing to do actually..
 	// job already done by the reset flag of the wbfs_open_partition
-	fprintf(stderr, "wbfs initialized.\n");
+	fprintf(stderr, "wbfs initialized (%x)\n", (unsigned) p);
 }
 
 void wbfs_applet_estimate(wbfs_t *p, char *argv)
@@ -313,7 +314,7 @@ void wbfs_applet_addcfg(wbfs_t *p)
 		}
 		else
 		{
-			wbfs_add_cfg(p, read_wii_disc_sector, NULL, _spinner, ONLY_GAME_PARTITION);
+			wbfs_add_cfg(p);
         }
 
 }
@@ -546,7 +547,7 @@ struct wbfs_applets
 }
 
 #define APPLET(x) { #x,wbfs_applet_##x, NULL, NULL }
-#define APPLET2(x) { #x, wbfs_applet_##x, NULL, wbfs_applet_##x}
+#define APPLET2(x) { #x, NULL, NULL, wbfs_applet_##x}
 #define APPLET_NOARG(x) { #x, NULL, wbfs_applet_##x, NULL }
 
 wbfs_applets[] =
@@ -632,7 +633,6 @@ int main(int argc, char *argv[])
 	{
 		while(1)
 		{
-		int k;
 		system("cls");
 		printf("wbfs windows port build 'delta'\nModified by Hermes\n\n");
 		printf("Press Device letter:\n\n");

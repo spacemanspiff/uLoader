@@ -53,6 +53,8 @@ distribution.
 /* Variables */
 static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb2";
 static char fs2[] ATTRIBUTE_ALIGN(32) = "/dev/usb/ehc";
+
+static char fsoff[] ATTRIBUTE_ALIGN(32) = "/dev/usb2/OFF";
  
 static s32 hid = -1, fd = -1;
 static u32 sector_size;
@@ -123,6 +125,14 @@ s32 USBStorage2_GetCapacity(u32 *_sector_size)
 	return IPC_ENOENT;
 }
 
+s32 USBStorage2_EHC_Off(void)
+{
+	USBStorage2_Deinit();
+	fd=IOS_Open(fsoff, 0);
+	USBStorage2_Deinit();
+	return 0;
+
+}
 
 s32 USBStorage2_Init(void)
 {

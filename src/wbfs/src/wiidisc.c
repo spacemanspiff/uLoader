@@ -9,7 +9,7 @@
 void aes_set_key(u8 *key);
 void aes_decrypt(u8 *iv, u8 *inbuf, u8 *outbuf, unsigned long long len);
 
-void set_cios_mode(wiidisc_t*d, int mode);
+void set_ciso_mode(wiidisc_t*d, int mode);
 
 static void _decrypt_title_key(u8 *tik, u8 *title_key)
 {
@@ -243,7 +243,7 @@ static void do_disc(wiidisc_t*d)
 	disc_read(d, 0, b, 0x100);
 	if(b[0]=='C' && b[1]=='I' && b[2]=='S' && b[3]=='O')
 	{
-	set_cios_mode(d, 1);
+	set_ciso_mode(d, 1);
 	disc_read(d, 0, b, 0x100);
 	}
         magic=_be32(b+24);

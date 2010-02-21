@@ -37,6 +37,7 @@ extern "C" {
 #include "libpng/pngu/pngu.h"
 #include "remote.h"
 
+
 #ifndef ALTERNATIVE_VERSION
 #define BACK_COLOR 0xffffffff //0xffa0a0a0
 #else
@@ -51,7 +52,7 @@ extern void reset_call();
 
 extern int idioma;
 
-extern char letrero[2][60][64];
+extern char letrero[2][70][64];
 
 extern int mode_disc;
 
@@ -64,6 +65,28 @@ extern int use_icon2;
 extern Mtx	modelView;
 
 extern char uloader_version[5];
+
+/*************************************/
+#include <wiiuse/wpad.h>
+
+extern unsigned temp_pad,new_pad,old_pad;
+
+extern WPADData * wmote_datas;
+
+extern int rumble;
+
+void wiimote_rumble(int status);
+void make_rumble_off();
+
+unsigned wiimote_read();
+
+void wiimote_ir();
+
+void wiimote_guitar();
+
+
+
+/*************************************/
 
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
 
@@ -99,10 +122,17 @@ extern char cabecera2_str[128];
 
 extern int altdol_frames2;
 
+extern char *down_mess;
+
+extern int down_frame;
 
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
 
 void splash_scr();
+
+void splash_scr_send();
+
+void splash2_scr();
 
 void create_background_text(int seed, int width,int height,unsigned *t);
 
@@ -119,7 +149,6 @@ int Draw_button(int x,int y,char *cad);
 int Draw_button2(int x,int y,char *cad, int selected);
 
 void * create_png_texture(GXTexObj *texture, void *png, int repeat);
-
 
 void draw_background();
 
@@ -143,6 +172,17 @@ extern int coseno2(int ang);
 void draw_altdolscr();
 
 void set_text_screen_fx();
+
+void circle_select(int x, int y, char symb, int selected);
+
+void wait_splash_scr();
+void down_uload_gfx();
+
+void snd_explo(int voice, int pos);
+void happy_new_year(int nyear);
+
+void cluster_warning();
+
 
 
 #ifdef __cplusplus
