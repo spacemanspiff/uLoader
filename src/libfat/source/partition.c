@@ -152,7 +152,7 @@ PARTITION* _FAT_partition_constructor (const DISC_INTERFACE* disc, uint32_t cach
 		uint8_t part_table[16*4],*ptr;
 
 		//find FAT partition
-		if(sectorBuffer[0x1bc]!=0 || sectorBuffer[0x1bd]!=0 || sectorBuffer[0x1fe]!=0x55 || sectorBuffer[0x1ff]!=0xaa) memset(part_table,0,16*4);
+		if(sectorBuffer[0x1fe]!=0x55 || sectorBuffer[0x1ff]!=0xaa) memset(part_table,0,16*4);
 		else memcpy(part_table,sectorBuffer+0x1be,16*4);
 
         ptr = part_table;

@@ -10,7 +10,7 @@
 #include "libwbfs/libwbfs.h"
 
 /* Constants */
-#define MAX_NB_SECTORS	64 //32
+#define MAX_NB_SECTORS	64
 
 /* Variables */
 static wbfs_t *hdd = NULL;

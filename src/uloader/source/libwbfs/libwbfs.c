@@ -406,9 +406,10 @@ int wbfs_wiiscrub_read_disc(wbfs_disc_t*d, u64 offset, s32 size, char *dst)
 						{
 						if(copy_buffer[1024]=='H' && copy_buffer[1025]=='D' && copy_buffer[1026]=='R')
 							{
-							memset(&copy_buffer[1024+8], 0, copy_buffer[1027]*1024);
-							memset(&copy_buffer[1024],0,8);
+							memset(&copy_buffer[1024], 0, copy_buffer[1027]*1024+1024);
+							
 							}
+						
 						}
 
 						/////////////////////////////

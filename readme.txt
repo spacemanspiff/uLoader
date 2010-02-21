@@ -1,7 +1,7 @@
-uLoader v2.8 BETA - by Hermes (www.elotrolado.net)
+uLoader v3.0 - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
-WARNING: run at first cios_installer.dol (2.6 required). Now you can select the IOS used to install
+WARNING: run at first cios_installer.dol (3.0 required). Now you can select the IOS used to install
 
 uLoader is a work based on Kwiirk's YAL and Waninkoko's usbloader that tries to give support to both custom IOS (cIOS222 and cIOS249) 
 to launch backups from USB mass storage devices with a graphical user interface similar to Wii channels.
@@ -10,6 +10,14 @@ to launch backups from USB mass storage devices with a graphical user interface 
 
 Features:
 ---------
+
+- New dev/mload and EHCI module based in interruptions. New cIOS based in IOS 38 base (I have done test reading 21000+ seconds without errors).
+  See operational mode below.
+
+- Now you can add your own .mod music from sd:/apps/uloader/music.mod .
+
+- Test Mode support: Press RESET button when you can see the start screen to enter in Test Mode. Press RESET or HOME to exit and to save the internal 
+  log file in the SD (sd:/log_ehc.txt)
 
 - Support for SD and USB FAT/FAT32: Now you can use cheats codes and load alternative .dol from the USB 2.0 device
   (FAT partition is required)
@@ -46,7 +54,6 @@ Features:
 
 - Support added to record the selected cheats index when you use cheats from txt files
 
-- New USB code and more
 
 ************************************************************************************************************************************************************
 
@@ -76,6 +83,8 @@ CONTROLS
 - HOME: Special Menu (Add games, format, parental control, exit..)
 
 - HOME (pointing one game): Complete Special Menu (options for PNG, Rename, alternative dol, delete...)
+
+- LEFT/RIGHT: Volume control for .mod music (from game screen selection)
 
 ************************************************************************************************************************************************************
 
@@ -226,13 +235,17 @@ in the _CFG_ WBFS file created by uLoader. It support 1024 games
 NOTE2: Of course, when you "delete alternative .dol" it delete the list entry in _CFG_ and not 
 delete the .dol :P
 
-
 NOTE3: You can delete the olds sd:/games or usb:/games directories
 
+Operational Mode for EHCI Driver
+---------------------------------
 
+- Device Mount: frontal LED frontal on from a second and when it finish LED off
 
+- Mounting device fail or non recoverable error: frontal LED blinking slowly
 
+- Unit Mounted disconnected: frontal LED bliking 3 times and LED off in secuence
 
+- Device mismatch (different device): fast frontal LED blinking
 
-
-
+- Interrupt support to free devices as USB 1.1 for others ports (remember you port 0 is always for USB 2.0 operations)

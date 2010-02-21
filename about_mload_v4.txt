@@ -1,0 +1,36 @@
+
+dev/mload is now a powerfull tool with access to system and supervisor modes on the Starlet, with disabled
+memory protection.
+
+- Added patch for os_software_IRQ(4) (EHCI) and os_software_IRQ(9) (system mode access backdoor)
+
+- dev/mload patch kernel routines and identify the IOS base used (to report it to one application module as ehcmodule.elf)
+
+- Added SWI vector service to direct connect dev/mload functions in Supervisor Mode (see swi_mload.h from libcios). Partial support
+for svc 0xab (os_puts()) to capture log messages to a internal buffer (you can recover it from the PPC or th Starlet)
+
+- Added new SWI lib and syscalls revised
+
+- Basically, you can expand the system patching directly the routines using dev/mload tools. For example, ehcmodule use it to
+capture the Interrupt vector from the system area to using with the EHCI IRQ. It supports IOS 36/37/38 and 60 automatically.
+
+- Now  dev/mload works at 0x79 priority (max priority)
+
+NOTEs: Remember you cannot call syscalls from system/supervisor routines. Because it, you can get from mload the syscall jump table to call some
+syscalls directly (as os_sync_before_read/os_sync_after_write). See main.c and crt0.s from ehcmodule to understand as you can call syscalls directly.
+
+Also you can see main.c and crt0.s for some routines as ic_invalidate() (instruction cache invalidate), read_access_perm() and write_access_perm() (for
+disabling memory protection).
+
+*************************************************************************************************************************************************************
+
+WARNING!: IOS 36 works very bad with EHCI driver! I think it can be a bug in the kernel code when it switch threads or similar things. IOS 38 works very well
+
+*************************************************************************************************************************************************************
+
+Links:
+
+http://infocenter.arm.com/help/topic/com.arm.doc.ddi0198d/DDI0198_926_TRM.pdf
+
+
+http://rtds.cs.tamu.edu/web_462/techdocs/ARM/cores/DDI0222B_9EJS_r1p2.pdf

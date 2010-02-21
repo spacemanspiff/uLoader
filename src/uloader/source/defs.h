@@ -44,7 +44,7 @@ struct Partition_Info
 	u32	Type;
 } __attribute__((__packed__));
 #define        Disc_ID			((u32*) 0x80000000)
-#define        Disc_Region		((u32*) 0x80000003)
+#define        Disc_Region		((u8*) 0x80000003)
 #define        Disc_Magic		((u32*) 0x80000018)
 #define        Sys_Magic		((u32*) 0x80000020)
 #define        Version			((u32*) 0x80000024)

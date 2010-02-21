@@ -1,7 +1,7 @@
-uLoader v2.8 BETA - por Hermes (www.elotrolado.net)
+uLoader v3.0 - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
-ATENCION: ejecuta primero cios_installer.dol (2.6 requerido). Ahora puedes seleccionar el IOS usado para instalar
+ATENCION: ejecuta primero cios_installer.dol (3.0 requerido). Ahora puedes seleccionar el IOS usado para instalar
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
 para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii
@@ -10,6 +10,15 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 
 Caracteristicas:
 ---------------
+
+- Nuevo dev/mload y modulo EHCI basado en interrupciones. Nuevo cIOS basado en IOS 38 (Yo tengo hecho test leyendo durante mas de 21000 segundos sin errores).
+  Mira  el modo de operación abajo.
+
+- Ahora puedes añadir tu propia musica añadiendo  un fichero .mod en la ruta sd:/apps/uloader/music.mod
+
+- Soporte para modo test: Pulsa el botón RESET nada mas ver la pantalla de presentación para entrar en dicho modo. Pulsa RESET o HOME para salir 
+  y salvar el log interno en la SD (sd:/log_ehc.txt)
+
 - Soporte para SD y USB FAT/FAT32: Ahora puedes usar cheats y carga .dolalternativo desde el dispositivo USB 2.0 (requiere una partición FAT)
 
 - Añadido control Parental. Por defecto la contraseña es 00000 (el ultimo cero es el 'ENTER'. Puedes programar una nueva contraseña como XXXX0).
@@ -45,7 +54,6 @@ Caracteristicas:
 
 - Añadido soporte para recordar los trucos seleccionados cuando se usan trucos desde fichero txt
 
-- Código USB mejorado y más cosas
 
 ************************************************************************************************************************************************************
 
@@ -75,6 +83,8 @@ CONTROLES
 - HOME: Menu especial (Añadir juegos, formatear, control parental, salir...)
 
 - HOME (apuntando a juego): Menu especial completo (opciones para PNG, dol altenativo, borrar...) 
+
+- LEFT/RIGHT: Control de volumen del mod (en pantalla de seleccion de juegos)
 
 ************************************************************************************************************************************************************
 
@@ -221,11 +231,23 @@ NOTA: El viejo metodo para dol alternativo ya no es soportado.
 NOTA: Ello puede listar 5 dols solamente, pero pienso que es suficiente por el momento (normalmente encuentra uno o ninguno). 
 Cuando seleccionas uno, ellos is salvado en el fichero WBFS _CFG_ creado por uLoader. Soporta 1024 juegos
 
+NOTA2: Por supuesto, cuando usas "delete alternative .dol"ello borra la entrada de lista en _CFG_ y no el .dol :P
 
-NOTE2: Por supuesto, cuando usas "delete alternative .dol"ello borra la entrada de lista en _CFG_ y no el .dol :P
+NOTA3: Puedes borrar los viejos directorios sd:/games o usb:/games
 
 
-NOTE3: Puedes borrar los viejos directorios sd:/games o usb:/games
+Modo Operacional del driver EHCI
+--------------------------------
+
+- Montaje de dispositivo: LED frontal luce y se apaga al finalizar.
+
+- Fallo de montaje/error irrecuperable: LED frontal parpadea con una cadencia lenta
+
+- Desconexion de una unidad montada: LED frontal parpadea 3 veces y se apaga, de forma continua
+
+- Detección de un dispositivo diferente al que hay montado: LED frontal parpadea rápidamente
+
+- Soporte por interrupciones para liberar como USB 1.1 el resto de puertos (recuerda que el puerto 0 es siempre para USB 2.0)
 
 
 

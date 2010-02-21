@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <app>
-	<name>(!) cIOS 222 installer </name>
+	<name>(!) cIOS 222 installer v4</name>
 	<coder>Hermes</coder>
-	<version>2.6</version>
+	<version>3.0</version>
 <short_description>cIOS for uLoader</short_description>
-<long_description>custom IOS based in dev/mload engine to use with uLoader 2.6</long_description>
+<long_description>custom IOS based in dev/mload engine to use with uLoader 3.0</long_description>
 </app>

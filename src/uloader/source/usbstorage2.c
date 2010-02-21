@@ -34,14 +34,17 @@ distribution.
 
 /* IOCTL commands */
 #define UMS_BASE			(('U'<<24)|('M'<<16)|('S'<<8))
-#define USB_IOCTL_UMS_INIT	        (UMS_BASE+0x1)
+#define USB_IOCTL_UMS_INIT				(UMS_BASE+0x1)
 #define USB_IOCTL_UMS_GET_CAPACITY      (UMS_BASE+0x2)
 #define USB_IOCTL_UMS_READ_SECTORS      (UMS_BASE+0x3)
-#define USB_IOCTL_UMS_WRITE_SECTORS	(UMS_BASE+0x4)
-#define USB_IOCTL_UMS_READ_STRESS	(UMS_BASE+0x5)
-#define USB_IOCTL_UMS_SET_VERBOSE	(UMS_BASE+0x6)
+#define USB_IOCTL_UMS_WRITE_SECTORS		(UMS_BASE+0x4)
+#define USB_IOCTL_UMS_READ_STRESS		(UMS_BASE+0x5)
+#define USB_IOCTL_UMS_SET_VERBOSE		(UMS_BASE+0x6)
 #define USB_IOCTL_UMS_UMOUNT			(UMS_BASE+0x10)
 #define USB_IOCTL_UMS_WATCHDOG			(UMS_BASE+0x80)
+
+#define USB_IOCTL_UMS_TESTMODE			(UMS_BASE+0x81)
+
 
 
 
@@ -75,6 +78,19 @@ s32 USBStorage2_Watchdog(u32 on_off)
 		s32 ret;
 
 		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WATCHDOG, "i:", on_off);
+
+		return ret;
+	}
+
+	return IPC_ENOENT;
+}
+
+s32 USBStorage2_TestMode(u32 on_off)
+{
+	if (fd >= 0) {
+		s32 ret;
+
+		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_TESTMODE, "i:", on_off);
 
 		return ret;
 	}
@@ -170,6 +186,7 @@ mounted = 0;
 extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
 
 static void *mem2_ptr=NULL;
+
 s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 {
 	void *buf = (void *)buffer;
@@ -180,7 +197,7 @@ s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 	/* Device not opened */
 	if (fd < 0)
 		return fd;
-    if(!mem2_ptr) mem2_ptr=SYS_AllocArena2MemLo(2048*64,32);
+    if(!mem2_ptr) mem2_ptr=SYS_AllocArena2MemLo(2048*256,32);
 	/* MEM1 buffer */
 	if (!__USBStorage2_isMEM2Buffer(buffer)) {
 		/* Allocate memory */
@@ -211,7 +228,7 @@ s32 USBStorage2_WriteSectors(u32 sector, u32 numSectors, const void *buffer)
 	/* Device not opened */
 	if (fd < 0)
 		return fd;
-	if(!mem2_ptr) mem2_ptr=SYS_AllocArena2MemLo(2048*64,32);
+	if(!mem2_ptr) mem2_ptr=SYS_AllocArena2MemLo(2048*256,32);
 	
 
 	/* MEM1 buffer */
