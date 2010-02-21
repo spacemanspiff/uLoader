@@ -4,6 +4,7 @@
 /* Prototypes */
 s32 WBFS_Init(void);
 s32 WBFS_Open(void);
+s32 WBFS_Open2(int index); // index 0-3
 s32 WBFS_Close();
 s32 WBFS_Format(u32, u32);
 s32 WBFS_GetCount(u32 *);

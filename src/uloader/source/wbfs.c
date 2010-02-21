@@ -211,6 +211,28 @@ s32 WBFS_Open(void)
 	return 0;
 }
 
+s32 WBFS_Open2(int index) // index 0-3
+{
+	u32 lba;
+	/* Close hard disk */
+	if (hdd)
+		wbfs_close(hdd);hdd=0;
+
+	lba=wbfs_get_partition_LBA(index);
+
+	if(lba==0xFFFFFFFF)
+		{
+		if((index & 3)==0) return WBFS_Open();
+		return -1;
+		}
+	/* Open hard disk */
+	hdd = wbfs_open_partition(__WBFS_ReadUSB, __WBFS_WriteUSB, NULL, sector_size, 0, lba, 0);
+	if (!hdd)
+		return -1;
+
+	return 0;
+}
+
 s32 WBFS_Close(void)
 {
 	if (hdd)
@@ -339,7 +361,7 @@ if (!hdd)
 		return 0;
 
 	/* Try to open game disc */
-	disc = wbfs_open_disc(hdd, "__CFG_");
+	disc = wbfs_open_disc(hdd, (u8 *) "__CFG_");
 	if (!disc)
 		{
 		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
@@ -363,12 +385,12 @@ if(!hdd) WBFS_Open();
 if (!hdd)
 		return 0;
 	/* Try to open game disc */
-	disc = wbfs_open_disc(hdd, "__CFG_");
+	disc = wbfs_open_disc(hdd, (u8 *) "__CFG_");
 	if (!disc)
 		{
 		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
 	   
-		disc = wbfs_open_disc(hdd, "__CFG_");
+		disc = wbfs_open_disc(hdd, (u8 *) "__CFG_");
 		}
    
 	if(disc)

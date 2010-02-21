@@ -70,7 +70,7 @@
 #include "ehcmodule.h"
 #include "dip_plugin.h"
 #include "mload.h"
-
+//#include "logmodule.h"
 
 
 static u32 ios_36[16] ATTRIBUTE_ALIGN(32)=
@@ -102,31 +102,63 @@ static u32 ios_38[16] ATTRIBUTE_ALIGN(32)=
 };
 
 
+/*
+static u32 ios_60[16] ATTRIBUTE_ALIGN(32)=
+{
+	0, // DI_EmulateCmd
+	0,
+	0x2022cd60, // dvd_read_controlling_data
+	0x20200f04+1, // handle_di_cmd_reentry (thumb)
+	0, // ios_shared_alloc_aligned (thumb) // no usado
+	0, // ios_shared_free (thumb) // no usado
+	0x20205e00+1, // ios_memcpy (thumb)
+	0x20200048+1, // ios_fatal_di_error (thumb)
+	0x20202944+1, // ios_doReadHashEncryptedState (thumb)
+	0x20203750+1, // ios_printf (thumb)
+};
+*/
 
 
 u32 patch_datas[8] ATTRIBUTE_ALIGN(32);
 
+data_elf my_data_elf;
 
+int my_thread_id=0;
 int load_ehc_module()
 {
 int is_ios=0;
 
 
+/*
+// bloquea el flag de disco dentro desde el PPC
+*((volatile u32 *) 0xcd0000c4)=*((volatile u32 *) 0xcd0000c4) | (1<<7);
+*((volatile u32 *) 0xcd0000c0)=(*((volatile u32 *) 0xcd0000c8))| (1<<7);
+
+*((volatile u32 *) 0xcd0000d4)=(*((volatile u32 *) 0xcd0000d4)) & ~(1<<6);*/
+/*
+	if(mload_init()<0) return -1;
+	mload_elf((void *) logmodule, &my_data_elf);
+	my_thread_id= mload_run_thread(my_data_elf.start, my_data_elf.stack, my_data_elf.size_stack, my_data_elf.prio);
+	if(my_thread_id<0) return -1;
+	*/
+  
+
 	if(mload_module(ehcmodule, size_ehcmodule)<0) return -1;
-	usleep(250*1000);
+	usleep(350*1000);
 	
 
 	// Test for IOS
-
+	
 	mload_seek(0x20207c84, SEEK_SET);
 	mload_read(patch_datas, 4);
-	if(patch_datas[0]==0x6e657665) is_ios=38;
+	if(patch_datas[0]==0x6e657665) 
+	 {
+	 is_ios=38;
+	 }
 	else
-		{
-		mload_seek(0x20207ff0, SEEK_SET);
-		mload_read(patch_datas, 4);
-		if(patch_datas[0]==0x6e657665) is_ios=36;
-		}
+	{
+	is_ios=36;
+	}
 
 	if(is_ios==36)
 		{
@@ -157,8 +189,9 @@ int is_ios=0;
 		mload_write(ios_38, 4);
 
 		}
-
 	
+
+	mload_close();
 
 return 0;
 }
@@ -211,10 +244,10 @@ void DisplayLogo(void);
 int load_disc(u8 *discid);
 
 // to read the game conf datas
-u8 temp_data[256*1024] ALIGNED(0x20);
+u8 *temp_data= NULL;
 
 // texture of white-noise animation generated here
-u32 game_empty[128*64*3] ALIGNED(0x20);
+u32 *game_empty= NULL;
 
 s8 sound_effects[2][2048] ALIGNED(0x20);
 
@@ -339,20 +372,22 @@ void Determine_VideoMode(char Region)
 
 		 case 1:
 				/* GAME LAUNCHED WITH 1 - FISHEARS*/
-                _Video_Mode = 5;
+                _Video_Mode = PAL60;
                 progressive = (CONF_GetProgressiveScan() > 0) && VIDEO_HaveComponentCable();
                 vmode     = (progressive) ? &TVNtsc480Prog : &TVEurgb60Hz480IntDf;
                 break;
          case 2:
                 /* GAME LAUNCHED WITH 2 - FISHEARS*/
-                _Video_Mode = 0;
+                _Video_Mode = NTSC;
+				
                 progressive = (CONF_GetProgressiveScan() > 0) && VIDEO_HaveComponentCable();
                 vmode     = (progressive) ? &TVNtsc480Prog : &TVNtsc480IntDf;
                 break;
+		
 		}		
 
 /* Set video mode register */
-	*(vu32 *)0x800000CC = _Video_Mode;
+	*Video_Mode = _Video_Mode;
 
 	
 }
@@ -845,12 +880,12 @@ void create_cheats();
 
 struct _data_cheats
 {
-void *title;
-void *description;
+	void *title;
+	void *description;
 
-int apply;
-u8 *values;
-int len_values;
+	int apply;
+	u8 *values;
+	int len_values;
 
 } data_cheats[MAX_LIST_CHEATS];
 
@@ -1414,17 +1449,70 @@ void cabecera(int frames2, char *cab)
 
 }
 
+void cabecera2(int frames2, char *cab)
+{
+	int ylev=(SCR_HEIGHT-440);
 
+#define SLICE_LEN 180
+
+
+	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
+
+	SetTexture(&text_background);
+   
+	ConfigureForTexture(10);
+	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
+	AddTextureVertex(0, 0, 999, 0xfff0f0f0, 0, 0);
+	AddTextureVertex(SCR_WIDTH, 0, 999, 0xffa0a0a0, 1023, 0); 
+	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT, 999, 0xfff0f0f0, 1023, 1024); 
+	AddTextureVertex(0, SCR_HEIGHT, 999, 0xffa0a0a0, 0, 1024); 
+	GX_End();
+		
+
+	/*SetTexture(NULL);
+    DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);*/
+
+	SetTexture(NULL);
+	
+	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, 0, 360, 0x8fffffff);
+	
+
+	SetTexture(MOSAIC_PATTERN);
+	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360, (frames2 % 360)+45, 0xff0000ff);
+	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+90, (frames2 % 360)+45+90, 0xff0000ff);
+	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+180, (frames2 % 360)+45+180, 0xff0000ff);
+	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+270, (frames2 % 360)+45+270, 0xff0000ff);
+
+	SetTexture(NULL);
+	DrawSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, 4, 0, 360,  0xcf000000);
+	
+
+
+	PX= 0; PY=ylev-32; color= 0xff000000; 
+				
+	bkcolor=0;
+	letter_size(16,32);
+
+	autocenter=1;
+	bkcolor=num_partitions=0;//0xb0f0f0f0;
+	s_printf("%s", cab);
+	bkcolor=0;
+#undef SLICE_LEN	
+
+}
 void add_game()
 {
 int frames2=0;
 int ret;
 static struct discHdr header ATTRIBUTE_ALIGN(32);
+static f32 used,free;
+
 char str_id[7];	
 //ASND_Pause(1);
 
     
-	WDVD_SetUSBMode(NULL);
+	WDVD_SetUSBMode(NULL, 0);
 
 	WBFS_Init();
 
@@ -1436,6 +1524,11 @@ char str_id[7];
 	
 	while(1)
 		{
+		if(exit_by_reset)
+			{
+			autocenter=0;
+			goto out;
+			}
 
 		cabecera(frames2, &letrero[idioma][23][0]);
 	
@@ -1536,6 +1629,7 @@ char str_id[7];
 
 /////////////////////
 
+    WBFS_DiskSpace(&used, &free);
 
     while(1)
 		{
@@ -1546,11 +1640,17 @@ char str_id[7];
 		
 		cabecera(frames2, &letrero[idioma][23][0]);
 
+		
+		PX=0;PY=ylev+32; color= 0xffff3000; bkcolor=0;
+		letter_size(12,32);
+		s_printf("HDD: Used: %.2fGB Free: %.2fGB", used,free);
+
 		if(strlen(header.title)<=37) letter_size(16,32);
 		else if(strlen(header.title)<=45) letter_size(12,32);
 		else letter_size(8,32);		
 
-		PX=0;PY=ylev+352/2-32; color= 0xff000000; 
+
+		PX=0;PY=ylev+352/2-32; color= 0xff000000;
 				
 		bkcolor=0;
 		
@@ -1563,6 +1663,12 @@ char str_id[7];
 		s_printf(&letrero[idioma][33][0]);
 
 		Screen_flip();
+
+        if(exit_by_reset)
+			{
+			autocenter=0;
+			goto out;
+			}
 
 	    if(new_pad & (WPAD_GUITAR_HERO_3_BUTTON_RED | WPAD_BUTTON_B))
 			{
@@ -1913,7 +2019,7 @@ char buff[64];
 						if(select_game_bar==3) {snd_fx_yes();Screen_flip(); select_file(0,header); return 3;}
 						if(select_game_bar==4) {snd_fx_yes();Screen_flip(); if(delete_game(header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
 						}
-					if(select_game_bar==5) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) return 2; else return 1;}
+					if(select_game_bar==5) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
 					
 					if(select_game_bar==6) {snd_fx_yes();Screen_flip(); return 1;}
 					}
@@ -1963,6 +2069,13 @@ for(n=0;n<128;n++)
 CreateTexture(&text_screen_fx, TILE_SRGBA8, screen_fx, 128, 128, 0);
 pos-=6;
 }
+
+int frames3=0;
+
+int current_partition=0;
+
+int partition_cnt[4]={-1,-1,-1,-1};
+
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
@@ -2004,6 +2117,7 @@ int main(int argc, char **argv) {
 	
 		ret2=-1;
 	
+	    
 		ret=IOS_ReloadIOS(cios);
 		//ret=-1;	
 
@@ -2015,6 +2129,11 @@ int main(int argc, char **argv) {
 			}
 
 		sleep(1);
+
+		temp_data=memalign(32,256*1024);
+        // texture of white-noise animation generated here
+        game_empty=memalign(32,128*64*3*4);
+
 		load_ehc_module();
         
 		
@@ -2116,9 +2235,9 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.5");
+			s_printf("v1.6");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.5");
+			s_printf("v1.6");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -2245,6 +2364,8 @@ int main(int argc, char **argv) {
 			MODPlay_Start (&mod_track); // Play the MOD
 			}
 		#endif
+		current_partition=0;
+		
 
 get_games:
 		
@@ -2273,7 +2394,28 @@ get_games:
 		autocenter=1;
 		SetTexture(NULL);
 
-		ret = WBFS_Open();
+		///current_partition=0;
+		
+		
+		// locate WBFS Partitions and number of games from the partitions
+		for(n=0;n<4;n++)
+			{
+			ret = WBFS_Open2(n);
+			if(ret==0) {partition_cnt[n]=0;ret = WBFS_GetCount((u32 *) &partition_cnt[n]);if(ret<0) partition_cnt[n]=0;}
+			else partition_cnt[n]=-1;
+			}
+		
+
+		// get a valid partition from current partition selected
+        for(n=0;n<4;n++)
+			{
+			ret = WBFS_Open2((current_partition+n) & 3);
+			if(ret==0) {current_partition=(current_partition+n) & 3;break;}
+			else partition_cnt[(current_partition+n) & 3]=-1;
+			}
+	
+		
+		
 		if (ret < 0) {
 			
 			
@@ -2283,8 +2425,26 @@ get_games:
 			s_printf("No WBFS partition found!\n");
 			Screen_flip();
 			sleep(4);
-			if(menu_format()==0) {ret = WBFS_Open();if(ret<0) goto error_w;}
+			if(menu_format()==0) 
+				{
+				// locate WBFS Partitions and number of games from the partitions
+				for(n=0;n<4;n++)
+					{
+					ret = WBFS_Open2(n);
+					if(ret==0) {partition_cnt[n]=0;ret = WBFS_GetCount((u32 *) &partition_cnt[n]);if(ret<0) partition_cnt[n]=0;}
+					else partition_cnt[n]=-1;
+					}
+				// get a valid partition from current partition
+				for(n=0;n<4;n++)
+					{
+					ret = WBFS_Open2((current_partition+n) & 3);
+					if(ret==0) {current_partition=(current_partition+n) & 3;break;}
+					else partition_cnt[(current_partition+n) & 3]=-1;
+					}
+				if(ret<0) goto error_w;
+				}
 			else goto exit_ok;
+
 			Screen_flip();
 			SetTexture(&text_background);
 			DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);
@@ -2297,7 +2457,10 @@ get_games:
 			}
 
 		cnt=0;buffer=NULL;
-		ret = WBFS_GetCount(&cnt);
+		//ret = WBFS_GetCount(&cnt);
+		ret=partition_cnt[current_partition];
+		cnt=(u32) ret;
+
 		if (ret < 0 || cnt==0) {
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
@@ -2570,7 +2733,9 @@ get_games:
 			{
 			PX= 26; PY=ylev+12; color= 0xff000000; 
 			bkcolor=0xb0f0f0f0;
-			if((game_datas[game_mode-1].config & 1) || force_ios249) s_printf("cIOS 249"); else s_printf("cIOS 222");
+			if((game_datas[game_mode-1].config & 1) || force_ios249) s_printf("cIOS 249"); 
+			
+			else {if(game_datas[game_mode-1].config & 2)  s_printf("cIOS 223"); else s_printf("cIOS 222");}
 			
 			forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
 
@@ -2632,19 +2797,24 @@ get_games:
 			autocenter=0;
 			bkcolor=0xb0f0f0f0;
 			s_printf(" Video Mode ");
-			PX=460-12;s_printf(" Select cIOS ");
+			//PX=460-12;s_printf(" Select cIOS ");
+			PX=32;PY=m+56+40;s_printf(" cIOS ");
 			bkcolor=0;
 			m+=28;
-
+            
 			if(Draw_button2(36, m, " Autodetect ",(forcevideo==0))) select_game_bar=200;
 			if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
 			if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;
 
-			if(Draw_button2(472, m, " cIOS 222 ", force_ios249 ? -1 : cios==222)) select_game_bar=300;
-			if(Draw_button2(472, m+56, " cIOS 249 ",cios==249)) select_game_bar=301;
+			//if(Draw_button2(472, m, " cIOS 222 ", force_ios249 ? -1 : cios==222)) select_game_bar=300;
+			//if(Draw_button2(472, m+56, " cIOS 249 ",cios==249)) select_game_bar=301;
+
+			if(Draw_button2(36+6*12, m+56, " cIOS 222 ", force_ios249 ? -1 : cios==222)) select_game_bar=300;
+			if(Draw_button2(x_temp+12, m+56, " cIOS 223 ", force_ios249 ? -1 : cios==223)) select_game_bar=301;
+			if(Draw_button2(x_temp+12, m+56, " cIOS 249 ",cios==249)) select_game_bar=302;
 
 
-			if(Draw_button2(36, m+56, " Skip IOS ", force_ios249 ? -1 : force_ingame_ios!=0)) select_game_bar=302;
+			if(Draw_button2(x_temp+20, m+56, " Skip IOS ", force_ios249 ? -1 : force_ingame_ios!=0)) select_game_bar=303;
 
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
 			if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
@@ -2658,6 +2828,33 @@ get_games:
 		int set_set=0;
 		int selected_panel=-1;
 		select_game_bar=0;
+		
+
+		// change partition draw and selection
+		letter_size(16,24);
+		bkcolor=0;
+		autocenter=0;
+
+		for(n=0;n<4;n++)
+			{
+			if(partition_cnt[n]<0) continue;
+
+			if(n==current_partition)
+				DrawRoundFillBox(22+50*n, ylev-32, 48, 32, 0, 0xa000ff00);
+			else
+				DrawRoundFillBox(22+50*n, ylev-32, 48, 32, 0, 0xa0ffffff);
+
+			PX=38+50*n; PY=ylev-26; color= 0xff000000;s_printf("%c", 49+n); 
+
+			if(px>=22+50*n && px<22+50*n+48 && py>=ylev-32 && py<ylev)
+				{
+				DrawRoundBox(22+50*n, ylev-32, 48, 32, 0, 4, 0xfff08000);
+				select_game_bar=10000+n;
+				}
+            else
+				DrawRoundBox(22+50*n, ylev-32, 48, 32, 0, 4, 0xa0000000);
+		
+			}
 
 		PX= 0; PY=ylev-32; color= 0xff000000; 
 				
@@ -2901,6 +3098,23 @@ get_games:
 					s_printf("%s",header->title);
 					autocenter=0;
 				}
+			else
+			if(select_game_bar>=10000 && select_game_bar<10004)
+				{
+					SetTexture(NULL);
+					DrawRoundFillBox(20, ylev+ 3*110, 150*4, 108, 0, 0xcfcfffff);
+					DrawRoundBox(20, ylev+ 3*110, 150*4, 108, 0, 6, 0xcff08000);
+					letter_size(16,32);
+
+					PX= 0; PY=ylev+ (3*110)+(108-32)/2; color= 0xff000000; 
+								
+					bkcolor=0;
+						
+					autocenter=1;
+					s_printf("Select Partition #%i",select_game_bar-9999);
+					autocenter=0;
+
+				}
 
 		
 		
@@ -3111,7 +3325,9 @@ get_games:
 									int n;
 									struct discHdr *header;
 									if(!is_favorite) last_game=actual_game;
-									
+
+									if(select_game_bar>=10000 && select_game_bar<10004)  {snd_fx_yes();current_partition=select_game_bar-10000;Screen_flip();goto get_games;}
+
 									if(temp_sel>=0)
 									     snd_fx_yes();
 									else snd_fx_no();
@@ -3161,7 +3377,8 @@ get_games:
 												   WBFS_GetProfileDatas(discid, temp_data);
 												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
 												   
-												   if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; else cios=222;
+												   if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
+												   else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
 
 												   forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
 
@@ -3233,9 +3450,10 @@ get_games:
 														WPAD_Shutdown();
 														
 														save_cfg();
-														
-														
-														if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; else cios=222;
+
+														if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
+															else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
+
 
 														forcevideo=(game_datas[game_mode-1].config>>2) & 3;if(forcevideo==3) forcevideo=0;
 
@@ -3252,13 +3470,23 @@ get_games:
 														#ifdef USE_MODPLAYER
 														ASND_End();		// finaliza el sonido
 														#endif
-														if(cios!=222)
+														if(cios!=222 && force_ios249==0)
 															{
+															cabecera2(frames3, "Loading...");
+															frames3+=16;
+															Screen_flip();
 															IOS_ReloadIOS(cios);
 															sleep(1);
+															cabecera2(frames3, "Loading...");
+															frames3+=16;
+															Screen_flip();
 															load_ehc_module();
 															for(n=0;n<25;n++)
 																{
+																cabecera2(frames3, "Loading...");
+																frames3+=16;
+																Screen_flip();
+
 																	ret2 = USBStorage2_Init(); 
 																	if(!ret2) break;
 																	usleep(200*1000);
@@ -3332,6 +3560,7 @@ get_games:
 												   else
 														{
 														if(cios==249) temp_data[4]|=1;
+														if(cios==223) temp_data[4]|=2;
 														temp_data[4]|=(forcevideo & 3)<<2;
 														temp_data[4]|=(langsel & 15)<<4;
 														temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
@@ -3352,12 +3581,21 @@ get_games:
 												   forcevideo= select_game_bar-200;
 												   snd_fx_yes();
 												   }
-							if(select_game_bar>=300 && select_game_bar<=301)
+							if(select_game_bar>=300 && select_game_bar<=302)
 												   {
-												   cios= (select_game_bar-300) ? 249 : 222;
+												   switch(select_game_bar-300)
+													   {
+													   case 0:
+														   cios=222;break;
+													   case 1:
+														   cios=223;break;
+													   case 2:
+														   cios=249;break;
+													   }
+												   //cios= (select_game_bar-300) ? 249 : 222;
 												   snd_fx_yes();
 												   }
-							if(select_game_bar==302)
+							if(select_game_bar==303)
 												   {
 												   force_ingame_ios=(force_ingame_ios==0);
 												   snd_fx_yes();
@@ -3394,6 +3632,7 @@ get_games:
 							
 						    temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
 						    if(cios==249) temp_data[4]|=1;
+							if(cios==223) temp_data[4]|=2;
 						    temp_data[4]|=(forcevideo & 3)<<2;
 						    temp_data[4]|=(langsel & 15)<<4;
 							temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
@@ -3606,25 +3845,15 @@ int load_disc(u8 *discid)
         static struct Partition_Descriptor Descriptor ALIGNED(0x20);
         static struct Partition_Info Partition_Info ALIGNED(0x20);
         int i;
+		
 
         memset(&Header, 0, sizeof(Header));
         memset(&Descriptor, 0, sizeof(Descriptor));
         memset(&Partition_Info, 0, sizeof(Partition_Info));
 
-		
-		/*
-		// fix speed to 6x (MAX)
-		for(i=0;i<5;i++)
-			{
-			if(!USBStorage2_Init()) break;
-			}
-	
-		USBStorage2_WFS_Speed_Fix(0x1);
-		USBStorage2_Deinit();
-		*/
-
 		WDVD_Init();
-        if(WDVD_SetUSBMode(discid)!=0) return 1;
+        if(WDVD_SetUSBMode(discid, current_partition)!=0) return 1;
+		//WDVD_SetUSBMode(NULL);
 
         WDVD_Reset();
 		//return -456;
@@ -3642,7 +3871,10 @@ int load_disc(u8 *discid)
 
 		if(strncmp((char *) &Header, (char *) discid, 6)) 
 		    return 666; // if headerid != discid (on hdd) error
-		
+
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+        Screen_flip();
 
         u32 Offset = 0x00040000; // Offset into disc to partition descriptor
         WDVD_UnencryptedRead(&Descriptor, sizeof(Descriptor), Offset);
@@ -3659,6 +3891,11 @@ int load_disc(u8 *discid)
         memset(PartBuffer, 0, BufferLen);
         WDVD_UnencryptedRead(PartBuffer, BufferLen, Offset);
 
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+        Screen_flip();
+
+
         struct Partition_Info *Partitions = (struct Partition_Info*)PartBuffer;
         for ( i = 0; i < Descriptor.Primary_Count; i++)
         {
@@ -3668,7 +3905,8 @@ int load_disc(u8 *discid)
                         break;
                 }
         }
-        Offset = Partition_Info.Offset << 2;
+       
+		Offset = Partition_Info.Offset << 2;
         free(PartBuffer);
         if (!Offset)
                 return 3;
@@ -3692,7 +3930,10 @@ int load_disc(u8 *discid)
         Ticket		= (signed_blob*)(Ticket_Buffer);
         T_Length	= SIGNED_TIK_SIZE(Ticket);
 
-		
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+        Screen_flip();
+
 
         // Open Partition and get the TMD buffer
        
@@ -3701,13 +3942,24 @@ int load_disc(u8 *discid)
         Tmd = (signed_blob*)(Tmd_Buffer);
         MD_Length = SIGNED_TMD_SIZE(Tmd);
         static struct AppLoaderHeader Loader ALIGNED(32);
+
         WDVD_Read(&Loader, sizeof(Loader), 0x00002440);// Offset into the partition to apploader header
         DCFlushRange((void*)(((u32)&Loader) + 0x20),Loader.Size + Loader.Trailer_Size);
+
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+        Screen_flip();
+
 
 
         // Read apploader from 0x2460
         WDVD_Read(Apploader, Loader.Size + Loader.Trailer_Size, 0x00002440 + 0x20);
         DCFlushRange((void*)(((int)&Loader) + 0x20),Loader.Size + Loader.Trailer_Size);
+
+		cabecera2(frames3, "Loading...");
+		frames3+=16;
+        Screen_flip();
+
 
 
         AppLoaderStart	Start	= Loader.Entry_Point;
@@ -3785,8 +4037,13 @@ int load_disc(u8 *discid)
         //printf("Loading game");
         while (Load(&Address, &Section_Size, &Partition_Offset))
         {
+	
+		frames3+=16;
                 if (!Address) return 5;
+				cabecera2(frames3, "Loading...");
                 WDVD_Read(Address, Section_Size, Partition_Offset << 2);
+
+				Screen_flip();
                 
 				/*HOOKS STUFF - FISHEARS*/
 				dogamehooks(Address, Section_Size);
@@ -3804,22 +4061,25 @@ int load_disc(u8 *discid)
         *Sys_Magic	= 0x0d15ea5e;
         *Version	= 1;
         *Arena_L	= 0x00000000;
+		*BI2		= 0x817E5480;
         *Bus_Speed	= 0x0E7BE2C0;
         *CPU_Speed	= 0x2B73A840;
+
+		/* Setup low memory */
+		*(vu32 *)0x80000060 = 0x38A00040;
+		*(vu32 *)0x800000E4 = 0x80431A80;
+		*(vu32 *)0x800000EC = 0x81800000;
 
         // Enable online mode in games
         memcpy(Online_Check, Disc_ID, 4);
 
-		
-        
+
         // Retrieve application entry point
         void* Entry = Exit();
 
         // Set Video Mode based on Configuration
 		if (vmode)
 			Set_VideoMode();
-		
-
 		
 
         // Flush application memory range
@@ -3838,7 +4098,9 @@ int load_disc(u8 *discid)
                         return ret;
         }
 		#endif
-
+		
+		
+	
        // debug_printf("start %p\n",Entry);
 	   settime(secs_to_ticks(time(NULL) - 946684800));
 
@@ -4283,6 +4545,13 @@ while(1)
 			autocenter=0;
 
 			}
+		}
+	else
+		{
+		SetTexture(NULL);
+
+		DrawRoundFillBox(SCR_WIDTH/2-100, 480-128, 200, 128, 0, 0xffafafaf);
+		DrawRoundBox(SCR_WIDTH/2-100, 480-128, 200, 128, 0, 4, 0xff303030);
 		}
 
 	SetTexture(NULL);

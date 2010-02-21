@@ -310,7 +310,7 @@ s32 WDVD_DisableReset(u8 val)
 	return (ret == 1) ? 0 : -ret;
 }
 
-s32 WDVD_SetUSBMode(u8 *id)
+s32 WDVD_SetUSBMode(u8 *id, s32 partition)
 {
 	s32 ret;
 
@@ -319,10 +319,14 @@ s32 WDVD_SetUSBMode(u8 *id)
 	/* Set USB mode */
 	inbuf[0] = IOCTL_DI_SETUSBMODE << 24;
 	inbuf[1] = (id) ? 1 : 0;
+	
 
 	/* Copy ID */
 	if (id)
+		{
 		memcpy(&inbuf[2], id, 6);
+		inbuf[5] = partition;
+		}
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_SETUSBMODE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
 	if(ret!=1)

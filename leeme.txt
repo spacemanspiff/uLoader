@@ -1,4 +1,4 @@
-uLoader v1.4 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.6 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol
@@ -19,6 +19,12 @@ Caracteristicas:
 - Textos en Inglés y Español (autodetecta)
 
 - Soporta Forzado de video, seleccion de idioma y Ocarina
+
+- Soporte de hasta 4 particiones WBFS
+
+- Posibilidad de usar el cIOS alternativo 223 para lanzar juego.
+
+- Código USB mejorado y más cosas
 
 CONTROLES
 ---------

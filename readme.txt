@@ -1,4 +1,4 @@
-uLoader v1.4 BETA - by Hermes (www.elotrolado.net)
+uLoader v1.6 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol
@@ -18,6 +18,12 @@ Features:
 - Screen text in Spanish and English (auto-detect)
 
 - Support for video mode forced, language selection and Ocarina
+
+- Support for multiples WBFS partitions (max 4).
+
+- Possibility to use the alternative cIOS 223 (only to launch games)
+
+- New USB code and more
 
 
 CONTROLS
