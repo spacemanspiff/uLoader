@@ -319,8 +319,9 @@ if (!hdd)
 		wbfs_disc_read(disc,(1024>>2), buff, 1024);
 		
 		if(buff[0]=='H' && buff[1]=='D' && buff[2]=='R' && buff[3]!=0)
-			buff[3]=200;
+			
 			wbfs_disc_read(disc,(2048>>2), buff+1024, ((u32) buff[3])*1024);
+		
 		/* Close disc */
 		wbfs_close_disc(disc);
 

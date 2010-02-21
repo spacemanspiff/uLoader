@@ -1,4 +1,4 @@
-uLoader v1.6 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.7 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol
@@ -8,6 +8,11 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 
 Caracteristicas:
 ---------------
+
+- Añadido control Parental. Por defecto la contraseña es 00000 (el ultimo cero es el 'ENTER'. Puedes programar una nueva contraseña como XXXX0).
+  Puedes cambiar la contraseña desde el menu especial, pulsando HOME y salir de la caja que pide contraseña pulsando B.  Desde el menu de control
+  parental se listan los ultimos 8 juegos lanzados con fecha y hora, se habilita la petición de contraseña solo con entrar o se puede cambiar la 
+  contraseña por otra.
 
 - Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe 
   que adjunto (ver mas abajo "Notas sobre wbfs_win").
@@ -23,6 +28,8 @@ Caracteristicas:
 - Soporte de hasta 4 particiones WBFS
 
 - Posibilidad de usar el cIOS alternativo 223 para lanzar juego.
+
+- Posibilidad de añadir/borrar iconos desde la SD a los juegos, directamente (el PNG  es añadido al HDD directamente)
 
 - Código USB mejorado y más cosas
 
@@ -64,6 +71,8 @@ la configuración requiere 256 bytes en la SD que se guardarán en:
 fat:/apps/uloader/uloader.cfg
 fat:/uloader/uloader.cfg
 fat:/uloader.cfg
+
+NOTA: el fichero cfg ahora se alamacena dentro del disco duro
 
 En orden de preferencia.
 
@@ -148,6 +157,14 @@ El fichero PNG debe medir menos de 200KB. Si mide menos de 100KB mejor, porque e
 Tanto el ancho como el alto es mejor que sean divisibles entre 16 para evitar problemas con las texturas y si no supera 256x192 mejor. Yo recomendaría unas dimensiones de 128x96 como promedio.
 
 Si tienes dudas, pregunta en el foro.
+
+Recuerda que ahora tienes una opción para subir iconos desde la SD en uLoader.
+
+Algunos usuarios de Elotrolado.net han subido algunos iconos en este enlace:
+
+http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
+
+(salva la pagina por entero para obtener todos los iconos rapidamente)
 
 
 

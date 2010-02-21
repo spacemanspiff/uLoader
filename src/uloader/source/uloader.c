@@ -152,13 +152,13 @@ int is_ios=0;
 	mload_seek(0x20207c84, SEEK_SET);
 	mload_read(patch_datas, 4);
 	if(patch_datas[0]==0x6e657665) 
-	 {
-	 is_ios=38;
-	 }
+		{
+		is_ios=38;
+		}
 	else
-	{
-	is_ios=36;
-	}
+		{
+		is_ios=36;
+		}
 
 	if(is_ios==36)
 		{
@@ -210,6 +210,8 @@ MODPlay mod_track;
 
 #endif
 
+// parental control flag
+int parental_control_on=1;
 
 /*LANGUAGE PATCH - FISHEARS*/
 u32 langsel = 0;
@@ -257,30 +259,36 @@ s8 sound_effects[2][2048] ALIGNED(0x20);
 
 int idioma=0;
 
+char month[2][12][4]=
+	{
+	{"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"},
+	{"ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"}
+	
+	};
 char letrero[2][50][64]=
 	{
 	{"Return", "Configure", "Delete Favorite", "Add Favorite", "Load Game", "Add to Favorites", "Favorites", "Page", "Ok" ,"Discard",
 	" Cheats Codes found !!! ", "Apply Codes ", "Skip Codes ", "Format WBFS", "Selected", "You have one WBFS partition", "Are You Sure You Can Format?",
 	" Yes ", " No ", "Formatting...","Formatting Disc Successfull","Formatting Disc Failed",
 //22 
-	"Return", "Add New Game", "Add PNG Bitmap", "Delete Game", "Format Disc", "Return to Wii Menu", "","","","",
+	"Return", "Add New Game", "Add PNG Bitmap", "Delete PNG Bitmap", "Delete Game", "Format Disc", "Fix Parental Control","Return to Wii Menu","","",
 //32
 	"Are you sure you want delete this?", "Press A to accept or B to cancel", 
 // 34
 "Insert the game DVD disc...", "ERROR! Aborted", "Press B to Abort","Opening DVD disc...", "ERROR: Not a Wii disc!!",
-"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done"
+"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done", "Change the password", "Use this password?",
 	},
     // spanish
 	{"Retorna", "Configurar", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", "Hecho", "Descartar",
 	" Códigos de Trucos encontrados !!! ","Usa Códigos", "Salta Códigos", "Formatear WBFS", "Seleccionado", "Ya tienes una partición WBFS", 
 	"¿Estas seguro que quieres formatear?", " Si ", " No ", "Formateando...", "Exito Formateando el Disco", "Error al Formatear el Disco",
 //22	
-	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Juego", "Formatear Disco", "Retorna al Menu de Wii", "","","","",
+	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Bitmap PNG", "Borrar Juego", "Formatear Disco", "Fijar Control Parental", "Retorna al Menu de Wii", "","",
 //32
 	"¿Estás seguro de que quieres borrar éste?", "Pulsa A para aceptar o B para cancelar",
 // 34
 "Inserta el DVD del juego ...", "ERROR! Abortado", "Pulsa B para Abortar","Abriendo el disco DVD...", "ERROR: No es un disco de Wii!!",
-"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado"
+"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado", "Cambia la contraseña", "¿Usar esta contraseña?",
 
 	},
 	};
@@ -553,7 +561,7 @@ void snd_fx_fx(int percent)
 int scroll_text=-20;
 
 GXTlutObj palette_icon;
-GXTexObj text_icon[2];
+GXTexObj text_icon[3];
 
 GXTexObj text_button[4], default_game_texture, text_background,text_game_empty[4];
 GXTexObj text_screen_fx;
@@ -735,7 +743,9 @@ void create_game_png_texture(int n)
 
 
 	if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
-		{game_datas[n].png_bmp=NULL;return;}
+		{game_datas[n].png_bmp=NULL;game_datas[n].config=0;
+		 return;
+		 }
 
     game_datas[n].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
 
@@ -775,14 +785,56 @@ void create_game_png_texture(int n)
 //---------------------------------------------------------------------------------
 /* Configuration datas (Favorites) */
 //---------------------------------------------------------------------------------
+struct _game_log
+	{
+	u8 id[6];
+	u8 bcd_time[6];
+	};
 
 struct _config_file
 {
 	u32 magic;
 	u8 id[16][8];
-	u32 pad[31];
+	char parental[4];
+	struct _game_log game_log[8];
+	
+	u32 pad[6];
 }
 config_file ATTRIBUTE_ALIGN(32);
+
+void add_game_log(u8 *id)
+{
+int n;
+time_t  my_time=(time(NULL));
+struct tm *l_time=localtime(&my_time);
+for(n=0;n<8;n++) 
+	{
+	if(config_file.game_log[n].id[0]==0) break;
+	if(!strncmp((void *) config_file.game_log[n].id, (void *) id,6)) break;
+	}
+if(n==8)
+	{
+	for(n=0;n<7;n++) config_file.game_log[n]=config_file.game_log[n+1];
+	}
+
+memcpy(config_file.game_log[n].id, id, 6);
+memset(config_file.game_log[n].bcd_time,0,6);
+
+if(l_time)
+	{
+	l_time->tm_mon++;
+	l_time->tm_year+=1900;
+
+	config_file.game_log[n].bcd_time[0]=((l_time->tm_mday/10)<<4) | (l_time->tm_mday % 10);
+	config_file.game_log[n].bcd_time[1]=((l_time->tm_mon/10)<<4) | (l_time->tm_mon % 10);
+	config_file.game_log[n].bcd_time[2]=((l_time->tm_year/1000)<<4) | (l_time->tm_year/100 % 10);
+	config_file.game_log[n].bcd_time[3]=((l_time->tm_year/10 % 10)<<4) | (l_time->tm_year % 10);
+	config_file.game_log[n].bcd_time[4]=((l_time->tm_hour/10)<<4) | (l_time->tm_hour % 10);
+	config_file.game_log[n].bcd_time[5]=((l_time->tm_min/10)<<4) | (l_time->tm_min % 10);
+	}
+
+
+}
 
 int sd_ok=0;
 
@@ -1732,7 +1784,7 @@ out:
 }
 
 
-int delete_game(char *name)
+int delete_test(int ind, char *name)
 {
 int frames2=0;
 
@@ -1770,7 +1822,7 @@ while(1)
 
 	autocenter=1;
 	bkcolor=num_partitions=0;//0xb0f0f0f0;
-	s_printf("%s", &letrero[idioma][25][0]);
+	s_printf("%s", &letrero[idioma][ind][0]);
 	bkcolor=0;
 	
 	PX=0;PY=ylev+352/2-32;
@@ -1877,6 +1929,295 @@ while(1)
 return 0;
 }
 
+void set_parental_control()
+{
+int frames2=0;
+int n;
+
+int mode=0;
+
+parental_control_on=1;
+
+char parental_str[4]={0,0,0,0};
+
+char title_str[24];
+
+
+while(1)
+	{
+	int select_game_bar=0;
+	int ylev=(SCR_HEIGHT-440);
+
+	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
+
+	WPAD_ScanPads(); // esto lee todos los wiimotes
+
+	//SetTexture(NULL);
+    //DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+
+	SetTexture(&text_background);
+
+
+	ConfigureForTexture(10);
+	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
+	AddTextureVertex(0, 0, 999, 0xfff0f0f0, 0, (frames2 & 1023));
+	AddTextureVertex(SCR_WIDTH, 0, 999, 0xffa0a0a0, 1023, (frames2 & 1023)); 
+	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT, 999, 0xfff0f0f0, 1023, 1024+(frames2 & 1023)); 
+	AddTextureVertex(0, SCR_HEIGHT, 999, 0xffa0a0a0, 0, 1024+(frames2 & 1023)); 
+	GX_End();
+
+	PX= 0; PY=8; color= 0xff000000; 
+	letter_size(16,32);
+	
+	bkcolor=0;//0xc0f08000;
+			
+	autocenter=1;
+	s_printf("%s","Parental Control");
+	autocenter=0;
+
+    if(mode==1)
+			{
+			ylev+=32;
+
+			SetTexture(NULL);
+
+			DrawRoundFillBox(20+148, ylev, 148*2, 352, 0, 0xcfafafaf);
+
+			letter_size(16,32);
+
+			
+
+			select_game_bar=0;
+			
+
+			// change partition draw and selection
+			letter_size(16,24);
+			bkcolor=0;
+			autocenter=0;
+			
+			for(n=0;n<4;n++)
+				{
+				int my_x=SCR_WIDTH/2-100+50*n;
+				int my_y=ylev+50;
+
+				if(parental_str[n]==0) DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0ffffff);
+				else DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa000ff00);
+
+				PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", parental_str[n]==0 ? ' ' : parental_str[n]);
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+
+				}
+
+			for(n=0;n<10;n++)
+				{
+				int my_x=SCR_WIDTH/2-75+50*((n==0) ? 1 :((n-1) % 3));
+				int my_y=ylev+64+50*((n==0) ? 4 :3-((n-1)/3));
+				
+				DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
+
+				PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", 48+n); 
+
+				if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
+					{
+					DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xfff08000);
+					select_game_bar=20000+n;
+					}
+				else
+					DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+			
+				}
+			ylev-=32;
+			}
+    if(mode==0)
+		{
+		int m,l,k;
+		
+		m=64;
+		for(n=0;n<8;n++)
+			{
+			PX=36;PY=m;
+            if(config_file.game_log[n].id[0])
+				{
+				letter_size(12,32);
+				color=0xff000000;
+			
+				s_printf("%c%c%c%c%c%c ",config_file.game_log[n].id[0],config_file.game_log[n].id[1],config_file.game_log[n].id[2],config_file.game_log[n].id[3],config_file.game_log[n].id[4],config_file.game_log[n].id[5]);
+
+			    memset(title_str,32,22); title_str[22]=0;
+
+				if(gameList && gameCnt>0)
+					{
+					for(l=0;l<gameCnt;l++)
+						{
+						if(!strncmp( (void *)gameList[l].id, (void *) config_file.game_log[n].id, 6))
+							{
+							for(k=0;k<22;k++) if(gameList[l].title[k]==0) break; else title_str[k]=gameList[l].title[k]<32 ? ' ': gameList[l].title[k];
+							}
+						}
+					}
+
+                color=0xffff1000; s_printf("%s ",title_str);
+				color=0xff000000;
+
+				s_printf("%c%c-%s-%c%c%c%c %c%c:%c%c",
+					(config_file.game_log[n].bcd_time[0]>>4)+48, (config_file.game_log[n].bcd_time[0] & 15)+48,
+					 &month[idioma][((config_file.game_log[n].bcd_time[1]>>4)*10+(config_file.game_log[n].bcd_time[1] & 15)-1) % 12][0],
+					(config_file.game_log[n].bcd_time[2]>>4)+48, (config_file.game_log[n].bcd_time[2] & 15)+48,
+					(config_file.game_log[n].bcd_time[3]>>4)+48, (config_file.game_log[n].bcd_time[3] & 15)+48,
+					(config_file.game_log[n].bcd_time[4]>>4)+48, (config_file.game_log[n].bcd_time[4] & 15)+48,
+					(config_file.game_log[n].bcd_time[5]>>4)+48, (config_file.game_log[n].bcd_time[5] & 15)+48);
+				}
+			else {autocenter=1;s_printf("< Empty >");autocenter=0;}
+			m+=40;
+		    }
+		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=61;
+		if(Draw_button(600-32-strlen(&letrero[idioma][42][0])*8, ylev+108*4-64, &letrero[idioma][42][0])) select_game_bar=70;
+		}
+	
+	if(mode==2)
+		{
+
+		SetTexture(NULL);
+		DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+		DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
+
+		letter_size(16,24);
+
+		for(n=0;n<5;n++)
+			{
+			int my_x=SCR_WIDTH/2-125+50*n;
+			int my_y=ylev+50;
+
+			if(n==4) DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0ffffff);
+			else DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa000ff00);
+
+			PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", n==4 ? '0' : parental_str[n]);
+			DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+
+			}
+
+		letter_size(16,32);
+
+		color= 0xff000000; bkcolor=0;
+		PX=0;PY=ylev+352/2-32;
+		autocenter=1;letter_size(12,32);
+		s_printf("%s", &letrero[idioma][43][0]);
+
+		autocenter=0;
+		
+		letter_size(16,32);
+
+		
+
+		
+		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][17][0])) select_game_bar=60;
+			
+		if(Draw_button(600-32-strlen(&letrero[idioma][18][0])*8, ylev+108*4-64, &letrero[idioma][18][0])) select_game_bar=61;
+		}
+
+	temp_pad= wiimote_read(); 
+	new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+
+	if(wmote_datas!=NULL)
+			{
+			SetTexture(NULL);		// no uses textura
+
+					if(wmote_datas->ir.valid)
+						{
+						px=wmote_datas->ir.x;py=wmote_datas->ir.y;
+						
+						SetTexture(NULL);
+						DrawIcon(px,py,frames2);
+						}
+					 else 
+					 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
+						{
+
+						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
+							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
+						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
+							{guitar_pos_x-=8;if(px<16) px=16;}
+							
+
+						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
+							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
+						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
+							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+						
+						px=guitar_pos_x; py=guitar_pos_y;
+
+						
+						SetTexture(NULL);
+						DrawIcon(px,py,frames2);
+						
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) new_pad|=WPAD_BUTTON_B;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) old_pad|=WPAD_BUTTON_B;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) new_pad|=WPAD_BUTTON_1;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) old_pad|=WPAD_BUTTON_1;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS) new_pad|=WPAD_BUTTON_MINUS;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS) old_pad|=WPAD_BUTTON_MINUS;
+
+						if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) new_pad|=WPAD_BUTTON_PLUS;
+						if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) old_pad|=WPAD_BUTTON_PLUS;
+
+						}
+					 else
+					   {px=-100;py=-100;}
+
+				if(new_pad & WPAD_BUTTON_B)
+					{
+					for(n=0;n<4;n++) parental_str[n]=0;
+					snd_fx_no();
+					select_game_bar=0;
+
+					if(mode==0)
+						{
+						Screen_flip();break;
+						}
+					else mode=0;
+					}
+
+				
+
+				if(new_pad & WPAD_BUTTON_A) 
+					{
+					if(select_game_bar==60) {Screen_flip();snd_fx_yes(); for(n=0;n<4;n++) config_file.parental[n]=parental_str[n]-48;save_cfg(); return;} // Yes
+					if(select_game_bar==61) {
+											for(n=0;n<4;n++) parental_str[n]=0; 
+											snd_fx_no();
+											if(mode==0) {Screen_flip();break;} else mode=0;
+											} // No
+
+					if(select_game_bar==70) {snd_fx_yes();mode=1;}
+
+					if(select_game_bar>=20000 && select_game_bar<20010)
+								{
+								for(n=0;n<4;n++) if(parental_str[n]==0) break;
+								if(n<4) {parental_str[n]=select_game_bar+48-20000;snd_fx_yes();}
+								if(n>=3) {
+										 mode=2;
+										 }
+								select_game_bar=0;
+								}
+                   
+					}
+				}
+
+	
+
+	Screen_flip();
+	if(exit_by_reset) break;
+
+	frames2++;
+	
+	}
+}
+
 void select_file(int flag, struct discHdr *header);
 
 int home_menu(struct discHdr *header)
@@ -1916,7 +2257,7 @@ char buff[64];
 		else if(strlen(header->title)<=45) letter_size(12,32);
 		else letter_size(8,32);		
 
-		PX= 0; PY=ylev; color= 0xff000000; 
+		PX= 0; PY=8; color= 0xff000000; 
 				
 		bkcolor=0;
 		
@@ -1928,13 +2269,13 @@ char buff[64];
 		letter_size(16,32);
 		
 
-    for(n=0;n<6;n++)
+    for(n=0;n<8;n++)
 		{
 		memset(buff,32,56);buff[56]=0;
 		punt=&letrero[idioma][22+n][0];
 		memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 	
-		if(Draw_button2(30+48, ylev+56+64*n, buff,(!header && (n==2 || n==3)) ? -1 : 0)) select_game_bar=n+1;
+		if(Draw_button2(30+48, ylev+56*n, buff,(!header && (n==2 || n==3 || n==4 || (parental_control_on && n!=0 && n!=7))) ? -1 : 0)) select_game_bar=n+1;
 		}
 	if(select_game_bar>=0)
 		{
@@ -2017,11 +2358,22 @@ char buff[64];
 					if(header)
 						{
 						if(select_game_bar==3) {snd_fx_yes();Screen_flip(); select_file(0,header); return 3;}
-						if(select_game_bar==4) {snd_fx_yes();Screen_flip(); if(delete_game(header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
+                        if(select_game_bar==4) {snd_fx_yes();Screen_flip(); 
+						                       if(delete_test(25, header->title))
+												   {
+												   memset(temp_data,0,256*1024);WBFS_GetProfileDatas(header->id, temp_data);
+												   temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;temp_data[9]=0; // break PNG signature
+											       WBFS_SetProfileDatas(header->id, temp_data);
+												   } 
+											   return 3;
+											   }
+						if(select_game_bar==5) {snd_fx_yes();Screen_flip(); if(delete_test(26, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
 						}
-					if(select_game_bar==5) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
+					if(select_game_bar==6) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
+
+					if(select_game_bar==7) {set_parental_control();Screen_flip();return 0;}
 					
-					if(select_game_bar==6) {snd_fx_yes();Screen_flip(); return 1;}
+					if(select_game_bar==8) {snd_fx_yes();Screen_flip(); return 1;}
 					}
 			}
 	
@@ -2105,6 +2457,11 @@ int main(int argc, char **argv) {
 		int last_select=-1;
 
 		int force_ingame_ios=0;
+		int game_locked_cfg=0;
+
+		
+		int parental_mode=0;
+		char parental_str[4]={0,0,0,0};
 
         return_reset=1;
 
@@ -2235,9 +2592,9 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.6");
+			s_printf("v1.7");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.6");
+			s_printf("v1.7");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -2251,6 +2608,7 @@ int main(int argc, char **argv) {
 		CreatePalette(&palette_icon, TLUT_SRGB5A1, 0, icon_palette, icon_palette_colors); // crea paleta 0
 		CreateTexture(&text_icon[0], TILE_CI8, icon_sprite_1, icon_sprite_1_sx, icon_sprite_1_sy, 0);
 		CreateTexture(&text_icon[1], TILE_CI8, icon_sprite_2, icon_sprite_2_sx, icon_sprite_2_sy, 0);
+		CreateTexture(&text_icon[3], TILE_CI8, icon_sprite_3, icon_sprite_3_sx, icon_sprite_3_sy, 0);
 
 		create_png_texture(&text_button[0], button1, 0);
 		create_png_texture(&text_button[1], button2, 0);
@@ -2565,7 +2923,6 @@ get_games:
 
 	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
 
-	
 
 	if(game_mode)
 		{
@@ -2742,6 +3099,7 @@ get_games:
 			langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
 			force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
+			game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
 
 			if(forcevideo==1) s_printf(" Forced to PAL");
 			if(forcevideo==2) s_printf(" Forced to NTSC");
@@ -2754,6 +3112,13 @@ get_games:
 			autocenter=0;
 
 			bkcolor=0x0;
+
+			if(game_locked_cfg)
+					{
+					SetTexture(&text_icon[3]);
+					DrawFillBox(600-24, ylev+352-48, 16, 24, 0, 0xffffffff);
+					}
+
 		
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
 			if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
@@ -2796,7 +3161,7 @@ get_games:
 			letter_size(12,24);
 			autocenter=0;
 			bkcolor=0xb0f0f0f0;
-			s_printf(" Video Mode ");
+			s_printf(" Video Mode "); PX+=12*9-4; s_printf(" Parental Ctrl");
 			//PX=460-12;s_printf(" Select cIOS ");
 			PX=32;PY=m+56+40;s_printf(" cIOS ");
 			bkcolor=0;
@@ -2805,6 +3170,16 @@ get_games:
 			if(Draw_button2(36, m, " Autodetect ",(forcevideo==0))) select_game_bar=200;
 			if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
 			if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;
+
+			if(game_locked_cfg)
+				{
+				if(Draw_button2(x_temp+28, m, " Game Locked ",game_locked_cfg)) select_game_bar=210;
+				}
+			else
+				{
+				if(Draw_button2(x_temp+28, m, " Game Unlock ",game_locked_cfg)) select_game_bar=210;
+				
+				}
 
 			//if(Draw_button2(472, m, " cIOS 222 ", force_ios249 ? -1 : cios==222)) select_game_bar=300;
 			//if(Draw_button2(472, m+56, " cIOS 249 ",cios==249)) select_game_bar=301;
@@ -2933,7 +3308,7 @@ get_games:
 					}
 				letter_size(8,24);
 				
-				if(!(px>=20+n*150 && px<20+n*150+148 && py>=ylev+m*110 && py<ylev+m*110+108))
+				if(!(px>=20+n*150 && px<20+n*150+148 && py>=ylev+m*110 && py<ylev+m*110+108) && parental_mode==0)
 					{
 					PX= 26+n*150+scroll_mode; PY= 64-24+30+8+ylev+m*110; color= 0xff000000; 
 					
@@ -2963,7 +3338,17 @@ get_games:
 
 				SetTexture(&text_screen_fx);
 				DrawRoundFillBox(20+n*150+scroll_mode, ylev+m*110, 148, 108, 10, 0xffffffff);
+
+				// draw lock
+				if((game_datas[(m<<2)+n].config>>30) & 1)
+					{
+					SetTexture(&text_icon[3]);
+					DrawFillBox(20+n*150+scroll_mode+124, ylev+m*110+8, 16, 24, 10, 0xffffffff);
+					}
+
 				SetTexture(NULL);
+
+
 
 				
 				set_set=1;
@@ -2984,7 +3369,7 @@ get_games:
 				}
 			
 			SetTexture(NULL);
-			if(px>=20+n*150 && px<20+n*150+148 && py>=ylev+m*110 && py<ylev+m*110+108)
+			if(px>=20+n*150 && px<20+n*150+148 && py>=ylev+m*110 && py<ylev+m*110+108 && parental_mode==0)
 				{
 				
 				if(old_temp_sel!=(m<<2)+n && old_temp_sel<1000) 
@@ -3015,7 +3400,7 @@ get_games:
 					DrawRoundBox(20+n*150+scroll_mode-620, ylev+m*110, 148, 108, 0, 4, 0xff303030);
 					}
 
-				if(!scroll_mode && !insert_favorite)
+				if(!scroll_mode && !insert_favorite  && parental_mode==0)
 					{
 					SetTexture(NULL);
 			
@@ -3079,7 +3464,7 @@ get_games:
 					}
 			}
 
-			if(selected_panel>=0 && scroll_mode==0)
+			if(selected_panel>=0 && scroll_mode==0  && parental_mode==0)
 				{struct discHdr *header = &gameList[game_datas[selected_panel].ind];
 		
 					SetTexture(NULL);
@@ -3099,7 +3484,7 @@ get_games:
 					autocenter=0;
 				}
 			else
-			if(select_game_bar>=10000 && select_game_bar<10004)
+			if(select_game_bar>=10000 && select_game_bar<10004 && parental_mode==0)
 				{
 					SetTexture(NULL);
 					DrawRoundFillBox(20, ylev+ 3*110, 150*4, 108, 0, 0xcfcfffff);
@@ -3119,6 +3504,72 @@ get_games:
 		
 		
 		} // modo panel
+
+		//	parental_control_on=1;
+//		int parental_mode=0;
+		/////////////////////////
+		if(parental_mode)
+			{
+			ylev+=32;
+
+			SetTexture(NULL);
+
+			DrawRoundFillBox(20+148, ylev, 148*2, 352, 0, 0xcfafafaf);
+
+			letter_size(16,32);
+
+			PX= 0; PY=ylev+8; color= 0xff000000; 
+					
+			bkcolor=0;//0xc0f08000;
+			
+			autocenter=1;
+			s_printf("%s","Parental Control");
+			autocenter=0;
+
+			select_game_bar=0;
+			
+
+			// change partition draw and selection
+			letter_size(16,24);
+			bkcolor=0;
+			autocenter=0;
+			
+			for(n=0;n<4;n++)
+				{
+				int my_x=SCR_WIDTH/2-100+50*n;
+				int my_y=ylev+50;
+
+				if(parental_str[n]==0) DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0ffffff);
+				else DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa000ff00);
+
+				PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", parental_str[n]==0 ? ' ' : '*');
+				DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+
+				}
+
+			for(n=0;n<10;n++)
+				{
+				int my_x=SCR_WIDTH/2-75+50*((n==0) ? 1 :((n-1) % 3));
+				int my_y=ylev+64+50*((n==0) ? 4 :3-((n-1)/3));
+				
+				DrawRoundFillBox(my_x, my_y, 48, 48, 0, 0xa0cfffff);
+
+				PX=my_x+16; PY=my_y+6+8; color= 0xff000000;s_printf("%c", 48+n); 
+
+				if(px>=my_x && px<my_x+48 && py>=my_y && py<my_y+48)
+					{
+					DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xfff08000);
+					select_game_bar=20000+n;
+					}
+				else
+					DrawRoundBox(my_x, my_y, 48, 48, 0, 4, 0xa0000000);
+			
+				}
+
+			ylev-=32;
+
+			}
+		////////////////////////////
 		} 
 
 	load_png=0;
@@ -3221,7 +3672,7 @@ get_games:
 							}
 						}
 
-					 if(!game_mode && !insert_favorite && !cheat_mode && gameList!=NULL) //limit left/right
+					 if(!game_mode && !insert_favorite && !cheat_mode && gameList!=NULL && parental_mode==0) //limit left/right
 						{
 						
 						if(new_pad & WPAD_BUTTON_MINUS)
@@ -3241,6 +3692,39 @@ get_games:
 
 					if((new_pad & WPAD_BUTTON_A) && gameList!=NULL)
 						{
+						if(parental_mode)
+							{
+							if(select_game_bar>=20000 && select_game_bar<20010)
+								{
+								for(n=0;n<4;n++) if(parental_str[n]==0) break;
+								if(n<4) {parental_str[n]=select_game_bar+48-20000;snd_fx_yes();}
+								if(n>=4) {
+									     for(n=0;n<4;n++)
+											{
+											if(config_file.parental[n]!=(parental_str[n]-48)) break;
+											}
+										  if(select_game_bar+48-20000=='0') n++;
+									      if(n==5)
+											{
+											parental_control_on=0;
+											snd_fx_yes();
+											if(parental_mode>=1024) game_mode=parental_mode-1024;
+											else go_home=1;
+											}
+										  else
+											{
+											for(n=0;n<4;n++) parental_str[n]=0;
+											parental_control_on++;
+											snd_fx_no();
+											if(parental_control_on>=5) {sleep(3);exit_by_reset=3; goto exit_ok;}
+											}
+										  
+										  parental_mode=0;
+										  }
+								select_game_bar=0;
+								}
+							}
+						else
 						if(test_gfx_page)
 							{
 							 if(cheat_mode && txt_cheats)
@@ -3348,6 +3832,15 @@ get_games:
 											break;
 											}
 										}
+									
+									
+									
+									// game is locked
+									if(((game_datas[game_mode-1].config>>30) & 1) && parental_control_on)
+										{
+											parental_mode=game_mode+1024;
+											game_mode=0; // block game_mode, active parental_mode
+										}
 								
 
 									}
@@ -3385,6 +3878,7 @@ get_games:
 												   langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
 												   force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
+												   game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
 
 												   edit_cfg=1;
 												   }
@@ -3449,6 +3943,8 @@ get_games:
 														Screen_flip();
 														WPAD_Shutdown();
 														
+														add_game_log(discid);
+
 														save_cfg();
 
 														if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
@@ -3460,6 +3956,7 @@ get_games:
 														langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
 														force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
+														game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
 														
 														fatUnmount("sd");
 														__io_wiisd.shutdown();
@@ -3504,6 +4001,7 @@ get_games:
 														mload_close();
 
 														ret = load_disc(discid);
+														
 
 														//////////////////////////////////
 													
@@ -3564,6 +4062,8 @@ get_games:
 														temp_data[4]|=(forcevideo & 3)<<2;
 														temp_data[4]|=(langsel & 15)<<4;
 														temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
+														temp_data[7]|=((game_locked_cfg!=0) & 1)<<6;
+											
 														}
 
 												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
@@ -3580,6 +4080,12 @@ get_games:
 												   {
 												   forcevideo= select_game_bar-200;
 												   snd_fx_yes();
+												   }
+
+							if(select_game_bar==210)
+												   {
+												   game_locked_cfg=(game_locked_cfg==0);
+												   snd_fx_yes();usleep(250);
 												   }
 							if(select_game_bar>=300 && select_game_bar<=302)
 												   {
@@ -3612,7 +4118,13 @@ get_games:
 						{
 						
 						int n;
-						
+						if(parental_mode)
+							{
+							for(n=0;n<4;n++) parental_str[n]=0;
+							snd_fx_no();
+							if(parental_mode==1) go_home=1;
+							parental_mode=0;
+							}
 						if(cheat_mode)
 							{
 							}
@@ -3636,6 +4148,7 @@ get_games:
 						    temp_data[4]|=(forcevideo & 3)<<2;
 						    temp_data[4]|=(langsel & 15)<<4;
 							temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
+							temp_data[7]|=((game_locked_cfg!=0) & 1)<<6;
 
 						    game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
 
@@ -3659,7 +4172,7 @@ get_games:
 							}
 						}
 
-					if(new_pad & WPAD_BUTTON_1) // swap favorites/page
+					if((new_pad & WPAD_BUTTON_1) && parental_mode==0) // swap favorites/page
 						{
 						int n;
 
@@ -3681,7 +4194,14 @@ get_games:
 							}
 						
 						}
-					if((new_pad & WPAD_BUTTON_HOME) && game_mode==0 && insert_favorite==0 && scroll_mode==0) go_home=1;
+					if((new_pad & WPAD_BUTTON_HOME) && game_mode==0 && insert_favorite==0 && scroll_mode==0 && parental_mode==0) 
+						{
+						if(parental_control_on)
+										{
+										parental_mode=1;
+										}
+									else go_home=1;
+						}
 							
 			
 			} 
@@ -3790,6 +4310,14 @@ get_games:
 			}//
 
 		n=home_menu(header);
+		if(n==0)
+			{
+			if(parental_control_on)
+				{
+				for(n=0;n<4;n++) parental_str[n]=0;
+				parental_control_on=1;
+				}
+			}
 		if(n==1) {exit_by_reset=return_reset;break;}
 		if(n==2) {Screen_flip();goto get_games;}
 		if(n==3) load_png=1;

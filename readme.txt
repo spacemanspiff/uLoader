@@ -1,4 +1,4 @@
-uLoader v1.6 BETA - by Hermes (www.elotrolado.net)
+uLoader v1.7 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol
@@ -9,11 +9,15 @@ to launch backups from USB mass storage devices with a graphical user interface 
 Features:
 ---------------
 
+- Parental control added: by default the password is 00000 (the last 0 is the 'ENTER', so you can program a new password as XXXX0 ). 
+ You can change it from special menu pressing HOME. You can exits from the  password box pressing B. Parental control list the last 8 games launched
+ with date/time, enables the password box (automatic when you enter in the menu) and fix a new password.
+
 - 16 games per screen, showing an icon that can be inserted in the device, using the attached wbfs_win.exe revision (see below "Notes about wbfs_win").
 
 - It has a Favorites Screen (up to 16 games) (save __CFG_ in HDD)
 
-- Allows to select the cIOS to use between cIOS 222 and CIOS 249.
+- Allows to select the cIOS to use between cIOS 222, cIOS 223 and CIOS 249.
 
 - Screen text in Spanish and English (auto-detect)
 
@@ -22,6 +26,8 @@ Features:
 - Support for multiples WBFS partitions (max 4).
 
 - Possibility to use the alternative cIOS 223 (only to launch games)
+
+- Option to add or delete PNG icons from the SD to the game directly (PNG is added in the HDD)
 
 - New USB code and more
 
@@ -67,6 +73,8 @@ fat:/uloader/uloader.cfg
 fat:/uloader.cfg
 
 in preference order.
+
+NOTE: the last releases add the .cfg to the HDD and don't need the SD for it
 
 To do that, press A on game icon's and you'll access a screen that will give you the options to add/erase the game
 from favorites screen (erase action only appears when you access from favorites)
@@ -155,6 +163,14 @@ My recommendation is a size of 128x96 average.
 
 If you have doubts, please ask in the forums.
 
+Remember, you have now one option to upload icons from the SD on uLoader 
+application
+
+Some elotrolado.net users have uploaded a lot of icons from here:
+
+http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
+
+(save the page content to get alls icons quickly)
 
 
 
