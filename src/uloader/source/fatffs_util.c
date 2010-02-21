@@ -853,14 +853,14 @@ char dir_path2[256];
 	if(shared_entries)
 	{
 	int n;
-	void *data;
+	void *data=NULL;
 	int len_data;
 
 	n=1;
     if(FAT_read_file(dir_path, &data, &len_data)==0)
 		{
 		if(len_data==(sizeof(shared_entry)*shared_entries) && len_data!=0 && !memcmp(data, shared_list, len_data)) n=0;
-		free(data);
+		free(data);data=NULL;
 		}
 
 	if(n)
@@ -883,8 +883,8 @@ char dir_path2[256];
 				
 				sprintf(dir_path2, "%s/shared/00010001/%08x%08x.app", &dev_names[is_sd==0][0], shared_list[n].title_id, shared_list[n].cindex);
 				
-				if(FAT_copy_file(dir_path, dir_path2)<0) {free(data);continue;}
-				free(data);
+				if(FAT_copy_file(dir_path, dir_path2)<0) {continue;}
+				
 				}
 
 			if(fp) fwrite(&shared_list[n], sizeof(shared_entry), 1, fp);
@@ -1632,6 +1632,8 @@ DIR_ITER *dir;
 time_sleep=5*60;
 /* Close directory */
 	dirclose(dir);
+
+	down_mess="";
 }
 
 
@@ -1670,6 +1672,7 @@ int error=0;
 
 int wad_len=0;
 
+int delete_content=0;
 
 char dir_path[256];
 
@@ -1781,7 +1784,7 @@ char dir_path[256];
 	if(FAT_write_file(dir_path, tik, header->tik_len)<0) {free(tik);tik=NULL;error=-9;goto error;}
 	}
 	
-    
+    delete_content=1;
 	// get title_key for decript content
 	_decrypt_title_key((void *) tik, title_key);
 	aes_set_key(title_key);
@@ -1816,7 +1819,6 @@ char dir_path[256];
 		fp2=fopen(dir_path, "wb");
 		if(!fp2) {error=-4;goto error;}
 
-		
 
 		// fix private content
 		if(Content[n].type & 0xC000) 
@@ -1954,7 +1956,7 @@ error:
 		down_mess=mess;
 	
 		
-		if(title_id && error)
+		if(title_id && error && delete_content)
 			{
 			// deletes the content
 			sprintf(dir_path, "%s/title/%08x/%08x", &dev_names[is_sd==0][0], title_id[0], title_id[1]);
@@ -1965,7 +1967,7 @@ error:
 		}
 
 	down_mess="Update Shared Info";
-    if(!error)
+    if(!error && title_id && title_id[0]==0x00010001)
 		scan_for_shared(is_sd);
 	down_mess="";
 

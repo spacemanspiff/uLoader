@@ -1,3 +1,100 @@
+Versión 4.8
+-----------
+
+Thanks to "elpresi" and "kwanbis" to translate the spanish text ;)
+
+What's new:
+
+- Improved savegame and FAT support
+
+- Wiiware/VC games emulation
+
+- Wiiware/VC/DLC content installer (Copy wads to sd:/nand/install or usb:/nand/install)
+
+- Auto-icon function for Wiiware/VC: It uses a series of checks to extract an image from icon.bin and use it as default (It can fail as it
+is a real chaos to find an image there... maybe in the future an image could be selected from banner.bin or icon.bin). This icon can be removed either by adding a PNG image from the usual place or by using the default icon if "Edit CFG#2" -> "Delete Icon" is selected.
+
+- Function to autocomplete/update shared content and option to force update of Wiiware/VC content (the former is done when the game is run; the latter with "Edit CFG #2" -> "Force Content Update")
+
+- FAT unmounting support when exiting to the menu, or when using the Reset or Power buttons (by monitoring /dev/stm/eventhook, /dev/stm(immediate and both buttons interrupt vectors)
+
+- Option to redirect to x:/nand/ when seeking downloadable content (DLC) when saves are emulated in nand2, 3 or 4
+
+- Backup/restore support for the quicksave/snapshot files created by certain Wiiware when exiting to the menu (qsdata.bin or snapshot.bin are restored if lost)
+
+- Support for copying game related DLC to the specified path.
+
+- Classic Controller suport added.
+
+- New uLoader hacks to set cIOS 224 as default cIOS and new "back in black" option to change the background look by having the posibility to add a PNG (640x480 true color) as wallpaper from sd:/background.png, sd:/apps/uloader/background.png or usb:/background.png, usb:/apps/uloader/background.png)
+
+
+NEW OPTIONS IN DETAIL
+
+Wiiware / VC
+--------------------
+
+Every time a wad is installed the newest version of the shared content is used. uLoader has its own installer which doesn't use the system, so it needs to manage the shared content by itself and set it as private. Old content update can be forced with a button, but it is recommended to install first the newest Wiiwares to get from the beginning the newer version of shared content.
+
+*Installation method
+
+Wiiware/VCs are installed in x:/nand. Copy the wads in x:/nand/install (don't copy too many as it takes some time to decrypt and install)
+
+* New option in Edit CFG #1:
+
+"Skiip Boot" -> skips the content flagged as executable and analyzes the title looking for other dol file. It is needed for some games that don't work in other ways.
+
+* New options in Edit CFG #2:
+
+Information about title path is shown (if you need to modify something, it would be x:/nand/title/00010001/xxxxxxxx where x is the information show)
+
+"Del Title" -> this completely deletes the Wiiware (the ususal option in uLoader to delete games is not used because an special method is needed)
+
+"Del Data" -> this just deletes the contents of the "_data" folder (savegames, etc)
+
+"Force Content Update" -> updates content that matches the hash, by scanning all the installed Wiiware. Useful in case of partial installs or game malfunction (for example, Super Mario 64's electronic manual problem in old installations can be fixed in this way)
+
+"Delete icon" -> damages the icon information in Wiiwares so it is not shown nor automatically updated (if you use the normal PNG delete uLoader would reinsert the icon again next time)
+
+
+Savegames / DLC in WBFS/.CISO and DVD
+----------------------------------
+Savegames work the same as in v4.5b, but now there are extra functions for DLC.
+
+"Use DLC form x:/nand" -> forces the load of DLC content (00010005) from x:/nand instead of the selected path for the savegame (for example you can save to x:/annd3 and take the DLC from x:/nand)
+
+"Copy DLC" -> similar to "NAND export save", copies DLC to the path selected for savegames (if you select "USB" and "nand2", DLC would install there).
+
+
+Installation process and working with content
+------------------------------------------------
+
+Wads copied to x:/nand/install are deleted once correctly installed. Two types are supported Wiiware/VC (00010001 titles) and DLC (00010005 titles). The routine is more permissive whith the latter with incomplete wads.
+
+When something is installed the content is checked and the shared content is updated if needed (in x:/nand/shared).
+
+The content update, if needed, is done during game execution (so the first time it will take some time if out-of-date content is found).
+uLoader modifyes title.tmd (it backs it up to #title.tmd) to flag all the content as private to avoid having to emulate the path /shared1 and thus manage to our taste shared content.
+
+It is also at that moment that a new ticket is generated from the actual IOS ticket to skip the ES_Identify(), FAT_Identify() and Set_UID() that otherwise would fail with IOS 37 and 57 (evidently, a false ticket is used to skip this step).
+
+
+RECOMENDATIONS
+--------------------
+
+- Don't install many wads at a time: a long time is required to decrypt and copy each game to the Wii.
+
+- Install new games first so older ones can get advantage of its improvements (anyway, if the game works correctly it doesn't really matter)
+
+- Respect original video mode, if it is not working, try the "skip IOS" option. If it is still not working, try other IOS (some games don't work with 224). Once the game is working, it can be checked if it admits the Auto or "Force PAL 60" modes for NTSC games, for example.
+
+- Be careful when copying DLC, because it will overwrite the old data and you could disable songs in GH, for example (a backup of title.tmd is done). If the game has the 53xxxxxx id, DLC will be at title/00010005/73xxxxxx, or put in another way, add 0x20.
+
+- DLC obtained in other ways, apart from being illegal, could be "trucha" and not work, be invisible to the programs or overlap with other DLCs in memory. The best thing to do is to download the free DLC to the nand without emulation (emulation gives problems with downloads) and then copy it with the "Copy DLC" to be emulated to be able to free the space that DLC took from the nand.
+
+FINAL NOTE: Warning: this is still experimental and there could be bugs that could make you lose all content or corrupt it, so it is adviced to do a backup of everything valuable and not push it. The extension for savegames, DLC and Wiiware is undoubtely a useful tool and it can still be improved. I am not responsible of bad uses or malfunctions and you are warned that you should protect valuable data as much as you can .
+
+
 The New in uLoader 4.5
 -----------------------
 

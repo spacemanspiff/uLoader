@@ -63,7 +63,7 @@
 #include "fatffs_util.h"
 
 
-char uloader_version[5]="4.8"; // yes, you can change here the current version of the application
+char uloader_version[5]="4.8A"; // yes, you can change here the current version of the application
 
 u32 INK0= 0xf0000000;
 u32 INK1= 0xfff0f0f0;
