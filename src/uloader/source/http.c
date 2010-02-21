@@ -405,6 +405,8 @@ int retry=2;
 		sleep(1);
 		netInit = 1;
 		}
+	if(!url) return -2;
+
     while(1)
 	{
 	retry--;

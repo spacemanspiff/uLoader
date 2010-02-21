@@ -45,10 +45,11 @@ distribution.
 
 
 
-#define UMS_HEAPSIZE			0x10000
+#define UMS_HEAPSIZE			0x1000 //0x10000
 
 /* Variables */
-static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb/ehc";
+static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb2";
+static char fs2[] ATTRIBUTE_ALIGN(32) = "/dev/usb/ehc";
  
 static s32 hid = -1, fd = -1;
 static u32 sector_size;
@@ -124,6 +125,8 @@ s32 USBStorage2_Init(void)
 
 	/* Open USB device */
 	fd = IOS_Open(fs, 0);
+	if (fd < 0) fd = IOS_Open(fs2, 0);
+	
 	if (fd < 0)
 		return fd;
 
@@ -156,6 +159,7 @@ void USBStorage2_Deinit(void)
 {
 mounted = 0;
 
+
 	/* Close USB device */
 	if (fd >= 0) {
 		IOS_Close(fd);
@@ -163,7 +167,9 @@ mounted = 0;
 	}
 }
 
+extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
 
+static void *mem2_ptr=NULL;
 s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 {
 	void *buf = (void *)buffer;
@@ -174,11 +180,11 @@ s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 	/* Device not opened */
 	if (fd < 0)
 		return fd;
-
+    if(!mem2_ptr) mem2_ptr=SYS_AllocArena2MemLo(2048*64,32);
 	/* MEM1 buffer */
 	if (!__USBStorage2_isMEM2Buffer(buffer)) {
 		/* Allocate memory */
-		buf = iosAlloc(hid, len);
+		buf = mem2_ptr; //iosAlloc(hid, len);
 		if (!buf)
 			return IPC_ENOMEM;
 	}
@@ -189,7 +195,7 @@ s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 	/* Copy data */
 	if (buf != buffer) {
 		memcpy(buffer, buf, len);
-		iosFree(hid, buf);
+		//iosFree(hid, buf);
 	}
 
 	return ret;
@@ -205,11 +211,13 @@ s32 USBStorage2_WriteSectors(u32 sector, u32 numSectors, const void *buffer)
 	/* Device not opened */
 	if (fd < 0)
 		return fd;
+	if(!mem2_ptr) mem2_ptr=SYS_AllocArena2MemLo(2048*64,32);
+	
 
 	/* MEM1 buffer */
 	if (!__USBStorage2_isMEM2Buffer(buffer)) {
 		/* Allocate memory */
-		buf = iosAlloc(hid, len);
+		buf = mem2_ptr; //buf = iosAlloc(hid, len);
 		if (!buf)
 			return IPC_ENOMEM;
 
@@ -269,7 +277,7 @@ static bool __usbstorage_ClearStatus(void)
 
 static bool __usbstorage_Shutdown(void)
 {
-	if(mounted) USBStorage2_Umount();
+	//if(mounted) USBStorage2_Umount();
 	USBStorage2_Deinit();
 
 	mounted = 0;

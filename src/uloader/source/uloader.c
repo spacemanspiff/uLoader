@@ -127,8 +127,9 @@ static u32 ios_60[16] ATTRIBUTE_ALIGN(32)=
 };
 */
 
-
+int force_reload_ios222=0;
 u32 patch_datas[8] ATTRIBUTE_ALIGN(32);
+
 
 data_elf my_data_elf;
 
@@ -138,6 +139,7 @@ void *external_ehcmodule= NULL;
 int size_external_ehcmodule=0;
 
 int sd_ok=0;
+int ud_ok=0;
 
 
 
@@ -146,7 +148,7 @@ int load_ehc_module()
 int is_ios=0;
 FILE *fp;
 
-//if(0)
+
 if(sd_ok && !external_ehcmodule)
 	{
 
@@ -183,11 +185,19 @@ if(sd_ok && !external_ehcmodule)
   
 	if(!external_ehcmodule)
 		{
-		if(mload_module(ehcmodule, size_ehcmodule)<0) return -1;
+		if(mload_init()<0) return -1;
+		mload_elf((void *) ehcmodule, &my_data_elf);
+		my_thread_id= mload_run_thread(my_data_elf.start, my_data_elf.stack, my_data_elf.size_stack, my_data_elf.prio);
+		if(my_thread_id<0) return -1;
+		//if(mload_module(ehcmodule, size_ehcmodule)<0) return -1;
 		}
 	else
 		{
-		if(mload_module(external_ehcmodule, size_external_ehcmodule)<0) return -1;
+		//if(mload_module(external_ehcmodule, size_external_ehcmodule)<0) return -1;
+		if(mload_init()<0) return -1;
+		mload_elf((void *) external_ehcmodule, &my_data_elf);
+		my_thread_id= mload_run_thread(my_data_elf.start, my_data_elf.stack, my_data_elf.size_stack, my_data_elf.prio);
+		if(my_thread_id<0) return -1;
 		}
 	usleep(350*1000);
 	
@@ -240,6 +250,8 @@ if(sd_ok && !external_ehcmodule)
 
 return 0;
 }
+
+
 
 // Based in Waninkoko patch
 
@@ -1143,70 +1155,86 @@ int n_sectors;
     if(ret<0) return -2;
     
 	///find wbfs partition
-    memcpy(part_table,temp_data+0x1be,16*4);
-    ptr = part_table;
+	if(temp_data[0x1bc]!=0 || temp_data[0x1bd]!=0 || temp_data[0x1fe]!=0x55 || temp_data[0x1ff]!=0xaa) 
+		{
+		memset(part_table,0,16*4);
+		partition_type[num_partitions].lba=0;
+		partition_type[num_partitions].len=n_sectors;
+		if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S')
+			partition_type[num_partitions].type|=(2<<8);
+		else partition_type[num_partitions].type=(4<<8);
 
-	for(i=0;i<4;i++,ptr+=16)
-        { 
-		u32 part_lba = read_le32_unaligned(ptr+0x8);
-
-		partition_type[num_partitions].len=read_le32_unaligned(ptr+0xC);
-        partition_type[num_partitions].type=(0<<8) | ptr[4];
-		partition_type[num_partitions].lba=part_lba;
-
-		if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S' && i==0)
-			{partition_type[num_partitions].len=n_sectors;partition_type[num_partitions].type=(2<<8);num_partitions++; break;}
+		num_partitions++;
+		}
+	else 
+		{
+		memcpy(part_table,temp_data+0x1be,16*4);
 
 
-		if(ptr[4]==0) 
-			{
-			continue;
-			}
+		ptr = part_table;
 
-		if(ptr[4]==0xf)
-			{
-			u32 part_lba2=part_lba;
-			u32 next_lba2=0;
-			int n;
-			
-			for(n=0;n<8;n++) // max 8 logic partitions (i think it is sufficient!)
+		for(i=0;i<4;i++,ptr+=16)
+			{ 
+			u32 part_lba = read_le32_unaligned(ptr+0x8);
+
+			partition_type[num_partitions].len=read_le32_unaligned(ptr+0xC);
+			partition_type[num_partitions].type=(0<<8) | ptr[4];
+			partition_type[num_partitions].lba=part_lba;
+
+			if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S' && i==0)
+				{partition_type[num_partitions].len=n_sectors;partition_type[num_partitions].type=(2<<8);num_partitions++; break;}
+
+
+			if(ptr[4]==0) 
 				{
-					ret = USBStorage2_ReadSectors(part_lba+next_lba2, 1, temp_data);
-					if(ret<0)
-						return -2; 
+				continue;
+				}
 
-					part_lba2=part_lba+next_lba2+read_le32_unaligned(temp_data+0x1C6);
-					next_lba2=read_le32_unaligned(temp_data+0x1D6);
-
-					partition_type[num_partitions].len=read_le32_unaligned(temp_data+0x1CA);
-					partition_type[num_partitions].lba=part_lba2;
-					partition_type[num_partitions].type=(1<<8) | temp_data[0x1C2];
-
-					ret = USBStorage2_ReadSectors(part_lba2, 1, temp_data);
-					if(ret<0)
-						return -2;
-
-					
-					if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S')
-						partition_type[num_partitions].type=(3<<8) | temp_data[0x1C2];
+			if(ptr[4]==0xf)
+				{
+				u32 part_lba2=part_lba;
+				u32 next_lba2=0;
+				int n;
 				
-					num_partitions++;
-					if(next_lba2==0) break;
-				}
-			}  
-          else   
-				{
-					ret = USBStorage2_ReadSectors(part_lba, 1, temp_data);
-			
-					if(ret<0)
-						return -2;
+				for(n=0;n<8;n++) // max 8 logic partitions (i think it is sufficient!)
+					{
+						ret = USBStorage2_ReadSectors(part_lba+next_lba2, 1, temp_data);
+						if(ret<0)
+							return -2; 
 
-					if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S')
-						partition_type[num_partitions].type|=(2<<8);
+						part_lba2=part_lba+next_lba2+read_le32_unaligned(temp_data+0x1C6);
+						next_lba2=read_le32_unaligned(temp_data+0x1D6);
 
-					num_partitions++;
-				}
-        }
+						partition_type[num_partitions].len=read_le32_unaligned(temp_data+0x1CA);
+						partition_type[num_partitions].lba=part_lba2;
+						partition_type[num_partitions].type=(1<<8) | temp_data[0x1C2];
+
+						ret = USBStorage2_ReadSectors(part_lba2, 1, temp_data);
+						if(ret<0)
+							return -2;
+
+						
+						if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S')
+							partition_type[num_partitions].type=(3<<8) | temp_data[0x1C2];
+					
+						num_partitions++;
+						if(next_lba2==0) break;
+					}
+				}  
+			  else   
+					{
+						ret = USBStorage2_ReadSectors(part_lba, 1, temp_data);
+				
+						if(ret<0)
+							return -2;
+
+						if(temp_data[0]=='W' && temp_data[1]=='B' && temp_data[2]=='F' && temp_data[3]=='S')
+							partition_type[num_partitions].type|=(2<<8);
+
+						num_partitions++;
+					}
+			}
+		}
 return 0;
 }
 
@@ -1215,12 +1243,12 @@ int menu_format()
 int frames2=0;
 int n,m;
 int ret;
-char type[4][9]={"Primary ", "Extended", "WBFS Pri", "WBFS Ext"};
+char type[5][9]={"Primary ", "Extended", "WBFS Pri", "WBFS Ext","Unknown "};
 
 int current_partition=0;
 
 int level=0;
-int it_have_wbfs=0;
+//int it_have_wbfs=0;
 
 int last_select=-1;
 
@@ -1286,12 +1314,12 @@ while(1)
 	letter_size(8,24);
 	SetTexture(NULL);
 
-	it_have_wbfs=0;
+	//it_have_wbfs=0;
 
-	for(n=0;n<num_partitions;n++)
+	/*for(n=0;n<num_partitions;n++)
 		{
 		if(type[partition_type[n].type>>8][0]>1) {it_have_wbfs=1;break;}
-		}
+		}*/
 
 	if(level>=100)
 		{
@@ -1338,17 +1366,26 @@ while(1)
 			DrawRoundBox(PX-32, PY-12, 60*8+64, 56, 0, 4, 0xff000000);
 			
 			color= 0xff000000; 
-			s_printf("Partition %2.2i -> %2.2xh (%s) LBA: %.10u LEN: %.2fGB", m+1, partition_type[m].type & 255, &type[partition_type[m].type>>8][0],
+			/*s_printf("Partition %2.2i -> %2.2xh (%s) LBA: %.10u LEN: %.2fGB", m+1, partition_type[m].type & 255, &type[partition_type[m].type>>8][0],
+					partition_type[m].lba, ((float)partition_type[m].len* (float)sector_size)/(1024*1024*1024.0));*/
+			if((partition_type[m].type>>8)==4)
+					{
+					s_printf("Unpartitioned Disc (%s) LBA: %.10u LEN: %.2fGB", &type[partition_type[m].type>>8][0],
+						partition_type[m].lba, ((float)partition_type[m].len* (float)sector_size)/(1024*1024*1024.0));
+					}
+				else
+					{
+					s_printf("Partition %2.2i -> %2.2xh (%s) LBA: %.10u LEN: %.2fGB", m+1, partition_type[m].type & 255, &type[partition_type[m].type>>8][0],
 					partition_type[m].lba, ((float)partition_type[m].len* (float)sector_size)/(1024*1024*1024.0));
-			
+					}
 			autocenter=1;
 			PX= 0; PY=ylev+180;
 			letter_size(12,32);
 			s_printf("%s", &letrero[idioma][16][0]);
 		
 			PX= 0; PY=ylev+180+48;
-			if(it_have_wbfs)
-				s_printf("%s", &letrero[idioma][15][0]);
+			/*if(it_have_wbfs)
+				s_printf("%s", &letrero[idioma][15][0]);*/
 			autocenter=0;
 
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][17][0])) select_game_bar=60;
@@ -1376,7 +1413,7 @@ while(1)
 				{
 				if(px>=PX-32 && px<=PX+60*8+64 && py>=PY-8 && py<PY+32) 
 					{
-					if((partition_type[m].type>>8)>1) DrawRoundFillBox(PX-40, PY-12, 60*8+80, 48, 0, 0xff00cf00);
+					if((partition_type[m].type>>8)>1 && (partition_type[m].type>>8)!=4) DrawRoundFillBox(PX-40, PY-12, 60*8+80, 48, 0, 0xff00cf00);
 					else DrawRoundFillBox(PX-40, PY-12, 60*8+80, 48, 0, 0xffcfcfcf);
 					
 					DrawRoundBox(PX-40, PY-12, 60*8+80, 48, 0, 5, 0xfff08000);select_game_bar=100+m;
@@ -1388,9 +1425,16 @@ while(1)
 					
 					DrawRoundBox(PX-32, PY-8, 60*8+64, 40, 0, 4, 0xff606060);
 					}
-				
-				s_printf("Partition %2.2i -> %2.2xh (%s) LBA: %.10u LEN: %.2fGB", m+1, partition_type[m].type & 255, &type[partition_type[m].type>>8][0],
+				if((partition_type[m].type>>8)==4)
+					{
+					s_printf("Unpartitioned Disc (%s) LBA: %.10u LEN: %.2fGB", &type[partition_type[m].type>>8][0],
+						partition_type[m].lba, ((float)partition_type[m].len* (float)sector_size)/(1024*1024*1024.0));
+					}
+				else
+					{
+					s_printf("Partition %2.2i -> %2.2xh (%s) LBA: %.10u LEN: %.2fGB", m+1, partition_type[m].type & 255, &type[partition_type[m].type>>8][0],
 					partition_type[m].lba, ((float)partition_type[m].len* (float)sector_size)/(1024*1024*1024.0));
+					}
 				}
 			}
 		
@@ -1881,6 +1925,7 @@ char str_id[7];
     sleep(1);
 
 	USBStorage2_Watchdog(0); // to increase the speed
+	WPAD_Shutdown();
 
 	/* Install game */
 	ret = WBFS_AddGame(0);
@@ -1897,7 +1942,16 @@ char str_id[7];
 		snd_fx_no();
 		Screen_flip();
 		autocenter=0;
-		sleep(4);
+		
+		WPAD_Init();
+		WPAD_SetIdleTimeout(60*5); // 5 minutes 
+
+		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
+		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
+		sleep(1);
+		wiimote_rumble(0);
+		WPAD_ScanPads();
+		sleep(3);
 		goto out;
 	}
 
@@ -1908,7 +1962,17 @@ char str_id[7];
 	s_printf("%s",&letrero[idioma][41][0]);
 	snd_fx_yes();
 	Screen_flip();
-	sleep(4);
+	WPAD_Init();
+	WPAD_SetIdleTimeout(60*5); // 5 minutes 
+
+	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
+	WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
+
+	sleep(1);
+	wiimote_rumble(0);
+	WPAD_ScanPads();
+	sleep(3);
+
 	}
 autocenter=0;
 
@@ -3283,7 +3347,10 @@ for(n=0;n<=gameCnt;n++)
 		sprintf(url, "http://www.wiiboxart.com/%s/%c%c%c%c%c%c.png", 
 		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
 		if(ret!=0)
+			{
+			force_reload_ios222=1;
 			ret=download_file(url, &temp_buf, &temp_size);
+			}
 		
 		sprintf(url, "http://www.muntrue.nl/covers/%s/160/225/boxart/%c%c%c%c%c%c.png", 
 		&region2[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
@@ -3341,6 +3408,7 @@ http_deinit();
 sleep(1);
 }
 
+
 int load_game_routine(u8 *discid, int game_mode);
 
 extern void *dol_data;
@@ -3379,9 +3447,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.5");
+			s_printf("v2.6");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.5");
+			s_printf("v2.6");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -3454,6 +3522,7 @@ int main(int argc, char **argv) {
 
 		int launch_counter=9;
 		int partial_counter;
+		
 
         return_reset=1;
 
@@ -3494,9 +3563,12 @@ int main(int argc, char **argv) {
 			cios++;
 			ret=IOS_ReloadIOS(cios);
 			}
-		//ret=-1;	
 
-		if(ret!=0)
+	    if(ret==0)
+			{
+			if((*(volatile u32 *)0x80003140 & 0xffff)<3) ret=-7777;
+			}
+		else
 			{
 			force_ios249=1;
 			cios=249;
@@ -3511,9 +3583,10 @@ int main(int argc, char **argv) {
 		bkcolor=0;
 
 		sleep(1);
-		
+			
 	    __io_wiisd.startup();
 		sd_ok = fatMountSimple("sd", &__io_wiisd);
+		
 
 		if(ret!=0) 
 			{
@@ -3529,8 +3602,10 @@ int main(int argc, char **argv) {
 			SetTexture(NULL);
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
-
-			s_printf("ERROR: You need cIOS222 and/or cIOS249 to work!!!\n");
+			if(ret==-7777)
+				s_printf("ERROR: You need cIOS222 from uLoader 2.6 v3 to work!!!\n");
+			else
+				s_printf("ERROR: You need cIOS222 and/or cIOS249 to work!!!\n");
 			Screen_flip();
 			goto error_0;
 			}
@@ -3540,6 +3615,61 @@ int main(int argc, char **argv) {
         game_empty=memalign(32,128*64*3*4);
 		
 		load_ehc_module();
+	
+	   
+	////////////////////////////////////
+            
+			#if 0
+			
+			// direct access register using mload v3 functions
+	
+			splash_scr();
+			SelectFontTexture(1); // selecciona la fuente de letra extra
+
+			letter_size(8,32);
+					
+			PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+					
+			bkcolor=0;
+			autocenter=1;
+			SetTexture(NULL);
+			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+			{
+			u32 dat=0;
+			u32 addr;
+
+			// get EHCI base registers
+			mload_getw((void *) 0x0D040000, &addr);
+			addr&=0xff;
+			addr+=0x0D040000;
+			
+			mload_getw((void *) (addr+0x44), &dat);
+		
+			mload_setw((void *) (addr+0x44), 0x1803);
+			usleep(100*1000);
+			mload_setw((void *) (addr+0x44), 0x1903); 
+			usleep(100*1000);
+			
+			// write port_status[0]
+			mload_setw((void *) (addr+0x44), 0x1801 ); 
+			usleep(100*1000);
+			 
+			// read port_status[0]
+			mload_getw((void *) (addr+0x44), &dat);
+
+			
+			
+
+		    s_printf("port_status[0]: %x\n",dat);
+			}
+			Screen_flip();
+			goto error_0;
+			#endif
+			
+
+////////////////////////////////////
+
 
 		WPAD_Init();
 		WPAD_SetIdleTimeout(60*5); // 5 minutes 
@@ -3678,6 +3808,7 @@ int main(int argc, char **argv) {
 	
 		}
 
+		
 		//save_log();
 
 		if(ret2<0)  goto error;
@@ -3699,12 +3830,6 @@ int main(int argc, char **argv) {
 		
 		
 		
-		/*
-		// mount ums test
-		__io_usbstorage2.startup();
-		sd_ok = fatMountSimple("sd", &__io_usbstorage2);
-		*/
-		
 		
        
 	   #if 1
@@ -3716,7 +3841,8 @@ int main(int argc, char **argv) {
 		
 		#endif
    
-		
+		__io_usbstorage2.startup();
+		ud_ok = fatMountSimple("ud", &__io_usbstorage2);
 
 		if(!direct_launch) sleep(2);
 	   
@@ -5327,7 +5453,9 @@ get_games:
 
 														DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
 														DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
-														
+														if(ret==-7777)
+															s_printf("ERROR: You need cIOS223 from uLoader 2.6 v3 to work!!!\n");
+														else
 														if(ret==666)s_printf("ERROR FROM THE LOADER: Disc ID is not equal!\n"); 
 														else 
 															s_printf("ERROR FROM THE LOADER: %i\n", ret);
@@ -5476,6 +5604,29 @@ get_games:
 								}
 							else
 								if(insert_favorite) snd_fx_no();
+							
+							if(is_favorite)
+								{
+								int flag=0,g;
+								for(n=0;n<15;n++)
+										if(config_file.id[n][0]!=0)	
+											{
+											for(g=0;g<gameCnt;g++)
+												{
+												struct discHdr *header = &gameList[g];
+												if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
+													{
+													flag=1;break;
+													}
+												 }
+											}
+								if(!flag) 
+									{is_favorite=0;
+									for(n=0;n<15;n++) {game_datas[n+16].ind=game_datas[n].ind;game_datas[n+16].png_bmp=NULL;}
+									load_png=1;
+									}
+								}
+				
 
 							game_mode=0;edit_cfg=0;
 							insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
@@ -5557,8 +5708,11 @@ get_games:
 
 			DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
-			
-			if(ret==666)s_printf("ERROR FROM THE LOADER: Disc ID is not equal!\n"); 
+
+			if(ret==-7777)
+				s_printf("ERROR: You need cIOS223 from uLoader 2.6 v3 to work!!!\n");
+			else
+			if(ret==666) s_printf("ERROR FROM THE LOADER: Disc ID is not equal!\n"); 
 			else 
 				s_printf("ERROR FROM THE LOADER: %i\n", ret);
 
@@ -5755,8 +5909,12 @@ error_0:
 		fatUnmount("sd");
 		__io_wiisd.shutdown();sd_ok=0;
 		}
-
-	USBStorage2_Umount();
+    if(ud_ok)
+		{
+		fatUnmount("ud");
+		__io_usbstorage2.shutdown();ud_ok=0;
+		}
+	//USBStorage2_Umount();
 
 	if(return_reset==2)
 		SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
@@ -5772,8 +5930,11 @@ int force_ingame_ios=0;
 
 	Screen_flip();
 	wiimote_rumble(0); 
-	usleep(100);
-	WPAD_Shutdown();
+	WPAD_ScanPads();
+	temp_pad= wiimote_read(); 
+	new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+	//WPAD_Shutdown();
+	
 
 	add_game_log(discid);
 
@@ -5800,41 +5961,63 @@ int force_ingame_ios=0;
 		__io_wiisd.shutdown();sd_ok=0;
 		}
 
+	if(ud_ok)
+		{
+		fatUnmount("ud");
+		__io_usbstorage2.shutdown();ud_ok=0;
+		}
+    USBStorage2_Watchdog(0); // disable watchdog
 	USBStorage2_Deinit();
 	WDVD_Close();
 	
 	#ifdef USE_MODPLAYER
 	ASND_End();		// finaliza el sonido
 	#endif
-	if((cios!=222 && force_ios249==0))
+	if((cios!=222 && force_ios249==0) || force_reload_ios222)
 		{
 		cabecera2(frames3, "Loading...");
 		frames3+=16;
 		Screen_flip();
-		ret2=IOS_ReloadIOS(cios);
+		WPAD_Shutdown();
+		usleep(500*1000);
 
+		ret2=IOS_ReloadIOS(cios);
+        if(cios==223 && ret2==0)
+			{
+			if((*(volatile u32 *)0x80003140 & 0xffff)<3) return -7777;
+			}
 		if(ret2<0)
 			{
 			cios=222;
 			IOS_ReloadIOS(cios);
 			}
-	
-		sleep(1);
+		
 		cabecera2(frames3, "Loading...");
 		frames3+=16;
 		Screen_flip();
 		load_ehc_module();
+	
+		WPAD_Init();
+		WPAD_SetIdleTimeout(60*5); // 5 minutes 
+
+		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
+		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
+		
 		for(n=0;n<25;n++)
 			{
 			cabecera2(frames3, "Loading...");
 			frames3+=16;
 			Screen_flip();
+			
 
 				ret2 = USBStorage2_Init(); 
 				if(!ret2) break;
 				usleep(500*1000);
 			}
+		
 		USBStorage2_Deinit();
+		
+		
 		}
 
 	// enables fake ES_ioctlv (to skip IOS_ReloadIOS(ios))
@@ -5845,7 +6028,7 @@ int force_ingame_ios=0;
 		}
 		
 	mload_close();
-
+	
 	ret = load_disc(discid);
 return ret;
 }
@@ -5857,6 +6040,7 @@ extern void settime(long long);
 
 bool compare_videomodes(GXRModeObj* mode1, GXRModeObj* mode2)
 {
+	
 	if (mode1->viTVMode != mode2->viTVMode || mode1->fbWidth != mode2->fbWidth ||	mode1->efbHeight != mode2->efbHeight || mode1->xfbHeight != mode2->xfbHeight ||
 	mode1->viXOrigin != mode2->viXOrigin || mode1->viYOrigin != mode2->viYOrigin || mode1->viWidth != mode2->viWidth || mode1->viHeight != mode2->viHeight ||
 	mode1->xfbMode != mode2->xfbMode || mode1->field_rendering != mode2->field_rendering || mode1->aa != mode2->aa || mode1->sample_pattern[0][0] != mode2->sample_pattern[0][0] ||
@@ -5878,8 +6062,10 @@ bool compare_videomodes(GXRModeObj* mode1, GXRModeObj* mode2)
 		return false;
 	} else
 	{
+		
 		return true;
 	}
+	
 }
 
 
@@ -5980,6 +6166,8 @@ GXRModeObj* PAL2NTSC[]={
 	&TVEurgb60Hz480ProgAa,  &TVNtsc480Prog,
 	0,0
 };
+
+
 
 GXRModeObj* NTSC2PAL[]={
 	&TVNtsc240Ds,			&TVPal264Ds,
@@ -6085,8 +6273,16 @@ int n,m, size;
 
 dol_len= 0;
 
+	
+	if(sd_ok)
+		fp=fopen(name,"rb"); // lee .dol desde sd
 
-	fp=fopen(name,"rb"); // lee el fichero de texto
+    if(!fp && ud_ok)
+		{
+		name[0]='u';
+		fp=fopen(name,"rb"); // lee .dol desde usb
+		}
+
 	if(fp)
 		{
 		fseek(fp, 0, SEEK_END);
@@ -6269,7 +6465,7 @@ int load_disc(u8 *discid)
 		cabecera2(frames3, "Loading...");
 		frames3+=16;
         Screen_flip();
-
+		
 
 
         AppLoaderStart	Start	= Loader.Entry_Point;
@@ -6361,6 +6557,8 @@ int load_disc(u8 *discid)
 				patch_dol(Address, Section_Size);
         }
 
+		WPAD_Shutdown();
+
 		// Cleanup loader information
         WDVD_Close();
 
@@ -6374,6 +6572,7 @@ int load_disc(u8 *discid)
                         return ret;
         }
 		#endif
+
 		
 
 		// Retrieve application entry point
@@ -6426,7 +6625,8 @@ int load_disc(u8 *discid)
         // Flush application memory range
         DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded values
 		
-	
+	    usleep(100*1000);
+
        // debug_printf("start %p\n",Entry);
 	   settime(secs_to_ticks(time(NULL) - 946684800));
 
@@ -6588,7 +6788,7 @@ int ret;
 int n,m;
 int mode=0;
 
-if(!sd_ok) return 0;
+if(!sd_ok && !ud_ok) return 0;
 
 actual_cheat=0;
 num_list_cheats=0;
@@ -6597,13 +6797,30 @@ len_cheats=0;
 
 txt_cheats=1;
 memset(data_cheats,0,sizeof(struct _data_cheats)*MAX_LIST_CHEATS);
-fp = fopen(file_cheats, "rb");
-	if (!fp) {
+fp=NULL;
+if(sd_ok)
+	{
+	fp = fopen(file_cheats, "rb");
+	if (!fp) 
+		{
 		txt_cheats=0;
 		file_cheats[17]='g';file_cheats[18]='c';file_cheats[19]='t';
 		fp = fopen(file_cheats, "rb");
-		
+		}
 	}
+if(!fp && ud_ok)
+	{
+	txt_cheats=1;
+	file_cheats[0]='u';file_cheats[17]='t';file_cheats[18]='x';file_cheats[19]='t';
+	fp = fopen(file_cheats, "rb");
+	if (!fp) 
+		{
+		txt_cheats=0;
+		file_cheats[17]='g';file_cheats[18]='c';file_cheats[19]='t';
+		fp = fopen(file_cheats, "rb");
+		}
+	}
+
 
 	if (!fp) {
 		return 0;
@@ -6771,7 +6988,9 @@ int mode=0;
 
 int flag_auto=1;
 
-//char id[7];
+have_device=(sd_ok!=0) | 2*(ud_ok!=0);
+
+if(ud_ok && !sd_ok) path_file[0]='u';
 
 read_list_file((void *) path_file, flag);
 
@@ -7086,7 +7305,7 @@ while(1)
 								{
 								
 								current_device=1;
-								sprintf(path_file, "usb:/");
+								sprintf(path_file, "ud:/");
 								read_list_file(NULL, flag);
 								posfile=0;flag_auto=1;
 							

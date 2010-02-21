@@ -1,7 +1,7 @@
-uLoader v2.5 BETA - by Hermes (www.elotrolado.net)
+uLoader v2.6 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
-WARNING: run at first cios_installer.dol (1.6 required). Now you can select the IOS used to install
+WARNING: run at first cios_installer.dol (2.6 required). Now you can select the IOS used to install
 
 uLoader is a work based on Kwiirk's YAL and Waninkoko's usbloader that tries to give support to both custom IOS (cIOS222 and cIOS249) 
 to launch backups from USB mass storage devices with a graphical user interface similar to Wii channels.
@@ -10,6 +10,9 @@ to launch backups from USB mass storage devices with a graphical user interface 
 
 Features:
 ---------
+
+- Support for SD and USB FAT/FAT32: Now you can use cheats codes and load alternative .dol from the USB 2.0 device
+  (FAT partition is required)
 
 - Parental control added: by default the password is 00000 (the last 0 is the 'ENTER', so you can program a new password as XXXX0 ). 
  You can change it from special menu pressing HOME. You can exits from the  password box pressing B. Parental control list the last 8 games launched
@@ -123,7 +126,7 @@ launch the game immediately.
 OCARINA
 -------
 
-Cheats codes must be in the "codes" folder of the SD with .gct as extension and the name equal to the disc ID.
+Cheats codes must be in the "codes" folder of the SD or USB (FAT) with .gct as extension and the name equal to the disc ID.
 
 Example:
 
@@ -205,7 +208,7 @@ http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
 ALTERNATIVE DOL NOTES
 ---------------------
 
-You needs to create a "games" folder in the root of the SD.
+You needs to create a "games" folder in the root of the SD or USB (FAT).
 
 The dol file is loaded in automatic form using the game id as filename 
 

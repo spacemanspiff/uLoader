@@ -1,7 +1,7 @@
-uLoader v2.5 BETA - por Hermes (www.elotrolado.net)
+uLoader v2.6 BETA - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
-ATENCION: ejecuta primero cios_installer.dol (1.6 requerido). Ahora puedes seleccionar el IOS usado para instalar
+ATENCION: ejecuta primero cios_installer.dol (2.6 requerido). Ahora puedes seleccionar el IOS usado para instalar
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
 para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii
@@ -10,6 +10,7 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 
 Caracteristicas:
 ---------------
+- Soporte para SD y USB FAT/FAT32: Ahora puedes usar cheats y carga .dolalternativo desde el dispositivo USB 2.0 (requiere una partición FAT)
 
 - Añadido control Parental. Por defecto la contraseña es 00000 (el ultimo cero es el 'ENTER'. Puedes programar una nueva contraseña como XXXX0).
   Puedes cambiar la contraseña desde el menu especial, pulsando HOME y salir de la caja que pide contraseña pulsando B.  Desde el menu de control
@@ -124,7 +125,7 @@ La pantalla de lanzar juegos te permite seleccionar el custom IOS a lanzar (si c
 OCARINA
 -------
 
-Los codigos de trucos deben estar en la carpeta "codes" de la SD con extensión .gct y nombre igual a la ID del juego
+Los codigos de trucos deben estar en la carpeta "codes" de la SD o en USB (FAT) con extension .gct y nombre igual a la ID del juego
 
 Ejemplo:
 
@@ -205,7 +206,7 @@ NOTAS DE DOL ALTERNATIVO
 ------------------------
 
 
-Primero necesitas crear un directorio "games" en raiz de la SD.
+Primero necesitas crear un directorio "games" en raiz de la SD o USB (FAT).
 
 
 El fichero dol es cargado de forma automatica usando la id del juego como nombre de fichero

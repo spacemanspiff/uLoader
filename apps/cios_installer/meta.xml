@@ -2,7 +2,7 @@
 <app>
 	<name>(!) cIOS 222 installer </name>
 	<coder>Hermes</coder>
-	<version>1.6</version>
+	<version>2.6</version>
 <short_description>cIOS for uLoader</short_description>
 <long_description>custom IOS based in dev/mload engine to use with uLoader 1.6</long_description>
 </app>

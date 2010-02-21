@@ -1,0 +1,5 @@
+In 'src/libfat/source' you can find the new partition.c file for LIBFAT.
+
+It have a new support to find FAT16/32 partitions into primary and extended partitions
+
+-Hermes-

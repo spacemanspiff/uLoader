@@ -54,7 +54,8 @@ wbfs_t*wbfs_open_hd(rw_sector_callback_t read_hdsector,
                 return 0;
 				}
         //find wbfs partition
-        wbfs_memcpy(part_table,tmp_buffer+0x1be,16*4);
+		if(tmp_buffer[0x1bc]!=0 || tmp_buffer[0x1bd]!=0 || tmp_buffer[0x1fe]!=0x55 || tmp_buffer[0x1ff]!=0xaa) wbfs_memset(part_table,0,16*4);
+		else wbfs_memcpy(part_table,tmp_buffer+0x1be,16*4);
         ptr = part_table;
 
 		for(l=0;l<4;l++) WBFS_part_list[l]=0xFFFFFFFF;
