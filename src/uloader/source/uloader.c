@@ -26,6 +26,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+// ALTERNATIVE_VERSION
 
 #include <gccore.h>
 #include <string.h>
@@ -67,16 +68,39 @@ int test_mode=0;
 #include <math.h>
 #include "http.h"
 
-#include "defpng.h"
-#include "button1.h"
-#include "button2.h"
-#include "button3.h"
-//#include "background.h"
-#include "icon.h"
+#include "gfx.h"
+
+#ifndef ALTERNATIVE_VERSION
+
+#include "resources/defpng.h"
+#include "resources/button1.h"
+#include "resources/button2.h"
+#include "resources/button3.h"
+
+#include "resources/icon.h"
+
+#else
+
+#include "resources_alt/defpng.h"
+#include "resources_alt/button1.h"
+#include "resources_alt/button2.h"
+#include "resources_alt/button3.h"
+
+#include "resources_alt/icon.h"
+
+#endif
 
 #include "files.h"
 
-#include "ehcmodule.h"
+#ifndef USE_PORT1
+
+#include "port0/ehcmodule.h"
+
+#else
+
+#include "port1/ehcmodule.h"
+
+#endif
 #include "dip_plugin.h"
 #include "mload.h"
 
@@ -88,162 +112,8 @@ extern int pintor();
 
 u32 gettick();
 
-//---------------------------------------------------------------------------------
-/* procedural texture */
-//---------------------------------------------------------------------------------
-
-#define RGB(r,g,b) ((r) |(g<<8) | (b<<16))
-
-static float InterPol(float a, float b, float x)
-{
-return a+(b-a)*x*x*(3-2*x);
-}
-
-static float InterLin(float a, float b, float x)
-{
-return a+(b-a)*x;
-}
-
-static float IntNoise(register int x)
-{
-	x = (x<<13)^x;
-
-return (((x * (x * x * 15731 + 789221) + 1376312589) & 0x7fffffff) / 2147483648.0);
-}
 
 
-static float Cellular(float x,float y,int width,int tam_cas, int seed)
-{
-double primero=2*tam_cas, segundo=2*tam_cas,tercero=2*tam_cas,dist_aux;
-int casilla_pto;
-double xpunto, ypunto;
-int n_casillas=(int) (width/tam_cas)+1;
-int casillax=(int)(x/tam_cas);
-int casillay=(int)(y/tam_cas);
-int casilla=n_casillas*casillay+casillax;
-int j,i;
-
-	for(j=-1;j<2;j++)
-		{
-		for(i=-1;i<2;i++)
-			{
-			casilla_pto=casilla+i+j*n_casillas;
-			xpunto=(casillax+i)*tam_cas+IntNoise(casilla_pto+seed)*tam_cas;
-			ypunto=(casillay+j)*tam_cas+IntNoise(casilla_pto+10+seed)*tam_cas;
-			dist_aux=sqrt((x-xpunto)*(x-xpunto)+(y-ypunto)*(y-ypunto));
-
-			if (primero>dist_aux)
-				{
-				tercero=segundo;
-				segundo=primero;
-				primero=dist_aux;
-				}
-			else 
-				{
-				if (segundo>dist_aux) 
-					{
-					tercero= segundo;
-					segundo=dist_aux;
-					} 
-				else 
-					{
-					if(tercero>dist_aux)
-						{tercero=dist_aux;}
-					}
-				} 
-			}
-		}
-
-return primero*primero/(segundo*tercero);
-}
-
-
-static float PerlinNoise(float x,float y,int width,int octaves,int seed){
-
-double a,b,valor=0.0f,freq,cachox,cachoy;
-int casilla,num_pasos,pasox,pasoy;
-int amplitud=256;
-int periodo=256;
-int s;
-
-	if(octaves>12) {octaves=12;}
-
-	for(s=0;s<octaves;s++)
-		{
-
-		amplitud>>=1;
-		periodo>>=1;
-		freq=1/(float) (periodo);
-		num_pasos=(int)(width*freq);
-		pasox=(int)(x*freq);
-		pasoy=(int)(y*freq);
-		cachox=x*freq-pasox;
-		cachoy=y*freq-pasoy;
-		casilla=pasox+pasoy*num_pasos;
-		a=InterPol(IntNoise(casilla+seed),IntNoise(casilla+1+seed),cachox);
-		b=InterPol(IntNoise(casilla+num_pasos+seed),IntNoise(casilla+1+num_pasos+seed),cachox);
-		valor+=InterPol(a,b,cachoy)*amplitud;
-
-		}
-
-return valor;
-}
-
-static int color_agua(float valor)
-{
-
-int r=InterLin(20, 91, valor);
-int g=InterLin(68, 187, valor);
-int b=InterLin(82, 251, valor);
-
-	if(r>255) r=255;
-	if(g>255) g=255;
-	if(b>255) b=255;
-
-return RGB(r,g,b);
-}
-
-
-static float rango(float v,float a,float b)
-{
-	if(v<a) v=a;
-	if(v>b) v=b;
-
-return v;
-}
-
-void create_background_text(int seed, int width,int height,unsigned *t)
-{
-//int seed = 666;
-
-int dispx,dispy;
-double colr,colr1;
-unsigned color;
-int j,i;
-
-for(j=0; j<height; j++)
-	{
-    for(i=0; i< width; i++)
-		{
-	
-		dispx= PerlinNoise(i,j+100,width,3,seed)/3;
-		dispy= PerlinNoise(i,j+105,width,3,seed)/3;
-		colr = Cellular(i*0.6+dispx,j+dispy,width,64/8,seed);
-		colr *= (colr);
-		colr1 = Cellular(i*0.6+dispy,j+dispx,width,48/8,seed);
-		colr1 *= (colr1);
-		colr=(colr*0.60+colr1*0.30);
-		
-		colr=rango(colr,0.0f,1.0f)+0.9f;
-		color=color_agua(colr);
-		
-		t[i+j*width]=color | 0xff000000;
-
-		}
-   
-    }
-
-}
 
 //#include "logmodule.h"
 
@@ -428,12 +298,21 @@ return 0;
 #ifdef USE_MODPLAYER
 
 #include "asndlib.h"
+
+#ifdef ALTERNATIVE_VERSION
+
+#include "oggplayer.h"
+#include "resources_alt/bg_music.h"
+
+#else
+
 // MOD Player
 #include "gcmodplay.h"
 
 MODPlay mod_track;
 
-#include "lotus3_2.h" 
+#include "resources/lotus3_2.h" 
+#endif
 
 #endif
 
@@ -841,21 +720,7 @@ void snd_fx_fx(int percent)
 /* GUI routines and datas*/
 //---------------------------------------------------------------------------------
 
-int scroll_text=-20;
 
-GXTlutObj palette_icon;
-GXTexObj text_icon[5];
-
-GXTexObj text_button[4], default_game_texture, text_background[3], text_background2,text_game_empty[4];
-GXTexObj text_screen_fx;
-
-u32 *screen_fx=NULL;
-
-GXTexObj text_move_chan;
-
-GXTexObj png_texture;
-
-void *mem_move_chan= NULL;
 
 struct _game_datas
 {
@@ -865,153 +730,6 @@ struct _game_datas
 	u32 config;
 } game_datas[32];
 
-
-void DrawIcon(int px,int py, u32 frames2)
-{
-	DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-24,py-24, 48, 48, 0, 0xffffffff);
-}
-
-void draw_text(char *text)
-{
-int n,m,len;
-len=strlen(text);
-
-
-for(n=0;n<13;n++)
-	{
-    if(scroll_text<0) m=n;
-	else
-		m=(n+scroll_text) % (len+4);
-
-	if(m<len)
-		s_printf("%c",text[m]);
-	else
-		s_printf(" ");
-	}
-}
-
-void draw_box_text(char *text)
-{
-int n,m,len,len2;
-
-len=strlen(text);
-len2=len/68;
-
-for(n=0;n<68;n++)
-	{
-	if(len<=68 || scroll_text<0) m=n;
-	else m=(n+scroll_text) % (len+4); //m=n+68*((scroll_text>>5)  % len2);
-
-	if(m<len)
-		s_printf("%c",text[m]);
-	else
-		s_printf(" ");
-	}
-}
-
-// Draw_button variables
-
-int step_button=0;
-
-int x_temp=0;
-
-int Draw_button(int x,int y,char *cad)
-{
-int len=strlen(cad);
-
-	SetTexture(&text_button[(step_button>>4) & 3]);
-	
-	if(px>=x && px<=x+len*8+32 && py>=y && py<y+56) DrawRoundFillBox(x-8, y-8, len*8+32+16, 56+16, 0, 0xffcfcfcf);
-		else DrawRoundFillBox(x, y, len*8+32, 56, 0, 0xffcfcfcf);
-	SetTexture(NULL);
-	PX=x+16; PY= y+12; color= 0xff000000;
-	letter_size(8,32);
-
-	s_printf("%s",cad);
-
-	x_temp=x+len*8+32;
-
-	if(px>=x && px<=x+len*8+32 && py>=y && py<y+56)
-		{DrawRoundBox(x-8, y-8, len*8+32+16, 56+16, 0, 5, 0xfff08000);return 1;}
-	
-	DrawRoundBox(x, y, len*8+32, 56, 0, 4, 0xff606060);
-	
-
-return 0;
-}
-
-int Draw_button2(int x,int y,char *cad, int selected)
-{
-int len=strlen(cad);
-unsigned color=0xffcfcfcf;
-
-if(selected) color= 0xff3fcf3f;
-
-if(selected<0) color=0x80cfcfcf;
-
-	SetTexture(&text_button[(step_button>>4) & 3]);
-	
-	if(selected>=0)
-		{
-		if(px>=x && px<=x+len*8+32 && py>=y && py<y+48) DrawRoundFillBox(x-8, y-8, len*8+32+16, 48+16, 0, color);
-			else DrawRoundFillBox(x, y, len*8+32, 48, 0, color);
-		}
-
-	SetTexture(NULL);
-	PX=x+16; PY= y+8; color= 0xff000000;
-	letter_size(8,32);
-
-	s_printf("%s",cad);
-
-	x_temp=x+len*8+32;
-
-	if(selected>=0)
-		if(px>=x && px<=x+len*8+32 && py>=y && py<y+48)
-			{DrawRoundBox(x-8, y-8, len*8+32+16, 48+16, 0, 5, 0xfff08000);return 1;}
-	
-	DrawRoundBox(x, y, len*8+32, 48, 0, 4, 0xff606060);
-	
-
-return 0;
-}
-
-
-void * create_png_texture(GXTexObj *texture, void *png, int repeat)
-{
-PNGUPROP imgProp;
-IMGCTX ctx;
-char *texture_buff;
-s32 ret;
-
-	/* Select PNG data */
-	ctx = PNGU_SelectImageFromBuffer(png);
-	if (!ctx)
-		{return NULL;}
-
-	/* Get image properties */
-	ret = PNGU_GetImageProperties(ctx, &imgProp);
-	if (ret != PNGU_OK)
-		{return NULL;}
-
-    texture_buff=memalign(32, imgProp.imgWidth * imgProp.imgHeight *4+2048);
-	if(!texture_buff) {return NULL;}
-
-	
-	PNGU_DecodeTo4x4RGBA8 (ctx, imgProp.imgWidth, imgProp.imgHeight, texture_buff, 255);
-	PNGU_ReleaseImageContext(ctx);
-
-	DCFlushRange( texture_buff, imgProp.imgWidth * imgProp.imgHeight *4);
-
-	if(repeat) GX_InitTexObj(texture,texture_buff, imgProp.imgWidth, imgProp.imgHeight, GX_TF_RGBA8, GX_REPEAT ,  GX_REPEAT , GX_FALSE);
-	else GX_InitTexObj(texture,texture_buff, imgProp.imgWidth, imgProp.imgHeight, GX_TF_RGBA8, GX_CLAMP ,  GX_CLAMP , GX_FALSE);
-
-	GX_InitTexObjLOD(texture, // objeto de textura
-						 GX_LINEAR, // filtro Linear para cerca
-						 GX_LINEAR, // filtro Linear para lejos
-						 0, 0, 0, 0, 0, GX_ANISO_1);
-
-return texture_buff;
-}
 
 
 void create_game_png_texture(int n)
@@ -1062,8 +780,6 @@ void create_game_png_texture(int n)
 						 0, 0, 0, 0, 0, GX_ANISO_1);
 		
 }
-
-
 
 
 struct _cheat_file
@@ -1236,118 +952,6 @@ struct _data_cheats
 
 extern int abort_signal;
 
-
-static int spinner_mode,spinner_percent;
-static char spinner_str[256]="";
-int spinner_ctrl=0;
-
-#define BACK_COLOR 0xffffffff //0xffa0a0a0
-
-void draw_background()
-{
-static int frames2=0;
-static int frames=0;
-static int frames1=0;
-
-
-if(frames==(12+2*(SCR_HEIGHT<=480))) {frames1++;frames=0;}
-SetTexture(&text_background[(frames1 % 3)]);
-frames++;
-	ConfigureForTexture(10);
-	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
-	AddTextureVertex(0, 0, 999, BACK_COLOR, 0, (frames2 & 1023));
-	AddTextureVertex(SCR_WIDTH, 0, 999, BACK_COLOR, 1023, (frames2 & 1023)); 
-	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT, 999, BACK_COLOR, 1023, 1024+(frames2 & 1023)); 
-	AddTextureVertex(0, SCR_HEIGHT, 999, BACK_COLOR, 0, 1024+(frames2 & 1023)); 
-	GX_End();
-	//frames2++;
-}
-
-void display_spinner_draw()
-{
-
-
-
-//Screen_flip();
-
-	autocenter=1;
-	/*SetTexture(&text_background2);
-	DrawRoundFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 999, 0xffa0a0a0);*/
-
-	draw_background();
-
-	SetTexture(NULL);
-	
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, 210, 210, 10, 0, 360, 0x8f60a0a0);
-	SetTexture(MOSAIC_PATTERN);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, 210, 210, 10, 0, 360*spinner_percent/100, 0xffa06000);
-	SetTexture(NULL);
-	DrawSlice(SCR_WIDTH/2, SCR_HEIGHT/2, 210, 210, 10, 4, 0, 360,  0xcf000000);
-    
-
-	PX=0; PY=SCR_HEIGHT/2-16; color= 0xff000000; 
-	letter_size(16,32);
-	SelectFontTexture(1);
-	if(spinner_mode)
-		color=0xffffffff;
-	else
-		color=0xff000000;
-
-	s_printf("%s", spinner_str);
-	color=0xff000000;
-	autocenter=0;
-	
-	Screen_flip();
-	if(!spinner_ctrl) remote_call_abort();
-
-}
-
-
-
-void my_perror(char * err)
-{
-int n;
-	Screen_flip();
-
-	for(n=0;n<240;n++)
-		{
-		autocenter=1;
-		draw_background();
-
-		SetTexture(NULL);
-		DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-32, 540, 64, 999, 0xa00000ff);
-		DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-32, 540, 64, 999, 4, 0xa0000000);
-
-		PX=0; PY=SCR_HEIGHT/2-16; color= 0xff000000; 
-		letter_size(8,32);
-		SelectFontTexture(1);
-		s_printf("Error: %s",err);
-		autocenter=0;
-		Screen_flip();
-		}
-//	sleep(4);
-}
-
-
-void display_spinner(int mode, int percent, char *str)
-{
-	spinner_mode=mode;
-	spinner_percent=percent;
-	if(str)
-		strcpy(spinner_str,str);
-	else spinner_str[0]=0;
-    
-	if(mode==0) 
-		{spinner_ctrl=1;remote_call(display_spinner_draw);}
-
-	// abort
-	if(exit_by_reset) {exit_by_reset=0;abort_signal=1;sleep(4);spinner_ctrl=0;remote_call_abort();usleep(100*1000);}
-	SYS_SetResetCallback(reset_call);
-
-	if(mode)
-	{sleep(4);spinner_ctrl=0;remote_call_abort();usleep(100*1000);}
-
-}
 
 struct _partition_type
 {
@@ -1829,7 +1433,7 @@ while(1)
 
 		}
 	
-
+	draw_snow();
 	Screen_flip();
 	
 	if(level>=1000)
@@ -1855,130 +1459,9 @@ while(1)
 return 0;
 }
 
-void cabecera(char *cab)
-{
-	int ylev=(SCR_HEIGHT-440);
-
-
-	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
-
-	draw_background();
-		
-
-	SetTexture(&text_button[0]);
-    DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
-	SetTexture(NULL);
-	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
-
-	PX= 0; PY=ylev-32; color= 0xff000000; 
-				
-	bkcolor=0;
-	letter_size(16,32);
-
-	autocenter=1;
-	bkcolor=num_partitions=0;//0xb0f0f0f0;
-	s_printf("%s", cab);
-	bkcolor=0;
-	
-
-}
-
-static char cabecera2_str[128]="";
-
-extern int seno2(int ang);
-extern int coseno2(int ang);
-
-int signal_draw_cabecera2=0;
-
-void draw_cabecera2()
-{
-static int frames2=0;
-int n;
-
-int ylev=(SCR_HEIGHT-440);
-
-#define SLICE_LEN 180
-
-
-	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
-
-	draw_background();
-		
-
-	/*SetTexture(NULL);
-    DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
-	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);*/
-    SetTexture(&text_icon[3]);
-
-	//DrawFillBox(20, ylev, 148*4, 352, 0, 0xffffffff);
-    for(n=0;n<8;n++)
-	{
-	u32 color;
-	int vel=7-(frames2>>6);
-	if(vel<0) vel=0;
-	int ang=(((frames2>>vel) & 127)<<7)-2048+(n<<11);
-	//vel=7;
-	//int ang=((frames2) & 31)<<10;
-	int xx1=SCR_WIDTH/2+(SLICE_LEN*seno2((ang) & 16383))/16384,yy1=SCR_HEIGHT/2-(SLICE_LEN*coseno2((ang) & 16383))/16384;
-	int xx2=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096) & 16383))/16384,yy2=SCR_HEIGHT/2-(SLICE_LEN*coseno2((ang+4096) & 16383))/16384;
-	int xx3=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*2) & 16383))/16384,yy3=SCR_HEIGHT/2-(SLICE_LEN*coseno2((ang+4096*2) & 16383))/16384;
-	int xx4=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*3) & 16383))/16384,yy4=SCR_HEIGHT/2-(SLICE_LEN*coseno2((ang+4096*3) & 16383))/16384;
-
-	
-	if(n==0) color=0xffffffff; else color=0x27ffffff;
-
-	SetTexture(&text_icon[3]);
-	ConfigureForTexture(10);
-	GX_Begin(GX_TRIANGLESTRIP,  GX_VTXFMT0, 5);
-
-	AddTextureVertex(xx1, yy1, 999, color, 1, 1);
-	AddTextureVertex(xx2, yy2, 999, color, 1024, 1); 
-	AddTextureVertex(xx3, yy3, 999, color, 1024, 1024); 
-	AddTextureVertex(xx4, yy4, 999, color, 1, 1024);
-	AddTextureVertex(xx1, yy1, 999, color, 1, 1);
-	GX_End();
-
-	if(vel!=0 || signal_draw_cabecera2) break;
-
-	}
-
-	
-
-	#if 0
-	SetTexture(NULL);	
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, 0, 360, 0x8fffffff);
-	
-
-	SetTexture(MOSAIC_PATTERN);
-	SetTexture(&text_icon[3]);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360, (frames2 % 360)+45, 0xff0000ff);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+90, (frames2 % 360)+45+90, 0xff0000ff);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+180, (frames2 % 360)+45+180, 0xff0000ff);
-	DrawFillSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, frames2 % 360+270, (frames2 % 360)+45+270, 0xff0000ff);
-
-	//SetTexture(&text_icon[3]);
-	SetTexture(NULL);
-	DrawSlice(SCR_WIDTH/2, SCR_HEIGHT/2, SLICE_LEN, SLICE_LEN, 10, 4, 0, 360,  0xcf000000);
-	#endif
-	SetTexture(NULL);
 
 
 
-	PX= 0; PY=ylev-32; color= 0xff000000; 
-				
-	bkcolor=0;
-	letter_size(16,32);
-
-	autocenter=1;
-	bkcolor=num_partitions=0;//0xb0f0f0f0;
-	s_printf("%s", cabecera2_str);
-	bkcolor=0;
-#undef SLICE_LEN	
-
-	Screen_flip();
-	frames2+=20;
-
-}
 
 void usb_test()
 {
@@ -2012,7 +1495,8 @@ if(addr==0)
     if(n_sectors==0)
 			n_sectors = USBStorage2_GetCapacity(&sector_size);
 
-	dat=0;			
+	dat=0;
+	
 mload_getw((void *) (addr+0x44), &dat);
 if(dat!=0x1005) dat2=dat;
 if(dat2!=0x1805) dat3=dat2;
@@ -2063,22 +1547,8 @@ switch((((u32) (time(NULL)-start_time)) % 10))
 	signal_draw_cabecera2=0;
 }
 
-void cabecera2(char *str)
-{
-	strcpy(cabecera2_str, str);
-	remote_call(draw_cabecera2);
-}
 
-void draw_add_game_mess()
-{
-int ylev=(SCR_HEIGHT-440);
 
-	cabecera( &letrero[idioma][23][0]);
-	PX=0;PY=ylev+352/2-16;
-
-	s_printf("%s",&letrero[idioma][41][0]);
-	Screen_flip();
-}
 
 void add_game()
 {
@@ -2129,6 +1599,7 @@ char str_id[7];
 		temp_pad= wiimote_read(); 
 		new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
 		
+		draw_snow();
 		Screen_flip();
 
 	    if(new_pad & (WPAD_GUITAR_HERO_3_BUTTON_RED | WPAD_BUTTON_B))
@@ -2140,6 +1611,7 @@ char str_id[7];
 
 				s_printf("%s",&letrero[idioma][39][0]);
 				if(n==0) snd_fx_no();
+				draw_snow();
 				Screen_flip();
 				wiimote_rumble(0);
 				WPAD_ScanPads();
@@ -2159,6 +1631,7 @@ char str_id[7];
 				PX=0;PY=ylev+352/2-16;
 				s_printf("ERROR! (ret = %d)", ret);
 				if(n==0) snd_fx_no();
+				draw_snow();
 				Screen_flip();
 				wiimote_rumble(0);
 				WPAD_ScanPads();
@@ -2187,6 +1660,7 @@ char str_id[7];
 			cabecera( &letrero[idioma][23][0]);
 			PX=0;PY=ylev+352/2-16;
 			s_printf("ERROR! (ret = %d)", ret);
+			draw_snow();
 			Screen_flip();
 			wiimote_rumble(0);
 			WPAD_ScanPads();
@@ -2208,6 +1682,7 @@ char str_id[7];
 			PX=0;PY=ylev+352/2-16;
 			s_printf("%s",&letrero[idioma][42][0]);
 			if(n==0) snd_fx_no();
+			draw_snow();
 			Screen_flip();
 			wiimote_rumble(0);
 			WPAD_ScanPads();
@@ -2237,6 +1712,7 @@ char str_id[7];
 			
 			s_printf("%s",&letrero[idioma][43][0]);
 			if(n==0) snd_fx_no();
+			draw_snow();
 			Screen_flip();
 			wiimote_rumble(0);
 			WPAD_ScanPads();
@@ -2288,7 +1764,8 @@ char str_id[7];
 		PX=0;PY=ylev+352/2+32; 
 
 		s_printf(&letrero[idioma][37][0]);
-
+		
+		draw_snow();
 		Screen_flip();
 
         if(exit_by_reset)
@@ -2305,6 +1782,7 @@ char str_id[7];
 				PX=0;PY=ylev+352/2-16;
 				s_printf("%s",&letrero[idioma][39][0]);
 				if(n==0) snd_fx_no();
+				draw_snow();
 				Screen_flip();
 				wiimote_rumble(0);
 				WPAD_ScanPads();
@@ -2325,7 +1803,7 @@ char str_id[7];
 		
 		s_printf("%s",&letrero[idioma][44][0]);
 		if(n==0) snd_fx_yes();
-		
+		draw_snow();
 		Screen_flip();
 		wiimote_rumble(0);
 		WPAD_ScanPads();
@@ -2359,6 +1837,7 @@ char str_id[7];
 			PX=0;PY=ylev+352/2-16;
 			s_printf("Installation ERROR! (ret = %d)", ret);
 			if(n==0) snd_fx_no();
+			draw_snow();
 			Screen_flip();
 			autocenter=0;
 			
@@ -2379,6 +1858,7 @@ char str_id[7];
 		
 		s_printf("%s",&letrero[idioma][45][0]);
 		if(n==0) snd_fx_yes();
+		draw_snow();
 		Screen_flip();
 		WPAD_Init();
 		WPAD_SetIdleTimeout(60*5); // 5 minutes 
@@ -2534,6 +2014,7 @@ while(1)
 
 				if(new_pad & WPAD_BUTTON_B)
 					{
+					draw_snow();
 					Screen_flip();snd_fx_no();break;
 					}
 
@@ -2541,14 +2022,14 @@ while(1)
 
 				if(new_pad & WPAD_BUTTON_A) 
 					{
-					if(select_game_bar==60) {Screen_flip();snd_fx_yes();return 1;} // Yes
-					if(select_game_bar==61) {Screen_flip();snd_fx_no();break;} // No
+					if(select_game_bar==60) {draw_snow();Screen_flip();snd_fx_yes();return 1;} // Yes
+					if(select_game_bar==61) {draw_snow();Screen_flip();snd_fx_no();break;} // No
                    
 					}
 				}
 
 	
-
+	draw_snow();
 	Screen_flip();
 	if(exit_by_reset) break;
 
@@ -2824,7 +2305,7 @@ while(1)
 
 					if(mode==0)
 						{
-						Screen_flip();break;
+						draw_snow();Screen_flip();break;
 						}
 					else mode=0;
 					}
@@ -2833,11 +2314,11 @@ while(1)
 
 				if(new_pad & WPAD_BUTTON_A) 
 					{
-					if(select_game_bar==60) {Screen_flip();snd_fx_yes(); for(n=0;n<4;n++) config_file.parental[n]=parental_str[n]-48;save_cfg(); return;} // Yes
+					if(select_game_bar==60) {draw_snow();Screen_flip();snd_fx_yes(); for(n=0;n<4;n++) config_file.parental[n]=parental_str[n]-48;save_cfg(); return;} // Yes
 					if(select_game_bar==61) {
 											for(n=0;n<4;n++) parental_str[n]=0; 
 											snd_fx_no();
-											if(mode==0) {Screen_flip();break;} else mode=0;
+											if(mode==0) {draw_snow();Screen_flip();break;} else mode=0;
 											} // No
 
 					if(select_game_bar==70) {snd_fx_yes();mode=1;}
@@ -2856,7 +2337,7 @@ while(1)
 				}
 
 	
-
+	draw_snow();
 	Screen_flip();
 	if(exit_by_reset) break;
 
@@ -3153,7 +2634,8 @@ while(1)
 					{
 					snd_fx_no();
 					select_game_bar=-1;
-
+					
+					draw_snow();
 					
 					Screen_flip();break;
 						
@@ -3173,10 +2655,10 @@ while(1)
 				if(new_pad & WPAD_BUTTON_A) 
 					{
 					if(select_game_bar==60) {if(len_str<2) {select_game_bar=65;}
-						                    else {Screen_flip();snd_fx_yes(); title[63]=0;memcpy(old_title,title,64);return 1;}
+						                    else {draw_snow();Screen_flip();snd_fx_yes(); title[63]=0;memcpy(old_title,title,64);return 1;}
 					                        }// OK
 					if(select_game_bar==61) {
-											Screen_flip();
+											draw_snow();Screen_flip();
 											snd_fx_no();
 											return 0;
 											} // discard
@@ -3226,7 +2708,7 @@ while(1)
 				}
 
 	
-
+    draw_snow();
 	Screen_flip();
 	if(exit_by_reset) break;
 
@@ -3285,94 +2767,6 @@ else
 return 0;
 }
 
-static int altdol_frames2=0;
-
-void draw_altdolscr()
-{
-
-int n;
-
-int ylev=(SCR_HEIGHT-440);
-
-#define SLICE_LEN 180
-
-
-	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
-
-	draw_background();
-
-	SetTexture(&text_button[0]);
-    DrawRoundFillBox(20, ylev, 148*4, 352, 999, 0xffafafaf);
-	SetTexture(NULL);
-	DrawRoundBox(20, ylev, 148*4, 352, 999, 4, 0xff303030);
-
-	PX= 0; PY=ylev-32; color= 0xff000000; 
-				
-	bkcolor=0;
-	letter_size(16,32);
-
-	autocenter=1;
-	bkcolor=0;
-	s_printf("%s", &letrero[idioma][31][0]);
-	bkcolor=0;
-	
-	
-	autocenter=0;
-	letter_size(16,32);
-		
-
-	/*SetTexture(NULL);
-    DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
-	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);*/
-    SetTexture(&text_icon[3]);
-
-	//DrawFillBox(20, ylev, 148*4, 352, 0, 0xffffffff);
-    for(n=0;n<8;n++)
-	{
-	u32 color;
-	int vel=7-(altdol_frames2>>6);
-	if(vel<0) vel=0;
-	int ang=(((altdol_frames2>>vel) & 127)<<7)-2048+(n<<11);
-	//vel=7;
-	//int ang=((frames2) & 31)<<10;
-	int xx1=SCR_WIDTH/2+(SLICE_LEN*seno2((ang) & 16383))/16384,yy1=ylev+352/2-(SLICE_LEN*coseno2((ang) & 16383))/16384;
-	int xx2=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096) & 16383))/16384,yy2=ylev+352/2-(SLICE_LEN*coseno2((ang+4096) & 16383))/16384;
-	int xx3=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*2) & 16383))/16384,yy3=ylev+352/2-(SLICE_LEN*coseno2((ang+4096*2) & 16383))/16384;
-	int xx4=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*3) & 16383))/16384,yy4=ylev+352/2-(SLICE_LEN*coseno2((ang+4096*3) & 16383))/16384;
-
-	
-	if(n==0) color=0xffffffff; else color=0x27ffffff;
-
-	SetTexture(&text_icon[3]);
-	ConfigureForTexture(10);
-	GX_Begin(GX_TRIANGLESTRIP,  GX_VTXFMT0, 5);
-
-	AddTextureVertex(xx1, yy1, 999, color, 1, 1);
-	AddTextureVertex(xx2, yy2, 999, color, 1024, 1); 
-	AddTextureVertex(xx3, yy3, 999, color, 1024, 1024); 
-	AddTextureVertex(xx4, yy4, 999, color, 1, 1024);
-	AddTextureVertex(xx1, yy1, 999, color, 1, 1);
-	GX_End();
-
-	if(vel!=0 /*|| signal_draw_cabecera2*/) break;
-
-	}
-
-
-	SetTexture(NULL);
-
-	PX=0;PY=ylev+352/2-32;
-	autocenter=1;letter_size(16,32);
-	s_printf("%s", &letrero[idioma][51][0]);
-	autocenter=0;
-		
-
-#undef SLICE_LEN	
-
-	Screen_flip();
-	altdol_frames2+=20;
-
-}
 
 
 void menu_alternativedol(u8 *id)
@@ -3712,7 +3106,7 @@ while(1)
 
 					if(new_pad & WPAD_BUTTON_B)
 						{
-						Screen_flip();snd_fx_no();return;
+						draw_snow();Screen_flip();snd_fx_no();return;
 						}
 
 					
@@ -3723,11 +3117,11 @@ while(1)
 						if(select_game_bar==51) {current_dol+=5;if(current_dol>(max_dol/5)*5) current_dol=(max_dol/5)*5;snd_fx_yes();}
 					
 
-						if(select_game_bar==60) {Screen_flip();snd_fx_no();return;} // exit
+						if(select_game_bar==60) {draw_snow();Screen_flip();snd_fx_no();return;} // exit
 						
-						if(select_game_bar==61) {Screen_flip();snd_fx_yes();if(indx<1024) memset((void *) &dol_infop[indx],0,32);mode=4;}
+						if(select_game_bar==61) {draw_snow();Screen_flip();snd_fx_yes();if(indx<1024) memset((void *) &dol_infop[indx],0,32);mode=4;}
 						
-						if(select_game_bar==62) {Screen_flip();snd_fx_yes();mode=2;}
+						if(select_game_bar==62) {draw_snow();Screen_flip();snd_fx_yes();mode=2;}
 					   //
 						if(select_game_bar>=1024)
 							{
@@ -3763,7 +3157,7 @@ while(1)
 		}
 
 	
-
+    draw_snow();
 	Screen_flip();
 	if(exit_by_reset) break;
 
@@ -4009,7 +3403,7 @@ int index=0;
 				
 				if(new_pad & (WPAD_BUTTON_B | WPAD_BUTTON_HOME))
 					{
-					snd_fx_no();Screen_flip();
+					snd_fx_no();draw_snow();Screen_flip();
 					return 0;
 					}
 
@@ -4029,18 +3423,18 @@ int index=0;
 					if(select_game_bar==51) {index+=6;if(index>6) index=0;}
 					
 					// return
-					if(select_game_bar==1) {snd_fx_yes();Screen_flip(); return 0;}
+					if(select_game_bar==1) {snd_fx_yes();draw_snow();Screen_flip(); return 0;}
 
 					// add game
-					if(select_game_bar==2) {snd_fx_yes();Screen_flip(); add_game(); return 2;}
+					if(select_game_bar==2) {snd_fx_yes();draw_snow();Screen_flip(); add_game(); return 2;}
 				
 					if(header)
 						{
 						// add png
-						if(select_game_bar==3) {snd_fx_yes();Screen_flip(); select_file(0,header); return 3;}
+						if(select_game_bar==3) {snd_fx_yes();draw_snow();Screen_flip(); select_file(0,header); return 3;}
 
 						// delete png
-                        if(select_game_bar==4) {snd_fx_yes();Screen_flip(); 
+                        if(select_game_bar==4) {snd_fx_yes();draw_snow();Screen_flip(); 
 						                       if(delete_test(25, header->title))
 												   {
 												   memset(temp_data,0,256*1024);WBFS_GetProfileDatas(header->id, temp_data);
@@ -4050,28 +3444,29 @@ int index=0;
 											   return 3;
 											   }
 						// rename
-						if(select_game_bar==7) {snd_fx_yes();Screen_flip(); if(rename_game(header->title))  {WBFS_RenameGame(header->id, header->title);WBFS_Close();return 2;} else return 0;}
+						if(select_game_bar==7) {snd_fx_yes();draw_snow();Screen_flip(); if(rename_game(header->title))  {WBFS_RenameGame(header->id, header->title);WBFS_Close();return 2;} else return 0;}
 						// delete game
-						if(select_game_bar==8) {snd_fx_yes();Screen_flip(); if(delete_test(29, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
-						if(select_game_bar==10) {snd_fx_yes();Screen_flip(); menu_alternativedol(header->id);return 0;}
+						if(select_game_bar==8) {snd_fx_yes();draw_snow();Screen_flip(); if(delete_test(29, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
+						if(select_game_bar==10) {snd_fx_yes();draw_snow();Screen_flip(); menu_alternativedol(header->id);return 0;}
 						}
 					
 					// parental control
-					if(select_game_bar==5) {set_parental_control();Screen_flip();return 0;}
+					if(select_game_bar==5) {set_parental_control();draw_snow();Screen_flip();return 0;}
 					
 					// menu wii
-					if(select_game_bar==6) {snd_fx_yes();Screen_flip(); return 1;}
+					if(select_game_bar==6) {snd_fx_yes();draw_snow();Screen_flip(); return 1;}
 					
 					
 
 					// format
-					if(select_game_bar==9) {snd_fx_yes();WBFS_Close();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
+					if(select_game_bar==9) {snd_fx_yes();WBFS_Close();draw_snow();Screen_flip(); if(menu_format()==0) {WBFS_Open();return 2;} else return 1;}
 
 					
 					}
 			}
 	
 	frames2++;step_button++;
+	draw_snow();
 	Screen_flip();
 	if(exit_by_reset)  
 		{	
@@ -4082,39 +3477,7 @@ int index=0;
 return 0;
 }
 
-void set_tex_pix_fx(int x, int y, unsigned color)
-{
-if(x<0 || x>127 || y<0 || y>127) return;
 
-	screen_fx[x+(y<<7)]=color;
-}
-void set_text_screen_fx()
-{
-int n,m;
-static int pos=256;
-unsigned color1=0x80ffffff;
-
-if(pos<-128) pos=1024;
-memset(screen_fx,0,128*128*4);
-
-for(n=0;n<128;n++)
-	{
-
-	color1=0x40ffffc0;
-    for(m=0;m<4;m++)
-		set_tex_pix_fx(pos-(n>>1)+m,n,color1);
-	color1=((0x50-m)<<24) | 0xffffd0;
-	for(m=8;m<20;m++)
-		set_tex_pix_fx(pos-(n>>1)+m,n,color1);
-	color1=0x40ffffc0;
-	for(m=24;m<28;m++)
-		set_tex_pix_fx(pos-(n>>1)+m,n,color1);
-	
-	}
-
-CreateTexture(&text_screen_fx, TILE_SRGBA8, screen_fx, 128, 128, 0);
-pos-=6;
-}
 
 int current_partition=0;
 
@@ -4177,6 +3540,7 @@ else sizex=600/(gameCnt);
 if(sizex<=2) sizex2=1;
 else {if(sizex>4) sizex2=sizex-2; else sizex2=sizex-1;}
 
+//draw_snow();
 Screen_flip();
 
 for(n=0;n<=gameCnt;n++)
@@ -4451,49 +3815,7 @@ int load_game_routine(u8 *discid, int game_mode);
 extern u32 load_dol();
 int load_file_dol(char *name);
 
-void splash_scr()
-{
 
-			autocenter=1;
-			draw_background();
-
-			PX=0; PY= 16; color= 0xffffffff; 
-			letter_size(32,64);
-			SetTexture(NULL);
-			DrawRoundFillBox((SCR_WIDTH-260)/2, 16, 260, 64, 0, 0x5f00c03f);
-			SelectFontTexture(1);
-			s_printf("%s","uLoader");
-			color= 0xff000000;
-			SetTexture(NULL);
-			DrawRoundBox((SCR_WIDTH-260)/2, 16, 260, 64, 0, 4, 0xff000000);
-
-			SelectFontTexture(0);
-			PY+=80;
-			letter_size(16,32);
-			s_printf("%s","\251 2009, Hermes (www.elotrolado.net)");
-			PY+=40;
-			
-			s_printf("%s","Based in YAL \251 2009, Kwiirk");
-			PY+=40;
-			s_printf("%s","and USBLoader \251 2009, Waninkoko");
-			PY+=34;
-			letter_size(8,32);
-			SelectFontTexture(1);
-			s_printf("%s","Ocarina and some game patch added from FISHEARS usbloader version");
-			
-			autocenter=0;
-			PX=20; PY= 32; color= 0xff000000; 
-			letter_size(8,16);
-			SelectFontTexture(1);
-			s_printf("v3.2");
-			PX=SCR_WIDTH-20-32;
-			s_printf("v3.2");
-			autocenter=1;
-			//letter_size(12,16);
-			PX=20; PY= 480-40; color= 0xff000000; 
-			s_printf("%s","40 Years Old - 25 Years Programming (11-06-1969)");
-		
-}
 
 void splash_scr_send()
 {
@@ -4585,6 +3907,7 @@ int r;
 	usleep(50*1024);
 }
 
+void update_bca(u8 *id, u8 *bca_datas);
 
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
@@ -4628,6 +3951,8 @@ int main(int argc, char **argv) {
 		int volume_osd=0;
 
 		int mode_disc=0;
+
+		int dvd_only=0;
 
 		
 		struct discHdr *disc_header=NULL;
@@ -4691,6 +4016,18 @@ int main(int argc, char **argv) {
 
 		InitScreen();  // Inicialización del Vídeo
 		remote_init();
+
+		{
+		time_t  my_time=(time(NULL));
+		struct tm *l_time=localtime(&my_time);
+
+		if(l_time)
+			{
+			l_time->tm_mon++;
+			
+			if((l_time->tm_mday>=12 && l_time->tm_mon==12) || (l_time->tm_mday<=6 && l_time->tm_mon==3)) flag_snow=1;
+			}
+		}
 
 		//create_png_texture(&text_background, background, 1);
         if(1) // new background
@@ -4847,6 +4184,8 @@ int main(int argc, char **argv) {
 		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
 		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
 
+		
+
 		//__io_usbstorage.startup();
 
         // sound pattern generator
@@ -4922,7 +4261,11 @@ int main(int argc, char **argv) {
 				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
 				
 				PY+=80;
+				#ifndef USE_PORT1
 				s_printf("You need plug one device on USB port 0...");
+				#else
+				s_printf("You need plug one device on USB port 1...");
+				#endif
 
 				}
 			else
@@ -4940,7 +4283,11 @@ int main(int argc, char **argv) {
 				
 				PY+=80;
 				if(!(conta & 64))
+					#ifndef USE_PORT1
 					s_printf("Maybe you need plug the device on USB port 0...");
+					#else
+					s_printf("Maybe you need plug the device on USB port 1...");
+					#endif
 				else
 					s_printf("Press < 2 > for DVD Mode");
 
@@ -4948,6 +4295,7 @@ int main(int argc, char **argv) {
 
 				if((new_pad & WPAD_BUTTON_2)) 
 					{
+					dvd_only=1;
 					mode_disc=1;
 					ret2=0;
 					}
@@ -4967,7 +4315,12 @@ int main(int argc, char **argv) {
 				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
 				
 				PY+=80;
+
+				#ifndef USE_PORT1
 				s_printf("Maybe you need plug the device on USB port 0...");
+				#else
+				s_printf("Maybe you need plug the device on USB port 1...");
+				#endif
 
 				}
 			else
@@ -5020,6 +4373,7 @@ int main(int argc, char **argv) {
 		CreateTexture(&text_icon[1], TILE_CI8, icon_sprite_2, icon_sprite_2_sx, icon_sprite_2_sy, 0);
 		CreateTexture(&text_icon[2], TILE_CI8, icon_sprite_3, icon_sprite_3_sx, icon_sprite_3_sy, 0);
 		CreateTexture(&text_icon[3], TILE_CI8, icon_sprite_4, icon_sprite_4_sx, icon_sprite_4_sy, 0);
+		CreateTexture(&text_icon[4], TILE_CI8, icon_sprite_5, icon_sprite_5_sx, icon_sprite_5_sy, 0);
 
 		#ifdef MEM_PRINT
 		
@@ -5196,7 +4550,12 @@ int main(int argc, char **argv) {
 			DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
 			
 			PY+=80;
+
+			#ifndef USE_PORT1
 			s_printf("Maybe you need plug the device on USB port 0...");
+			#else
+			s_printf("Maybe you need plug the device on USB port 1...");
+			#endif
 
 
 
@@ -5218,9 +4577,9 @@ int main(int argc, char **argv) {
 		ASND_Pause(0);
 	// inicializa el modplayer en modo loop infinito
 		
-		
+		#ifndef ALTERNATIVE_VERSION
 		MODPlay_Init(&mod_track);
-        
+		
 		n=-1;
 		if(sd_ok)
 			{
@@ -5261,6 +4620,42 @@ int main(int argc, char **argv) {
 			MODPlay_Start (&mod_track); // Play the MOD
 			
 			}
+
+		#else
+		
+		// Ogg
+
+		if(sd_ok)
+			{
+			FILE *fp;
+	        int ogg_size;
+	        void *ogg_file;
+
+	        fp=fopen("sd:/apps/uloader/music.ogg","rb"); // abre fichero
+	
+	        if(fp!=0)
+				{
+		        fseek(fp, 0, SEEK_END); // situa el puntero de lectura al final del fichero
+		        ogg_size = ftell(fp); // obtiene la posicion del puntero (al estar al final, obtiene el tamaño del fichero ;) 
+        
+		        fseek(fp, 0, SEEK_SET); // situa el puntero de lectura al principio del fichero
+
+		        ogg_file=malloc(ogg_size+128); /* asigna memoria suficiente para leer el fichero ogg al completo mas 128 bytes extras de proteccion (seguramente no haga falta, pero por si alguna lectura rebasa un poco) */
+	
+				if(ogg_file) // si tenemos memoria asignada, procede
+					{
+                    if(fread(ogg_file,1, ogg_size ,fp)==ogg_size) // lee el fichero al completo, si no falla procede
+						{
+	                    PlayOgg(mem_open(ogg_file, ogg_size),0,OGG_INFINITE_TIME); // tocala otra vez, Sam
+	                    }
+					}
+         
+				fclose(fp); // cierra el fichero
+				}
+			else PlayOgg(mem_open((void *) bg_music, size_bg_music),0,OGG_INFINITE_TIME);
+			}
+		#endif
+		
 		#endif
 
 		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
@@ -5447,13 +4842,22 @@ get_games:
 		
 		{
 		u8 temp=config_file.music_mod;
+		char temp2[4];
+
+		memcpy(temp2, config_file.parental, 4);
+		
 		memset(&config_file,0, sizeof (config_file));
 		if(!mode_disc) // mode disc
-			load_cfg();
-		else config_file.music_mod=temp;
+			{load_cfg();memset(parental_str ,0, 4);}
+		else {config_file.music_mod=temp; memcpy(config_file.parental, temp2, 4);}
+
 		}
 
+		#ifndef ALTERNATIVE_VERSION
 		MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
+		#else
+		SetVolumeOgg((config_file.music_mod & 128) ?  ((config_file.music_mod & 15)*16): 255);
+		#endif
 
 		
 		#endif
@@ -5851,7 +5255,10 @@ get_games:
 			
 			PX=608-6*16; 
 			if(header)
+				{
 				s_printf("%c%c%c%c%c%c", header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+			    memcpy(discid,header->id,6); discid[6]=0;
+				}
 			
 
 			PX= 26; PY=ylev+12+48;
@@ -5897,11 +5304,15 @@ get_games:
 				{
 				if(show_bca==0)
 					{
+					
 					if(Draw_button(x_temp+8, ylev+108*4-64, "Show BCA Data")) select_game_bar=56;
 					}
 				else
 					if(Draw_button(x_temp+8, ylev+108*4-64, "Hide BCA Data")) select_game_bar=56;
 				}
+
+			if(dvd_only==1 /*&& remote_DVD_disc_status==0*/)
+                if(Draw_button(x_temp+8, ylev+108*4-64,"Wii Menu"/* &letrero[idioma][27][0]*/)) select_game_bar=6;
 
             if(header)
 				{
@@ -5936,6 +5347,8 @@ get_games:
 							s_printf("%2.2x", BCA_Data[32+g*8+h]);
 						s_printf(" ");
 						}
+
+					if(Draw_button(12+SCR_WIDTH/2-(13*12)/2, PY+48, "Save BCA Data")) select_game_bar=57;
 					
 					}
 				else show_bca=0;
@@ -5945,6 +5358,9 @@ get_games:
 
 			if(header)
 				if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) {select_game_bar=5;}
+
+			
+			
 
 			
 			}
@@ -6659,7 +6075,13 @@ get_games:
 								config_file.music_mod=((config_file.music_mod-1) & 15) | (config_file.music_mod & ~15);
 							}
 						else config_file.music_mod=128+15;
+
+						#ifndef ALTERNATIVE_VERSION
 						MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
+						#else
+						SetVolumeOgg((config_file.music_mod & 128) ?  ((config_file.music_mod & 15)*16): 255);
+						#endif
+
 						if(!mode_disc) save_cfg();
 						}
 					if((new_pad & WPAD_BUTTON_RIGHT)  || (volume_osd && (frames2 & 7)==0 && (old_pad & WPAD_BUTTON_RIGHT)))
@@ -6671,7 +6093,13 @@ get_games:
 								config_file.music_mod=((config_file.music_mod+1) & 15) | (config_file.music_mod & ~15);
 							}
 						else config_file.music_mod=128+15;
+
+						#ifndef ALTERNATIVE_VERSION
 						MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
+						#else
+						SetVolumeOgg((config_file.music_mod & 128) ?  ((config_file.music_mod & 15)*16): 255);
+						#endif
+
 						if(!mode_disc) save_cfg();
 						}
 
@@ -6995,11 +6423,17 @@ get_games:
 							if(select_game_bar==56)
 													{
 													show_bca^=1;
+													
+													
 								/*
 													if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
 													snd_fx_yes();
 
 													if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}*/
+													}
+							if(select_game_bar==57)
+													{
+													if(show_bca) update_bca(discid, BCA_Data);
 													}
 
 							if(select_game_bar>=500 && select_game_bar<500+MAX_LIST_CHEATS)
@@ -7077,6 +6511,10 @@ get_games:
 														break;
 														}
 												   } // load game
+							// josete2k
+                            if(select_game_bar==6) {if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+							                         exit_by_reset=return_reset; // fixed by hermes //SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+													}
 
 							if(select_game_bar==10 || select_game_bar==11) { // return from config (saving)
 												   edit_cfg=0;
@@ -7262,8 +6700,8 @@ get_games:
 								}
 							}
 						}
-
-					if((new_pad & WPAD_BUTTON_1) && parental_mode==0) // swap favorites/page
+               
+					if((new_pad & WPAD_BUTTON_1) && parental_mode==0 && !mode_disc && game_mode==0) // swap favorites/page
 						{
 						int n;
 
@@ -7442,19 +6880,34 @@ get_games:
 
 	if(load_png)
 			{
+		    #ifndef ALTERNATIVE_VERSION
 			SelectFontTexture(0); // selecciona la fuente de letra normal
 
 			letter_size(32,64);
+			#else
+
+			SelectFontTexture(1); // selecciona la fuente de letra normal
+
+			letter_size(16,32);
+
+			#endif
 															
 			PX=0; PY= SCR_HEIGHT/2-32; color= 0xcf000000; bkcolor=0;
 															
 			autocenter=1;
 			SetTexture(NULL);
+
+			#ifndef ALTERNATIVE_VERSION
 			DrawRoundFillBox((SCR_WIDTH-320)/2, SCR_HEIGHT/2-40, 320, 80, 0, 0xcf00ff00);
 			DrawRoundBox((SCR_WIDTH-320)/2, SCR_HEIGHT/2-40, 320, 80, 0, 4, 0xcf000000);
+			#else
+            DrawRoundFillBox(SCR_WIDTH-400, SCR_HEIGHT/2-40, 160, 48, 0, 0xcf3399ff);
+			DrawRoundBox(SCR_WIDTH-400, SCR_HEIGHT/2-40, 160, 48, 0, 4, 0xcf000000);
+			#endif
 
 			s_printf("Loading");
 			autocenter=0;
+			draw_snow();
 			Screen_flip();
 
 			rumble=0;
@@ -7487,6 +6940,7 @@ get_games:
 				DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
 			}
 
+		draw_snow();
 		Screen_flip();
 		}
 
@@ -7544,6 +6998,10 @@ get_games:
 	mload_set_ES_ioctlv_vector(NULL);
 	mload_close();
 	#ifdef USE_MODPLAYER
+	
+	#ifdef ALTERNATIVE_VERSION
+		StopOgg();
+	#endif
 		ASND_End();		// finaliza el sonido
 	#endif
 	WPAD_Shutdown();
@@ -7560,6 +7018,9 @@ error_w:
 	mload_set_ES_ioctlv_vector(NULL);
 	mload_close();
 	 #ifdef USE_MODPLAYER
+	 #ifdef ALTERNATIVE_VERSION
+		StopOgg();
+	#endif
 		ASND_End();		// finaliza el sonido
 	#endif
 	
@@ -7650,6 +7111,9 @@ int flag_disc=game_mode & 0x800000;
 	WDVD_Close();
 	
 	#ifdef USE_MODPLAYER
+	#ifdef ALTERNATIVE_VERSION
+		StopOgg();
+	#endif
 	ASND_End();		// finaliza el sonido
 	#endif
 	if((cios!=222 && force_ios249==0) || force_reload_ios222)
@@ -8495,6 +7959,152 @@ int load_disc(u8 *discid)
 }
 
 
+void update_bca(u8 *id, u8 *bca_datas)
+{
+u8 *r=NULL;
+u8 *f;
+int len=0,mode;
+int pos=0,n,m,finded=0;
+
+FILE *fp;
+
+if(!sd_ok) return;
+
+    fp = fopen("sd:/bca_database.txt", "rb");
+	if(fp)
+		{
+		fseek(fp, 0, SEEK_END);
+		len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		r=malloc(len+16);
+        if(r)
+			len = fread(r, 1, len, fp);
+        fclose(fp);
+		if(!r) return;
+		}
+	
+	f=malloc(9+136);
+	if(!f) {if(r) free(r);return;}
+
+	fp = fopen("sd:/bca_database.txt", "wb");
+	if(!fp) 
+		{
+	    free(f);free(r);return;
+		}
+
+	n=0;
+
+    mode=0;
+
+	if(r!=NULL)
+	while(n<len)
+	{
+	if(mode==0)
+		{
+		if(r[n]!='[') {n++;continue;}
+		if(r[n]=='[' && r[n+7]==']' && r[n+8]<32)
+			{
+			mode=1;
+			for(m=0;m<6;m++)
+				if(r[n+m+1]!=id[m]) break;
+			if(m==6) finded=1;
+			
+			for(m=0;m<8;m++)
+				f[m]=r[n+m];
+			f[m]='\n';
+
+			n+=9;
+
+			}
+		else
+			{
+			n++;continue;
+			}
+		}
+
+	if(mode==1)
+		{
+		int k=9;
+
+		if(r[n]<32) {n++;continue;}
+
+		for(m=0;m<64;m++)
+			{
+			u8 h=bca_datas[m]>>4;
+
+			if((m & 7)==0 && m!=0) 
+			{
+		    if(m==32) f[k++]='\n'; else f[k++]=' ';
+			//n++;
+			while(r[n]<=32) {n++;if(n>=len) break;}
+			}
+
+			if(n>=len) break;
+			if((r[n]>='0' && r[n]<='9') || (r[n]>='A' && r[n]<='F'))
+				{
+				if(finded==1) f[k++]=(h)+48+7*(h>=10);
+					else f[k++]=r[n];
+	
+				n++;
+			    }
+			else break; // error!
+
+            h=bca_datas[m] & 15;
+			if((r[n]>='0' && r[n]<='9') || (r[n]>='A' && r[n]<='F'))
+				{
+				if(finded==1) f[k++]=(h)+48+7*(h>=10);
+					else f[k++]=r[n];
+				n++;
+			    }
+			else break; // error!
+
+			}
+		if(m==64) 
+			{
+			f[k++]='\n';n++;while(r[n]<=32) {n++;if(n>=len) break;}
+			pos = fwrite(f, 1, 9+136, fp);
+			if(pos!=(9+136)) break;
+			}
+		mode=0; if(finded==1) finded=2;
+		}
+	}
+    
+	if(finded==0)
+		{
+		int k=0;
+		f[k++]='[';
+		for(n=0;n<6;n++)
+			f[k++]=id[n];
+		f[k++]=']';
+		f[k++]='\n';
+
+		for(n=0;n<64;n++)
+			{
+			u8 h=bca_datas[n]>>4;
+
+			if((n & 7)==0 && n!=0) 
+				{
+				if(n==32) f[k++]='\n'; else f[k++]=' ';
+				}
+
+			f[k++]=(h)+48+7*(h>=10);
+			h=bca_datas[n] & 15;
+			f[k++]=(h)+48+7*(h>=10);
+		
+			}
+		f[k++]='\n';
+        pos = fwrite(f, 1, 9+136, fp);
+		}
+	
+
+	fclose(fp);
+
+	if(r) free(r);
+	
+	free(f);
+
+}
 
 char buff_rcheat[256];
 
