@@ -84,8 +84,6 @@ extern unsigned hiscore;
 extern int pintor();
 
 
-//#include "redol.h"
-
 #define ticks_to_msecs(ticks)      ((u32)((ticks)/(TB_TIMER_CLOCK)))
 
 u32 gettick();
@@ -3298,36 +3296,94 @@ int indx=0;
 return 0;
 }
 
-#if 0
-void change_file_dol()
+static int altdol_frames2=0;
+void draw_altdolscr()
 {
-u32 *mem;
-FILE *fp=NULL;
-if(!dol_data || !dol_len) return;
 
-dol_data=dol_len=0;
+int n;
 
-mem=(u32 *) temp_data;
+int ylev=(SCR_HEIGHT-440);
 
-mem[0]=0xc0c010c0;
-mem[1]=0;
-mem[2]=size_redol;
-mem[3]=0;
+#define SLICE_LEN 180
 
-mem[4]=(u32) (AlternativeDol_infodat.offset>>2);
-mem[5]=AlternativeDol_infodat.size;
-mem[6]=0;
-mem[7]=0;
 
-mload_seek(0x1377DF00, SEEK_SET);
-mload_write(mem, 256);
+	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
 
-mload_seek(0x13740000, SEEK_SET);
-mload_write(redol, size_redol);
-mload_close();
+	draw_background();
+
+	SetTexture(&text_button[0]);
+    DrawRoundFillBox(20, ylev, 148*4, 352, 999, 0xffafafaf);
+	SetTexture(NULL);
+	DrawRoundBox(20, ylev, 148*4, 352, 999, 4, 0xff303030);
+
+	PX= 0; PY=ylev-32; color= 0xff000000; 
+				
+	bkcolor=0;
+	letter_size(16,32);
+
+	autocenter=1;
+	bkcolor=0;
+	s_printf("%s", &letrero[idioma][31][0]);
+	bkcolor=0;
+	
+	
+	autocenter=0;
+	letter_size(16,32);
+		
+
+	/*SetTexture(NULL);
+    DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);*/
+    SetTexture(&text_icon[3]);
+
+	//DrawFillBox(20, ylev, 148*4, 352, 0, 0xffffffff);
+    for(n=0;n<8;n++)
+	{
+	u32 color;
+	int vel=7-(altdol_frames2>>6);
+	if(vel<0) vel=0;
+	int ang=(((altdol_frames2>>vel) & 127)<<7)-2048+(n<<11);
+	//vel=7;
+	//int ang=((frames2) & 31)<<10;
+	int xx1=SCR_WIDTH/2+(SLICE_LEN*seno2((ang) & 16383))/16384,yy1=ylev+352/2-(SLICE_LEN*coseno2((ang) & 16383))/16384;
+	int xx2=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096) & 16383))/16384,yy2=ylev+352/2-(SLICE_LEN*coseno2((ang+4096) & 16383))/16384;
+	int xx3=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*2) & 16383))/16384,yy3=ylev+352/2-(SLICE_LEN*coseno2((ang+4096*2) & 16383))/16384;
+	int xx4=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*3) & 16383))/16384,yy4=ylev+352/2-(SLICE_LEN*coseno2((ang+4096*3) & 16383))/16384;
+
+	
+	if(n==0) color=0xffffffff; else color=0x27ffffff;
+
+	SetTexture(&text_icon[3]);
+	ConfigureForTexture(10);
+	GX_Begin(GX_TRIANGLESTRIP,  GX_VTXFMT0, 5);
+
+	AddTextureVertex(xx1, yy1, 999, color, 1, 1);
+	AddTextureVertex(xx2, yy2, 999, color, 1024, 1); 
+	AddTextureVertex(xx3, yy3, 999, color, 1024, 1024); 
+	AddTextureVertex(xx4, yy4, 999, color, 1, 1024);
+	AddTextureVertex(xx1, yy1, 999, color, 1, 1);
+	GX_End();
+
+	if(vel!=0 /*|| signal_draw_cabecera2*/) break;
+
+	}
+
+
+	SetTexture(NULL);
+
+	PX=0;PY=ylev+352/2-32;
+	autocenter=1;letter_size(16,32);
+	s_printf("%s", &letrero[idioma][51][0]);
+	autocenter=0;
+		
+
+#undef SLICE_LEN	
+
+	Screen_flip();
+	altdol_frames2+=20;
 
 }
-#endif
+
 
 void menu_alternativedol(u8 *id)
 {
@@ -3717,7 +3773,13 @@ while(1)
 	if(mode==128) 
 		{
 		iso_files *file;
+
+		altdol_frames2=0;
+		remote_call(draw_altdolscr);
+
 		WBFS_getdols(id);
+
+		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 		/*
 		// simulate more dols
         file =CWIIDisc_first_file;
@@ -4347,9 +4409,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v3.0");
+			s_printf("v3.0C");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v3.0");
+			s_printf("v3.0C");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -5538,21 +5600,23 @@ get_games:
 					DrawFillBox(600-24, ylev+352-48, 16, 24, 0, 0xffffffff);
 					}
 
-		    
+		    //idioma=0;
 
 			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
-			if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
+			if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
 			
 			if(test_favorite)
 				{
 				if(is_favorite)
-					{if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][2][0])) select_game_bar=4;}
+					{if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][2][0])) select_game_bar=4;}
 				else
-					if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][3][0])) select_game_bar=3;
+					if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][3][0])) select_game_bar=3;
 				}
 
-			
+			if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8-78, ylev+108*4-64, "A.Dol")) select_game_bar=55;
 			if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) select_game_bar=5;
+
+			
 			}
 		else
 			{// edit config
@@ -6140,7 +6204,7 @@ get_games:
 		autocenter=1;
 		SelectFontTexture(1);
 		s_printf("%i", launch_counter);
-		SelectFontTexture(0);
+		SelectFontTexture(1);
 		color=0xff000000;
 		letter_size(16,24);
 		bkcolor=0;
@@ -6538,6 +6602,22 @@ get_games:
 												   save_cfg();
 												   load_png=1;
 												   }
+
+							if(select_game_bar==55)
+													{
+													struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+
+													direct_launch=0;
+												    select_game_bar=0;is_favorite=1; 
+
+												    snd_fx_yes();
+
+													menu_alternativedol(header->id);
+													old_pad|=new_pad;
+													new_pad=0;
+//													new_pad &=~ WPAD_BUTTON_A | WPAD_BUTTON_B;
+
+													}
 
 							if(select_game_bar>=500 && select_game_bar<500+MAX_LIST_CHEATS)
 													{
@@ -7133,8 +7213,6 @@ int force_ingame_ios=0;
 //	load_file_dol((char *) temp_data);
 
 	Get_AlternativeDol(discid);
-	//change_file_dol();
-    
 	
 	if(sd_ok)
 		{
@@ -7494,8 +7572,8 @@ return 0;
 
 void patch_dol(void *Address, int Section_Size, int mode)
 {
-	if(mode)
-		__Patch_Error001((void *) Address, Section_Size);
+	//if(mode)
+	__Patch_Error001((void *) Address, Section_Size);
 
 	__Patch_CoverRegister(Address, Section_Size);
 	
@@ -7717,7 +7795,7 @@ int load_disc(u8 *discid)
 				patch_dol(Address, Section_Size,0);
 
         }
-		#if 1
+		
 	
 
 		if(!strncmp((void *) AlternativeDol_infodat.id, (void *) discid, 6))
@@ -7731,13 +7809,13 @@ int load_disc(u8 *discid)
 
 			}
 
-		
-#endif
 
 		WPAD_Shutdown();
 
 		// Cleanup loader information
         WDVD_Close();
+
+		
 
 		#if 1
         // Identify as the game
@@ -7761,7 +7839,7 @@ int load_disc(u8 *discid)
 			{
 			
 			
-				cabecera2( "Loading...");
+				cabecera2( "Loading Alternative .dol");
 						
 				
 				Entry=(void *) load_dol();

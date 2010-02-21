@@ -1,4 +1,4 @@
-uLoader v3.0 - por Hermes (www.elotrolado.net)
+uLoader v3.0C - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (3.0 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -46,6 +46,8 @@ Caracteristicas:
   Ahora puedes descargar caratulas desde Internet o adquirir automaticamente las carátulas desde el directorio actual de la SD
 
 - Ahora puedes cargar juegos como Red Steel u otros usando un .dol alternativo (mira NOTAS DE DOL ALTERNATIVO en este documento)
+
+- Añadido acceso directo para selección de Dol alternativo
 
 - Ahora puedes cargar ehcmodule.elf externamente (mete en sd:/apps/uloader/ehcmodule.elf) para
   utilizar versiones antiguas del modulo (mira en src/uloader/resources)
