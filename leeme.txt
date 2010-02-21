@@ -1,4 +1,4 @@
-uLoader v3.1B - por Hermes (www.elotrolado.net)
+uLoader v3.2 - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (3.0 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -11,8 +11,8 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 Caracteristicas:
 ---------------
 
-
-- Soporte para nueva protección tipo NewSuperMario
+- Soporte para datos BCA. Puedes añadirlos en la .ISO, offset 0x100 (64 bytes). Si esta area está rellena con ceros it use un BCA por defecto (NSMB compatible).
+  Nueva funcion ioctl 0xda soportada en dip_plugin y añadida nueva opcion para el modo DVD para leer los datos BCA Datas desde el DVD original
 
 - Soporte para cargar juegos en DVD, con DOL alternativo (pulsa '2' sin dispositivo USB o pulsa el icono DVD en la esquina superior-derecha 
   de la selección de juegos)

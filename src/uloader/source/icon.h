@@ -15,12 +15,12 @@ extern "C" {
 #define icon_bits_per_color 8
 
 
-#define icon_palette_colors 39
+#define icon_palette_colors 31
 #define icon_palette_bits 16
 #define icon_palette_base 0
 
 
-extern unsigned short icon_palette[39];
+extern unsigned short icon_palette[31];
 
 typedef struct
 {

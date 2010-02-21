@@ -249,6 +249,11 @@ for(j=0; j<height; j++)
 
 extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
 
+u8 BCA_Data[64] ATTRIBUTE_ALIGN(32);
+int BCA_ret=-1;
+
+int show_bca=0;
+
 static u32 ios_36[16] ATTRIBUTE_ALIGN(32)=
 {
 	0, // DI_EmulateCmd
@@ -416,28 +421,6 @@ if(sd_ok && !external_ehcmodule)
 return 0;
 }
 
-
-
-// Based in Waninkoko patch
-
-void __Patch_CoverRegister(void *buffer, u32 len)
-{
-   const u8 oldcode[] = { 0x54, 0x60, 0xF7, 0xFF, 0x40, 0x82, 0x00, 0x0C, 0x54, 0x60, 0x07, 0xFF, 0x41, 0x82, 0x00, 0x0C };
-   const u8 newcode[] = { 0x54, 0x60, 0xF7, 0xFF, 0x40, 0x82, 0x00, 0x0C, 0x54, 0x60, 0x07, 0xFF, 0x48, 0x00, 0x00, 0x0C };
-
-int n;
-
-   /* Patch cover register */
-
-for(n=0;n<(len-sizeof(oldcode));n+=4)
-	{
-	if (memcmp(buffer+n, (void *) oldcode, sizeof(oldcode)) == 0) 
-		{
-		memcpy(buffer+n, (void *) newcode, sizeof(newcode));
-		}
-	}
-
-}
 
 
 #define USE_MODPLAYER 1
@@ -4144,18 +4127,44 @@ int n,m;
 int ret=0;
 
 static char url[512];
-static char region[3][8]={"pal","ntsc","ntscj"};
-static char region2[3][8]={"PAL","NTSC","NTSC-J"};
+static char region[3][8]={"pal", "ntsc", "ntscj"};
+static char region2[3][8]={"PAL", "NTSC", "NTSC-J"};
+static char region3[11][4]={"US", "EN", "FR", "DE", "ES", "IT", "NL", "PT", "AU", "JA", "KO"};
+
 char *flag;
 int sizex=0,sizex2=0;
 
 u8 *temp_buf=NULL;
 u32 temp_size=0;
 
+int reg_ind=0;
+
 //if(!sd_ok) return;
 
 //mkdir("sd:/covers",S_IREAD | S_IWRITE);
 if(!gameCnt) return;
+
+	switch(CONF_GetLanguage())
+			{
+		    case CONF_LANG_JAPANESE:
+				reg_ind=9;break;
+			case CONF_LANG_ENGLISH:
+				reg_ind=1;break;
+			case CONF_LANG_GERMAN:
+				reg_ind=3;break;
+			case CONF_LANG_FRENCH:
+				reg_ind=2;break;
+			case CONF_LANG_SPANISH:
+				reg_ind=4;break;
+			case CONF_LANG_ITALIAN:
+				reg_ind=5;break;
+			case CONF_LANG_DUTCH:
+				reg_ind=6;break;
+			case CONF_LANG_KOREAN:
+				reg_ind=10;break;
+			default:
+				reg_ind=1;break;
+			}
 
 flag=malloc(gameCnt);
 if(!flag) return;
@@ -4286,7 +4295,6 @@ for(n=0;n<=gameCnt;n++)
 
 
    
-	
 	memset(temp_data,0,256*1024);
 	WBFS_GetProfileDatas(header->id, temp_data);
 		
@@ -4323,19 +4331,68 @@ for(n=0;n<=gameCnt;n++)
 					}
 			}
 
-		sprintf(url, "http://www.wiiboxart.com/%s/%c%c%c%c%c%c.png", 
-		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+
+		if(header->id[3]=='E') reg_ind=0;
+		if(header->id[3]=='J') reg_ind=9;
+
+		//reg_ind=1;
+	
+
+		sprintf(url, "http://wiitdb.com/wiitdb/artwork/cover/%s/%c%c%c%c%c%c.png",
+		&region3[reg_ind][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+		
 		if(ret!=0)
 			{
 			force_reload_ios222=1;
 			ret=download_file(url, &temp_buf, &temp_size);
+			if(ret==0 && temp_buf!=NULL) 
+				{
+				if(!(temp_buf[1]=='P' && temp_buf[2]=='N' && temp_buf[3]=='G')) {free(temp_buf);temp_buf=NULL;ret=-1;}
+				}
+			}
+        if(reg_ind!=1)
+			{
+			sprintf(url, "http://wiitdb.com/wiitdb/artwork/cover/%s/%c%c%c%c%c%c.png",
+			&region3[1][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+			
+			if(ret!=0)
+				{
+				force_reload_ios222=1;
+				ret=download_file(url, &temp_buf, &temp_size);
+
+				if(ret==0 && temp_buf!=NULL) 
+					{
+					if(!(temp_buf[1]=='P' && temp_buf[2]=='N' && temp_buf[3]=='G')) {free(temp_buf);temp_buf=NULL;ret=-1;}
+					}
+				}
+			}
+		
+		sprintf(url, "http://www.wiiboxart.com/%s/%c%c%c%c%c%c.png", 
+		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+		
+		if(ret!=0)
+			{
+			force_reload_ios222=1;
+			ret=download_file(url, &temp_buf, &temp_size);
+			if(ret==0 && temp_buf!=NULL) 
+				{
+				if(!(temp_buf[1]=='P' && temp_buf[2]=='N' && temp_buf[3]=='G')) {free(temp_buf);temp_buf=NULL;ret=-1;}
+				}
 			}
 		
 		sprintf(url, "http://www.muntrue.nl/covers/%s/160/225/boxart/%c%c%c%c%c%c.png", 
 		&region2[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
 		
 		if(ret!=0)
+			{
+			force_reload_ios222=1;
 			ret=download_file(url, &temp_buf, &temp_size);
+			if(ret==0 && temp_buf!=NULL) 
+				{
+				if(!(temp_buf[1]=='P' && temp_buf[2]=='N' && temp_buf[3]=='G')) {free(temp_buf);temp_buf=NULL;ret=-1;}
+				}
+			}
+		
 
 		if(ret==0)
 			{
@@ -4428,9 +4485,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v3.1B");
+			s_printf("v3.2");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v3.1B");
+			s_printf("v3.2");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -4512,11 +4569,14 @@ int r;
 				if(r>=0) 
 					{
 					Disc_ReadHeader(&mydisc_header);
+					memset(BCA_Data,0,64);
+					BCA_ret=WDVD_Read_Disc_BCA(BCA_Data);
+					show_bca=0;
 					remote_DVD_disc_status=2;
 					}
-				else remote_DVD_disc_status=r;
+				else {remote_DVD_disc_status=r;BCA_ret=-1;}
 				}
-			else remote_DVD_disc_status=r;
+			else {remote_DVD_disc_status=r;BCA_ret=-1;}
 			}
 		}
 	else {remote_DVD_disc_status=0;}
@@ -5385,9 +5445,13 @@ get_games:
 		gameList = buffer;
 		gameCnt  = cnt;
 		
+		{
+		u8 temp=config_file.music_mod;
 		memset(&config_file,0, sizeof (config_file));
 		if(!mode_disc) // mode disc
 			load_cfg();
+		else config_file.music_mod=temp;
+		}
 
 		MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
 
@@ -5829,12 +5893,54 @@ get_games:
 					if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][3][0])) select_game_bar=3;
 				}
 
+			if(header && mode_disc && BCA_ret==0)
+				{
+				if(show_bca==0)
+					{
+					if(Draw_button(x_temp+8, ylev+108*4-64, "Show BCA Data")) select_game_bar=56;
+					}
+				else
+					if(Draw_button(x_temp+8, ylev+108*4-64, "Hide BCA Data")) select_game_bar=56;
+				}
+
             if(header)
 				{
 				if(!mode_disc)
 					{if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8-78, ylev+108*4-64, "A.Dol")) {load_alt_game_disc=0;select_game_bar=55;}}
 				else
 					{if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8-78, ylev+108*4-64, "A.Dol")) {load_alt_game_disc=1;select_game_bar=55;}}
+                
+
+				if(header && mode_disc && show_bca && BCA_ret==0)
+					{
+					int h,g;
+					
+					DrawRoundFillBox(40, ylev+352/2-32, 640-80, 64, 0, 0xffcfcf00);
+					DrawRoundBox(40, ylev+352/2-32, 640-80, 64, 0, 4, 0xffcf0000);
+
+					letter_size(8,24);
+					PX= 52; PY=ylev+352/2-24; 
+		
+					for(g=0;g<4;g++)
+						{
+						for(h=0;h<8;h++)
+							s_printf("%2.2x", BCA_Data[g*8+h]);
+						s_printf(" ");
+						}
+					
+					PX= 52; PY+=28;
+
+					for(g=0;g<4;g++)
+						{
+						for(h=0;h<8;h++)
+							s_printf("%2.2x", BCA_Data[32+g*8+h]);
+						s_printf(" ");
+						}
+					
+					}
+				else show_bca=0;
+				
+				
 				}
 
 			if(header)
@@ -6582,7 +6688,8 @@ get_games:
 							}
 						}
 
-					 if(!mode_disc && !insert_favorite && !cheat_mode && gameList!=NULL && parental_mode==0) //limit left/right
+					 if(!mode_disc && !insert_favorite && !cheat_mode && gameList!=NULL && parental_mode==0 
+						 && game_mode==0) //limit left/right
 						{
 						
 						if(new_pad & WPAD_BUTTON_MINUS)
@@ -6598,6 +6705,7 @@ get_games:
 							
 							}
 						} // limit left_right
+
 
                    
 					if((new_pad & WPAD_BUTTON_A) && (gameList!=NULL || (mode_disc && game_mode)))
@@ -6883,6 +6991,15 @@ get_games:
 
 													if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
 
+													}
+							if(select_game_bar==56)
+													{
+													show_bca^=1;
+								/*
+													if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+													snd_fx_yes();
+
+													if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}*/
 													}
 
 							if(select_game_bar>=500 && select_game_bar<500+MAX_LIST_CHEATS)
@@ -7596,7 +7713,7 @@ return ret;
 }
 
 #include <ogc/lwp_watchdog.h>
-extern void settime(long long);
+extern void settime(u64);
 
 // from coverflow loader
 
@@ -7801,49 +7918,152 @@ bool Search_and_patch_Video_Modes(void *Address, u32 Size )
 	return found;
 }
 
-
-
-void __Patch_Error001(void *buffer, u32 len)
+#if 0
+void mem_patch(void *buffer, u32 len, u8 *s, int s_size, int p_skip, u8 *p, int p_size)
 {
-	const u8 oldcode[] = { 0x40, 0x82, 0x00, 0x0C, 0x38, 0x60, 0x00, 0x01, 0x48, 0x00, 0x02, 0x44, 0x38, 0x61, 0x00, 0x18 };
-	const u8 newcode[] = { 0x40, 0x82, 0x00, 0x04, 0x38, 0x60, 0x00, 0x01, 0x48, 0x00, 0x02, 0x44, 0x38, 0x61, 0x00, 0x18 };
-	u32 cnt;
+int n;
 
-		
+   /* Patch data*/
 
-	/* Find code and patch it */
-	for (cnt = 0; cnt < (len - sizeof(oldcode)); cnt++) {
-		u8 *ptr = buffer + cnt;
+for(n=0;n<(len-s_size);n+=4)
+   {
+   if(!memcmp(buffer+n, (void *) s, s_size))
+      {
+      memcpy(buffer+n+p_skip, (void *) p,  p_size);
+      }
+   }
+}
+#endif
+
+int compare_hex_str(u8 *buff, const u8 *hex_str)
+{
+u8 dat=0;
+
+while(*hex_str!=0)
+	{
+	
+	//while(*hex_str<=' ') {hex_str++;if(hex_str==0) return 0;}
+
+	if(*hex_str>='A' && *hex_str<='F') dat=(10+*hex_str-'A')<<4;
+	else if(*hex_str>='a' && *hex_str<='f') dat=(10+*hex_str-'a')<<4;
+	else if(*hex_str>='0' && *hex_str<='9') dat=(*hex_str-'0')<<4;
+	else if(*hex_str=='x' || *hex_str<='X') dat= *buff & 0xf0;
+	else {return 0;}
+
+	hex_str++;
+	if(hex_str==0) return 0;
+
+	//while(*hex_str<=' ') {hex_str++;if(hex_str==0) return 0;}
+	
+	if(*hex_str>='A' && *hex_str<='F') dat|=(10+*hex_str-'A');
+	else if(*hex_str>='a' && *hex_str<='f') dat|=(10+*hex_str-'a');
+	else if(*hex_str>='0' && *hex_str<='9') dat|=(*hex_str-'0');
+	else if(*hex_str=='x' || *hex_str<='X') dat|= *buff & 0xf;
+	else {return 0;}	
+	
+	if(dat!=*buff) return 0;
+
+	buff++; hex_str++;
+	}
+
+return 1;
+}
+
+int set_hex_str(u8 *buff, const u8 *hex_str)
+{
+u8 dat=0;
+
+while(*hex_str!=0)
+	{
+	
+	//while(*hex_str<=' ') {hex_str++;if(hex_str==0) return 0;}
+
+	if(*hex_str>='A' && *hex_str<='F') dat=(10+*hex_str-'A')<<4;
+	else if(*hex_str>='a' && *hex_str<='f') dat=(10+*hex_str-'a')<<4;
+	else if(*hex_str>='0' && *hex_str<='9') dat=(*hex_str-'0')<<4;
+	else if(*hex_str=='x' || *hex_str<='X') dat= *buff & 0xf0;
+	else {return 0;}
+
+	hex_str++;
+	if(hex_str==0) return 0;
+
+	//while(*hex_str<=' ') {hex_str++;if(hex_str==0) return 0;}
+	
+	if(*hex_str>='A' && *hex_str<='F') dat|=(10+*hex_str-'A');
+	else if(*hex_str>='a' && *hex_str<='f') dat|=(10+*hex_str-'a');
+	else if(*hex_str>='0' && *hex_str<='9') dat|=(*hex_str-'0');
+	else if(*hex_str=='x' || *hex_str<='X') dat|= *buff & 0xf;
+	else {return 0;}	
+	
+	*buff++=dat;
+	hex_str++;
+	}
+
+return 1;
+}
+
+
+void patch_hex_str(u8 *buffer, u32 len, u32 step, const u8 *search, int skip_patch, const u8 *patch )
+{
+ u32 cnt;
+
+for (cnt = 0; cnt < len; cnt+=step) 
+	{
+	u8 *ptr = buffer + cnt;
 
 		/* Replace code if found */
-		if (!memcmp(ptr, oldcode, sizeof(oldcode))) {
-			memcpy(ptr, newcode, sizeof(newcode));
+		if (compare_hex_str(ptr, search))
+			{
+		    set_hex_str(ptr+skip_patch, patch);
+		
+			}
 			
-		}
 	}
 }
 
 
-void __Patch_NSMB(void *buffer, u32 len)
+#if 0
+void __Patch_DiscSeek(void *buffer, u32 len)
 {
-   const u8 oldcode1[] = { 0x94, 0x21, 0xFF, 0xD0, 0x7C, 0x08, 0x02, 0xA6, 0x90, 0x01, 0x00, 0x34, 0x39, 0x61, 0x00, 0x30, 0x48, 0x12 };
-   const u8 oldcode2[] = { 0x7C, 0x7B, 0x1B, 0x78, 0x7C, 0x9C, 0x23, 0x78, 0x7C, 0xBD, 0x2B, 0x78 };
+   const   u8 SearchPattern[] =  "38A000DA7CA401AE7C671B787FCAF3783929XXXX800DBXXC388000DA80ADB3XX"; 
+   const   u8 PatchData[] =      "38A000717CA401AE7C671B787FCAF3783929XXXX800DB3XX3880007180ADB3XX";
+   
+   
+   patch_hex_str((u8 *) buffer, (len - (strlen((char *) SearchPattern)>>1)),4 , SearchPattern, 0, PatchData);
 
-   const u8 newcode[] = { 0x4E, 0x80, 0x00, 0x20};
-   u32 cnt;
+  
+}
+#endif
 
-   /* Find code and patch it */
-   for (cnt = 0; cnt < (len - sizeof(oldcode1) - sizeof(oldcode2)-2); cnt++) {
-      u8 *ptr = buffer + cnt;
+// Based in Waninkoko patch
 
-      /* Replace code if found */
-      if (!memcmp(ptr, oldcode1, sizeof(oldcode1)) && !memcmp(ptr+sizeof(oldcode1)+2, oldcode2, sizeof(oldcode2))) {
-         memcpy(ptr, newcode, sizeof(newcode));
-         
-      }
-   }
+void __Patch_CoverRegister(void *buffer, u32 len)
+{
+   const u8 oldcode[] = "5460F7FF4082000C546007FF4182000C";
+   const u8 newcode[] = /*"5460F7FF4082000C546007FF"*/ "4800000C";
+
+   patch_hex_str((u8 *) buffer, (len - (strlen((char *) oldcode)>>1)),4 , oldcode, 12, newcode);
 
 }
+
+void __Patch_Error001(void *buffer, u32 len)
+{
+	const u8 oldcode[] = "4082000C386000014800024438610018";
+	const u8 newcode[] = "40820004";
+
+	patch_hex_str((u8 *) buffer, (len - (strlen((char *) oldcode)>>1)),4 , oldcode, 0, newcode);
+}
+
+#if 0
+void __Patch_NSMBW(void *buffer, u32 len)
+{
+
+const u8 oldcode[] = "9421FFD07C0802A690010034396100304812XXXX7C7B1B787C9C23787CBD2B78";
+const u8 newcode[] = "4E800020";
+
+	patch_hex_str((u8 *) buffer, (len - (strlen((char *) oldcode)>>1)),4 , oldcode, 0, newcode);
+}
+#endif
 
 #if 0
 
@@ -7904,11 +8124,12 @@ void patch_dol(void *Address, int Section_Size, int mode)
 {
 	//if(mode)
 	__Patch_Error001((void *) Address, Section_Size);
-	
-    __Patch_NSMB((void *) Address, Section_Size);	
-	
 
 	__Patch_CoverRegister(Address, Section_Size);
+
+	//__Patch_DiscSeek(Address, Section_Size);
+
+	//__Patch_NSMBW((void *) Address, Section_Size);
 	
 	
 	/*HOOKS STUFF - FISHEARS*/
@@ -7965,7 +8186,33 @@ int load_disc(u8 *discid)
                 return 2;
       
         Determine_VideoMode(*Disc_Region);
-        WDVD_UnencryptedRead(&Header, sizeof(Header), 0);
+	   
+		WDVD_UnencryptedRead(&Header, sizeof(Header), 0);
+		
+	
+		/* BCA Data can be present at 0x100 offset in the .ISO (normally is a padding area filled with zeroes, but uLoader use it for BCA datas) */
+
+		for(i=0xa2;i<0xe2;i++) if(Header.Padding[i]!=0) break; // test for bca data
+        
+		if(i==0xe2) // if filled with zeroes set for NSMB bca datas
+			{
+			memset(BCA_Data,0,64);
+			BCA_Data[0x33]=1;
+			
+			// write in dip_plugin bca data area
+			mload_seek(*((u32 *) (dip_plugin+15*4)), SEEK_SET);	// offset 15 (bca_data area)
+			mload_write(BCA_Data, 64);
+			mload_close();
+			}
+		else
+			{
+			memcpy(BCA_Data, &Header.Padding[0xa2],64);
+
+			// write in dip_plugin bca data area
+            mload_seek(*((u32 *) (dip_plugin+15*4)), SEEK_SET);	// offset 15 (bca_data area)
+			mload_write(BCA_Data, 64);
+			mload_close();
+			}
 
 		if(discid[6]==0)
 			{
