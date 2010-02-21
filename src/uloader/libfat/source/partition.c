@@ -160,8 +160,10 @@ sec_t FindFirstValidPartition(const DISC_INTERFACE* disc)
 PARTITION* _FAT_partition_constructor (const DISC_INTERFACE* disc, uint32_t cacheSize, uint32_t sectorsPerPage, sec_t startSector) {
 	PARTITION* partition;
 	int i;
-	uint8_t sectorBuffer[BYTES_PER_READ] = {0};
+	static uint8_t sectorBuffer[BYTES_PER_READ] = {0};
    
+    sectorBuffer[0]=0;
+
 	// Read first sector of disc
 	if (!_FAT_disc_readSectors (disc, startSector, 1, sectorBuffer)) {
 		return NULL;

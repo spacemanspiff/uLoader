@@ -62,7 +62,7 @@
 #include "sonido.h"
 
 
-char uloader_version[5]="4.5A"; // yes, you can change here the current version of the application
+char uloader_version[5]="4.5B"; // yes, you can change here the current version of the application
 
 extern u8 launch_short;
 

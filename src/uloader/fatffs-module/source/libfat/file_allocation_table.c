@@ -266,7 +266,7 @@ If an error occurs, return CLUSTER_ERROR
 uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster) {
 	uint32_t newCluster;
 	uint32_t i;
-	uint8_t emptySector[BYTES_PER_READ];
+	static uint8_t emptySector[BYTES_PER_READ] __attribute__((aligned(32)));
 	
 	// Link the cluster
 	newCluster = _FAT_fat_linkFreeCluster(partition, cluster);
@@ -278,9 +278,9 @@ uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster
 	// Clear all the sectors within the cluster
 	memset (emptySector, 0, BYTES_PER_READ);
 	for (i = 0; i < partition->sectorsPerCluster; i++) {
-		_FAT_disc_writeSectors (partition->disc, 
+		_FAT_cache_writeSectors (partition->cache, 
 			_FAT_fat_clusterToSector (partition, newCluster) + i,
-			1, emptySector);
+			1, (void *) emptySector);
 	}
 	
 	return newCluster;

@@ -100,8 +100,11 @@ static const char FAT_SIG[3] = {'F', 'A', 'T'};
 PARTITION* _FAT_partition_constructor (const DISC_INTERFACE* disc, uint32_t cacheSize, sec_t startSector) {
 	PARTITION* partition;
 	int i;
-	uint8_t sectorBuffer[BYTES_PER_READ] = {0};
+	
+	static uint8_t sectorBuffer[BYTES_PER_READ]__attribute__((aligned(32))) = {0};
 
+	sectorBuffer[0]=0;
+	
 	// Read first sector of disc
 	if (!_FAT_disc_readSectors (disc, startSector, 1, sectorBuffer)) {
 		return NULL;

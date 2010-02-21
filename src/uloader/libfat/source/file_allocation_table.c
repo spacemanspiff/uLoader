@@ -266,7 +266,7 @@ If an error occurs, return CLUSTER_ERROR
 uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster) {
 	uint32_t newCluster;
 	uint32_t i;
-	uint8_t emptySector[BYTES_PER_READ];
+	static uint8_t emptySector[BYTES_PER_READ] __attribute__((aligned(32)));
 
 	// Link the cluster
 	newCluster = _FAT_fat_linkFreeCluster(partition, cluster);

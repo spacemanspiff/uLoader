@@ -555,7 +555,7 @@ static bool _FAT_file_extend_r (struct _reent *r, FILE_STRUCT* file) {
 	PARTITION* partition = file->partition;
 	CACHE* cache = file->partition->cache;
 	FILE_POSITION position;
-	uint8_t zeroBuffer [BYTES_PER_READ] = {0};
+	const uint8_t zeroBuffer [BYTES_PER_READ] __attribute__((aligned(32)))= {0};
 	uint32_t remain;
 	uint32_t tempNextCluster;
 	unsigned int sector;
