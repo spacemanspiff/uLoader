@@ -372,10 +372,6 @@ error:
 }
 
 
-
-
-
-
 void wbfs_isotociso(char *argv)
 {
 	int n,m;
@@ -527,9 +523,9 @@ int main(int argc, char *argv[])
 		{
 		wbfs_isotociso(argv[1]);
 
-		printf("\nPress Any Key\n");
+		/*printf("\nPress Any Key\n");
 		while(1) {if(!kbhit()) break; getch();}
-		getch();
+		getch();*/
 		}
 
 	chdir(current_directory);

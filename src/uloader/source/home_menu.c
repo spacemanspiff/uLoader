@@ -93,9 +93,12 @@ int index=0;
 		memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 
 		if(Draw_button2(30+48, ylev+32+64*n, buff,
-			((!header && !mode_disc && (m==2 || m==3 || m==6 || m==7 || m==9 || (parental_control_on && m!=0 && m!=5)))  
-			|| (mode_disc && (m==1 || m==2 || m==3 ||  m==6 || m==7 || m==8 || (parental_control_on && m!=0 && m!=5))) || (!sd_ok  && m==10)
-				|| (is_fat && (m==1 ||  m==7 || (m==8 && dvd_only)))
+			(
+			(!header && !mode_disc && (m==2 || m==3 || m==6 || m==7 || m==9 ))  
+			|| (parental_control_on && m!=0 && m!=5)
+			|| (mode_disc && (m==1 || m==2 || m==3 ||  m==6 || m==7 || m==8)) 
+			|| (!sd_ok  && m==10)
+			|| (is_fat && (m==1 ||  m==7 || (m==8 && dvd_only)))
 		 ) ? -1 : 0))
 			     select_game_bar=m+1;
 	//
@@ -1332,6 +1335,8 @@ title[63]=0;
 
 len_str=strlen(title);
 
+cursor=len_str;
+
 while(1)
 	{
 	int select_game_bar=-1;
@@ -1999,7 +2004,7 @@ while(1)
 
         if(!load_alt_game_disc)
 			{
-			if(is_fat)
+			if(is_fat && !(mode_disc & 3))
 				{
 				FILE *fp;
 				char *name;
@@ -2020,7 +2025,13 @@ while(1)
 			WBFS_getdols(id);
 			}
 		else
+			{
+			int temp=is_fat;
+			is_fat=0;
 			disc_getdols(id);
+			is_fat=temp;
+			}
+
 
 		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 		/*
@@ -3104,6 +3115,7 @@ for(n=0;n<=gameCnt;n++)
 				}
 			}
 		
+		#if 0
 		sprintf(url, "http://www.muntrue.nl/covers/%s/160/225/boxart/%c%c%c%c%c%c.png", 
 		&region2[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
 		
@@ -3116,7 +3128,7 @@ for(n=0;n<=gameCnt;n++)
 				if(!(temp_buf[1]=='P' && temp_buf[2]=='N' && temp_buf[3]=='G')) {free(temp_buf);temp_buf=NULL;ret=-1;}
 				}
 			}
-		
+		#endif
 
 		if(ret==0)
 			{

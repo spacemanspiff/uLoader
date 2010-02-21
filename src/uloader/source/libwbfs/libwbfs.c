@@ -1142,5 +1142,53 @@ error:
         
 }
 
+// connect wiidisc to wbfs_disc
+int read_wiidisc_wbfsdisc(void*fp,u32 offset,u32 count,void*iobuf)
+{
+        return wbfs_disc_read((wbfs_disc_t*)fp, offset, iobuf, count);
+}
 
-u32 wbfs_extract_file(wbfs_disc_t*d, char *path);
+
+int wbfs_extract_file(wbfs_disc_t*d, char *path, void **data)
+{
+        wiidisc_t *wd = 0;
+        int ret = 0;
+
+        wd = wd_open_disc(read_wiidisc_wbfsdisc, d);
+        if (!wd) {
+                //ERROR("opening wbfs disc");
+				return -1;
+        }
+        wd->extracted_size = 0;
+        *data = wd_extract_file(wd, ONLY_GAME_PARTITION, path);
+        ret = wd->extracted_size;
+        if (!*data) {
+                //ERROR("file not found");
+                ret = -1;
+        }
+        wd_close_disc(wd);
+
+        return ret;
+}
+
+int wbfs_extract_file2(void *d, char *path, void **data, int read_wiidisc_wbfsdisc(void*fp,u32 offset,u32 count,void*iobuf))
+{
+	wiidisc_t *wd = 0;
+        int ret = 0;
+
+        wd = wd_open_disc(read_wiidisc_wbfsdisc, d);
+        if (!wd) {
+               // ERROR("opening wbfs disc");
+				return -1;
+        }
+        wd->extracted_size = 0;
+        *data = wd_extract_file(wd, ONLY_GAME_PARTITION, path);
+        ret = wd->extracted_size;
+        if (!*data) {
+                //ERROR("file not found");
+                ret = -1;
+        }
+        wd_close_disc(wd);
+	
+        return ret;
+}

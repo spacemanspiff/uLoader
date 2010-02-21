@@ -9,6 +9,8 @@
 
 #include "libwbfs/libwbfs.h"
 
+#include "sonido.h"
+
 /* Constants */
 #define MAX_NB_SECTORS	64
 
@@ -89,7 +91,31 @@ s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf)
 	/* Calculate offset */
 	offset = ((u64)lba) << 2;
 
-	/* Calcualte sizes */
+	/* Calculate sizes */
+	mod  = len % 32;
+
+	if (mod) {  // Offset not aligned...
+      u32 left = ((0x20 - mod) < len) ? 0x20 - mod : len;
+      buffer = memalign(32, 0x20);
+      if (!buffer)
+         return -1;
+
+      /* Read data */
+      ret = WDVD_UnencryptedRead(buffer, 0x20, offset - mod);
+      if (ret < 0)
+         goto out;
+
+      /* Copy data */
+      memcpy(iobuf, buffer + mod, left);
+      iobuf += left;
+      len -= left;
+      free (buffer);
+
+      if (len == 0)
+         return 0;
+	 }
+
+	/* Calculate sizes */
 	mod  = len % 32;
 	size = len - mod;
 
@@ -419,7 +445,7 @@ return 0;
 s32 WBFS_SaveCfg(void *data, s32 size, void *data2)
 {
 wbfs_disc_t *disc = NULL;
-if(!hdd) WBFS_Open();
+
 if (!hdd)
 		return 0;
 	/* Try to open game disc */
@@ -646,3 +672,37 @@ if(!buffer) return 0;
 	
 return 1;
 }
+// from Mark R. (USB Loader mrc v9)
+
+char* WBFS_BannerTitle(u8 *discid, SoundInfo *snd){
+	void *banner = NULL;
+	int size;
+     
+	if (!hdd)
+		return "\0e\0r\0r\0o\0r\0 \0b\0n\0B";
+
+	wbfs_disc_t* d =  wbfs_open_disc(hdd, (u8 *) discid);
+	if (!d) return "\0e\0r\0r\0o\0r\0 \0b\0n\0A";
+	size = wbfs_extract_file(d, "opening.bnr", &banner);
+	wbfs_close_disc(d);
+
+	if (!banner || size <= 0) return "\0e\0r\0r\0o\0r\0 \0b\0n\0B";
+
+	char* bannerTitle=malloc(84);
+	
+	int i;
+	for(i=0;i<84;i++)
+		bannerTitle[i]=((char*)banner)[0xB0+i];
+
+	parse_banner_snd(banner, snd);
+
+
+	//SAFE_FREE(banner);
+	if(banner){
+		free(banner);
+		banner=NULL;
+	}
+
+	return bannerTitle;
+}
+

@@ -124,7 +124,7 @@ static CACHE_ENTRY* _FAT_cache_getPage(CACHE *cache,sec_t sector)
 	unsigned int oldAccess = UINT_MAX;
 
 	for(i=0;i<numberOfPages;i++) {
-		if(sector>=cacheEntries[i].sector && sector<(cacheEntries[i].sector + cacheEntries[i].count)) {
+		if(sector>=cacheEntries[i].sector && sector<(cacheEntries[i].sector + cacheEntries[i].count) && cacheEntries[i].sector != CACHE_FREE) {
 			cacheEntries[i].last_access = accessTime();
 			return &(cacheEntries[i]);
 		}
@@ -145,6 +145,8 @@ static CACHE_ENTRY* _FAT_cache_getPage(CACHE *cache,sec_t sector)
 	sector = cache->FATdisalign+((sector-cache->FATdisalign)/sectorsPerPage)*sectorsPerPage; // align base sector to page size
 	sec_t next_page = sector + sectorsPerPage;
 	if(next_page > cache->endOfPartition)	next_page = cache->endOfPartition;
+    
+	cacheEntries[oldUsed].sector = CACHE_FREE;
 
 	if(!_FAT_disc_readSectors(cache->disc,sector,next_page-sector,cacheEntries[oldUsed].cache)) return NULL;
 

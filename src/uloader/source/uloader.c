@@ -56,10 +56,18 @@
 #include "global.h"
 #include "cheats.h"
 
+#include "sys/dir.h"
+#include "fatffs_util.h"
+#include "diario.h"
+#include "sonido.h"
 
-char uloader_version[5]="4.1"; // yes, you can change here the current version of the application
+
+char uloader_version[5]="4.5"; // yes, you can change here the current version of the application
 
 extern u8 launch_short;
+
+int global_mount=0;
+u32 nand_mode=0;
 
 int frames2=0;
 
@@ -214,7 +222,6 @@ char hook_type_name[8][16]={
 };
 
 
-
 //---------------------------------------------------------------------------------
 /* Global definitions */
 //---------------------------------------------------------------------------------
@@ -234,7 +241,7 @@ u8 *temp_data= NULL;
 // texture of white-noise animation generated here
 u32 *game_empty= NULL;
 
-s8 sound_effects[2][2048] ALIGNED(0x20);
+s8 sound_effects[2][2048] ATTRIBUTE_ALIGN(32);
 
 //---------------------------------------------------------------------------------
 /* language GUI */
@@ -1067,11 +1074,11 @@ int rel_time;
 	time_t  my_time=(time(NULL));
 	struct tm *l_time=localtime(&my_time);
 
-	if(l_time && !no_more_snow)
+	if(l_time)
 		{
 		l_time->tm_mon++;
-		
-		if((l_time->tm_mday>=12 && l_time->tm_mon==12) || l_time->tm_mon<2 || (l_time->tm_mday<=6 && l_time->tm_mon==3)) flag_snow=1;
+		if(!no_more_snow)
+			if((l_time->tm_mday>=12 && l_time->tm_mon==12) || l_time->tm_mon<3 || (l_time->tm_mday<=6 && l_time->tm_mon==3)) flag_snow=1;
 		}
 	
 
@@ -1098,9 +1105,28 @@ int rel_time;
 	
 	bkcolor=0;
 	remote_call(splash_scr_send);
+
+	WPAD_Init();
+	WPAD_SetIdleTimeout(60*5); // 5 minutes 
+
+	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
+	WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH+is_16_9*208, SCR_HEIGHT);	
+
+
+	sd_ok=0;
+	for(n=0;n<5;n++)
+	{
+	if(__io_wiisd.startup())
+		{
+		sd_ok = fatMountSimple("sd", &__io_wiisd);
+		if(!sd_ok) __io_wiisd.shutdown();
+		}
+	if(sd_ok) break;
+	usleep(50000);
+	}
 	
-	__io_wiisd.startup();
-	sd_ok = fatMountSimple("sd", &__io_wiisd);
+	
+	if(sd_ok) global_mount|=64;
 	
 
 	if(ret!=0) 
@@ -1128,7 +1154,7 @@ int rel_time;
 			#endif
 		Screen_flip();
 		sleep(2);
-		goto error_0;
+		goto error;
 		}
 
 	temp_data=memalign(32,256*1024);
@@ -1167,12 +1193,6 @@ int rel_time;
 
 	if(exit_by_reset) {test_mode=1; SYS_SetResetCallback(reset_call);exit_by_reset=0;}
  
-
-	WPAD_Init();
-	WPAD_SetIdleTimeout(60*5); // 5 minutes 
-
-	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
-	WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH+is_16_9*208, SCR_HEIGHT);	
 
 	
 
@@ -1215,6 +1235,12 @@ int rel_time;
 			remote_call(wait_splash_scr);
 
 			list_fat("sd:/ciso/");
+
+			if(sd_ok)
+				{
+				load_cfg(1);
+				}
+	
 			remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 			}
 
@@ -1438,6 +1464,7 @@ int rel_time;
 			ret2=0;
 			dvd_only=1;
 			mode_disc=1024+2; // USB DVD MODE
+			if(num_fat_games!=0) {is_fat=1;}
 			}
 
 		CreatePalette(&palette_icon, TLUT_RGB5A3, 0, icon_palette, icon_palette_colors); // crea paleta 0
@@ -1526,6 +1553,7 @@ int rel_time;
 			{
 			__io_usbstorage2.startup();
 			ud_ok = fatMountSimple("ud", &__io_usbstorage2);
+			if(ud_ok) global_mount|=128;
 			}
 		else ud_ok=0;
 
@@ -1774,6 +1802,8 @@ exit_ok:
 	#endif
 		ASND_End();		// finaliza el sonido
 	#endif
+	make_rumble_off();
+	wiimote_read();
 	WPAD_Shutdown();
 	USBStorage2_Umount();
 	SYS_RemoveAlarm(scr_poweroff);
@@ -1798,8 +1828,11 @@ error_w:
 	
 
 error:
+	make_rumble_off();
+	wiimote_read();
+
 	WPAD_Shutdown();
-error_0:
+
 	remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 	remote_end();
 	SYS_RemoveAlarm(scr_poweroff);
@@ -1830,6 +1863,177 @@ return 0;
    // return ret;
 }
 
+
+static u32 lba_start=0;
+
+static int init_ciso_table=1;
+
+int fun_fat_read(void*fp,u32 offset,u32 count,void*iobuf)
+{
+
+int ret,l;
+
+static u32 table_lba[2048];
+static u8 mem_index[2048];
+static u8 buff[32768] ATTRIBUTE_ALIGN(32);
+static int ciso_size;
+
+		
+	if(!fp)
+		{
+		void *temp_ptr;
+		int size2;
+		
+		size2=(count+31) & ~31;
+
+			temp_ptr=memalign(32, size2);
+
+			if(!temp_ptr) return 0;
+
+
+			if(WDVD_UnencryptedRead(temp_ptr, size2, ((u64)offset)<<2)<0) count=0;
+
+
+			if(count)
+				{
+				memcpy(iobuf, temp_ptr, count);
+				}
+
+			free(temp_ptr);
+
+		return (count==0);
+		}
+	
+		if(init_ciso_table)
+			{
+			u32 lba_glob=(lba_start<<9)+(16<<9);
+
+			
+			fseek(fp,(lba_start<<11), SEEK_SET);
+			
+			ret=fread(buff,1, 32768 ,fp);
+				if(ret<=0) {return 1;}
+				else
+					if(!(buff[0]=='C' && buff[1]=='I' && buff[2]=='S' && buff[3]=='O')) return 1;
+			ciso_size=(((u32)buff[4])+(((u32)buff[5])<<8)+(((u32)buff[6])<<16)+(((u32)buff[7])<<24))/4;
+		
+			memset(mem_index,0,2048);
+
+
+			for(l=0;l<16384;l++)
+				{
+
+				if((l & 7)==0) table_lba[l>>3]=lba_glob;
+				
+				if(buff[(8+l)])
+					{
+					mem_index[l>>3]|=1<<(l & 7);
+					lba_glob+=ciso_size;
+					}
+				}
+            
+			init_ciso_table=0;
+			}
+
+		if(!init_ciso_table)
+			{
+			u32 temp=((u32) offset)/ciso_size;
+	
+
+			u32 read_lba=table_lba[temp>>3];
+
+			for(l=0;l<(temp & 7);l++) if((mem_index[temp>>3]>>l) & 1) read_lba+=ciso_size;
+
+			read_lba<<=2;
+
+			read_lba+=((offset) & (ciso_size-1))<<2;
+			
+
+			fseek(fp, read_lba, SEEK_SET);
+			//ret=fread(ptr,1, size ,fp_disc);
+			return !(fread(iobuf, 1, count, fp)==count);
+		
+			}
+
+return 1;
+}
+
+
+
+// adapted from Mark R. (USB Loader mrc v9)
+char* FAT_BannerTitle(char *path, SoundInfo *snd ){
+	void *banner = NULL;
+	int size;
+	FILE *fp;
+
+	fp=fopen(path, "r");
+	if(!fp)  goto error;
+	
+	init_ciso_table=1;
+	lba_start=0;
+
+	size = wbfs_extract_file2(fp, "opening.bnr", &banner, fun_fat_read);
+	
+	fclose(fp);
+
+	if (!banner || size <= 0) goto error;
+
+		  
+	char* bannerTitle=malloc(84);
+	
+	int i;
+	for(i=0;i<84;i++)
+		bannerTitle[i]=((char*)banner)[0xB0+i];
+
+    parse_banner_snd(banner, snd);
+
+	//SAFE_FREE(banner);
+	if(banner){
+		free(banner);
+		banner=NULL;
+	}
+
+	return bannerTitle;
+error:
+	return "\0e\0r\0r\0o\0r\0 \0b\0n\0B";
+}
+
+char* disc_BannerTitle(u32 lba, SoundInfo *snd ){
+	void *banner = NULL;
+	int size;
+	FILE *fp=NULL;
+	
+	init_ciso_table=1;
+	lba_start=lba;
+
+	size = wbfs_extract_file2(fp, "opening.bnr", &banner, fun_fat_read);
+	
+
+	if (!banner || size <= 0) goto error;
+
+		  
+	char* bannerTitle=malloc(84);
+	
+	int i;
+	for(i=0;i<84;i++)
+		bannerTitle[i]=((char*)banner)[0xB0+i];
+
+	parse_banner_snd(banner, snd);
+
+	//SAFE_FREE(banner);
+	if(banner){
+		free(banner);
+		banner=NULL;
+	}
+	
+
+	return bannerTitle;
+error:
+	
+	return "\0e\0r\0r\0o\0r\0 \0b\0n\0B";
+}
+char* bannerTitle=NULL;
+
 int load_game_routine(u8 *discid, int game_mode)
 {
 int n, ret,ret2;
@@ -1840,6 +2044,65 @@ int flag_disc=game_mode & 0xa00000;
 	make_rumble_off();
 
 	wiimote_read();
+
+	SoundInfo snd;
+	memset(&snd, 0, sizeof(snd));
+
+	thread_in_second_plane=1;
+
+    cabecera2("Reading The Banner...");
+
+	if(flag_disc)
+		{
+		bannerTitle=disc_BannerTitle(0, &snd);
+	    
+		}
+	else
+	if(is_fat)
+		{
+		char *path;
+
+		get_fat_name_pass=1;
+				
+		path=get_fat_name(discid);
+				
+		get_fat_name_pass=0;
+		
+		
+		if(path)
+		   bannerTitle=FAT_BannerTitle(path, &snd);
+		else  bannerTitle=0;
+		 
+
+		}
+	else 
+		{
+		bannerTitle=WBFS_BannerTitle(discid, &snd);
+		
+		}
+        #ifdef USE_MODPLAYER
+		#ifdef ALTERNATIVE_VERSION
+			StopOgg();
+		#else
+			MODPlay_Stop(&mod_track); 
+		#endif
+		//ASND_End();		// finaliza el sonido
+		#endif
+		if (snd.dsp_data) 
+			{
+			
+			ASND_StopVoice(0);
+			ASND_StopVoice(1);
+
+			int fmt = (snd.channels == 2) ? VOICE_STEREO_16BIT : VOICE_MONO_16BIT;
+
+			if(snd.loop) ASND_SetInfiniteVoice(1, fmt, snd.rate, 0,	snd.dsp_data, snd.size, 160,160);
+		           else  ASND_SetVoice(1, fmt, snd.rate, 0, snd.dsp_data, snd.size, 96,96, NULL);
+			}
+	
+thread_in_second_plane=0;
+
+
 	//WPAD_Shutdown();
 
 	game_mode &= ~0xa00000;
@@ -1856,18 +2119,22 @@ int flag_disc=game_mode & 0xa00000;
     if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
     else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
     #else
-    if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;
-    game_datas[game_mode-1].config &=~1;
+	if((game_datas[game_mode-1].config & 1)) cios=224; 
+    else {if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
+   // game_datas[game_mode-1].config &=~1;
     #endif
+
 
 
 	forcevideo=(game_datas[game_mode-1].config>>2) & 3;//if(forcevideo==3) forcevideo=0;
 
 	langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
 
+	nand_mode=(game_datas[game_mode-1].config>>8) & 15;
+
 	force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
 
-	bca_mode=(game_datas[game_mode-1].config>>29) & 1;
+	//bca_mode=(game_datas[game_mode-1].config>>29) & 1;
 
 	hook_selected= ((game_datas[game_mode-1].config>>24) & 7)+1;
 	//game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
@@ -1882,26 +2149,34 @@ int flag_disc=game_mode & 0xa00000;
 		__io_wiisd.shutdown();
 		sd_ok=0;
 		}
+	 __io_wiisd.shutdown();
+	 __io_wiisd.shutdown();
+		
 
 	if(ud_ok)
 		{
 		fatUnmount("ud");
 		__io_usbstorage2.shutdown();ud_ok=0;
 		}
+	
     USBStorage2_Watchdog(0); // disable watchdog
 	USBStorage2_Deinit();
 
-	// WARNING: this disable ehcmodule for USB 2.0 operations (only to work in DVD Mode)
-	if(!(flag_disc & 0x200000) && flag_disc) USBStorage2_EHC_Off();
+	// WARNING: this disable ehcmodule for USB 2.0 operations (only to work in DVD Mode without NAND emulation)
+	//if(!(flag_disc & 0x200000) && flag_disc && (nand_mode & 2)==0) USBStorage2_EHC_Off();
 
 	WDVD_Close();
 	
+	/*
 	#ifdef USE_MODPLAYER
 	#ifdef ALTERNATIVE_VERSION
 		StopOgg();
+	#else
+		MODPlay_Stop(&mod_track); 
 	#endif
-	ASND_End();		// finaliza el sonido
+	//ASND_End();		// finaliza el sonido
 	#endif
+*/
 	if((cios!=222 && force_ios249==0) || force_reload_ios222)
 		{
 		cabecera2("Loading...");
@@ -1910,7 +2185,7 @@ int flag_disc=game_mode & 0xa00000;
 		usleep(500*1000);
 
 		ret2=IOS_ReloadIOS(cios);
-        if(cios==223 && ret2==0)
+        if((cios==223 || cios==224) && ret2==0)
 			{
 			if((*(volatile u32 *)0x80003140 & 0xffff)<4) return -7777;
 			}
@@ -1932,7 +2207,7 @@ int flag_disc=game_mode & 0xa00000;
 		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH+is_16_9*208, SCR_HEIGHT);	
 		
 		// WARNING: this disable ehcmodule for USB 2.0 operations (only to work in DVD Mode)
-        if(!(flag_disc & 0x200000) && flag_disc) USBStorage2_EHC_Off();	
+        if(!(flag_disc & 0x200000) && flag_disc && (nand_mode & 2)==0) USBStorage2_EHC_Off();	
 		else
 			{
 			if(!dvd_only)
@@ -1960,11 +2235,20 @@ int flag_disc=game_mode & 0xa00000;
 		}
 		
 	mload_close();
-
+   
 	if(flag_disc & 0x200000) discid[6]=2; // mode DVD USB
 	else if(flag_disc) discid[6]=1; // mode DVD
 
+	if(bannerTitle)
+			{
+			
+			if(Diario_ActualizarDiario(bannerTitle,(char*) discid)<0) ;//exit(0);
+			free(bannerTitle);
+			}
+
 	ret = load_disc(discid);
+	ASND_StopVoice(1);
+	ASND_End();		// finaliza el sonido
 
 return ret;
 }
@@ -2104,7 +2388,11 @@ int n, ret=-1;
 return ret;
 }
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////
+
+
 
 int menu_main()
 {
@@ -2134,8 +2422,6 @@ int last_select=-1;
 int force_ingame_ios=0;
 int game_locked_cfg=0;
 
-
-
 int parental_mode=0;
 char parental_str[4]={0,0,0,0};
 
@@ -2145,15 +2431,25 @@ int partial_counter;
 int volume_osd=0;
 int rumble_off_osd=0;
 int icon_osd=0;
+int warning_osd=0;
 
 int bca_saved=0;
 
 int temp_home=-1;
 
+char *warning_message="what?";
+int warning_time=0;
 
+int edit2_mode=0;
+ 
+int save_exist=0;
+
+int it_have_fat=is_fat;
 
 struct discHdr *disc_header=NULL;
 
+
+		if(mode_disc & 3) is_fat=0;
 get_games:
 		
 		frames=0;frames2=0;
@@ -2191,7 +2487,7 @@ get_games:
         
 		if (ret < 0 || temp_game_cnt==0) {
 
-			if(!mode_disc)
+			if(!(mode_disc & 3))
 				{
 				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
@@ -2253,7 +2549,7 @@ get_games:
 
 			if(!temp_game_cnt)
 				{
-				if(!mode_disc)
+				if(!(mode_disc & 3))
 					{
 					DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 					DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
@@ -2291,7 +2587,7 @@ get_games:
 		
 		memset(&config_file,0, sizeof (config_file));
 
-		if(!mode_disc) // mode disc
+		if(!(mode_disc & 3)) // mode disc
 			{load_cfg(0);memset(parental_str ,0, 4);}
 		else {if(load_cfg(1)<0) config_file.music_mod=temp; memset(parental_str ,0, 4);/* memcpy(config_file.parental, temp2, 4);*/}
 
@@ -2334,7 +2630,7 @@ get_games:
 
 				game_mode=1;
 				
-				if(mode_disc==0 && config_file.parental[0]==0 && config_file.parental[1]==0 && config_file.parental[2]==0 && config_file.parental[3]==0) parental_control_on=0;
+				if((mode_disc & 3) ==0 && config_file.parental[0]==0 && config_file.parental[1]==0 && config_file.parental[2]==0 && config_file.parental[3]==0) parental_control_on=0;
 
 				if(parental_control_on)
 					{if((game_datas[game_mode-1].config & (1<<30))!=0) {parental_mode=1024+game_mode;direct_launch=0;}}
@@ -2346,7 +2642,7 @@ get_games:
 		if(n==gameCnt) direct_launch=0;
 		}
 
-	if(mode_disc)
+	if((mode_disc & 3) && is_fat==0)
 	{
 	game_mode=1;
 	//if(is_fat)
@@ -2447,7 +2743,7 @@ get_games:
 	    else {disc_header=NULL;if(remote_DVD_disc_status==0) altdol_frames2=0;}
 		
 		
-		if(!mode_disc)
+		if(!(mode_disc & 3))
 		    header= &gameList[game_datas[game_mode-1].ind];
 		else header= disc_header;
 
@@ -2456,7 +2752,7 @@ get_games:
 		SetTexture(NULL);
 		DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
 		
-		if(mode_disc)
+		if((mode_disc & 3) && is_fat==0)
 			SetTexture(&default_game_texture);
 		else
 		if(game_datas[game_mode-1].png_bmp) 
@@ -2471,7 +2767,7 @@ get_games:
 			
 		DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
-		if(mode_disc)
+		if((mode_disc & 3) && is_fat==0)
 			SetTexture(&default_game_texture);
 		else
 		if(game_datas[game_mode-1].png_bmp) 
@@ -2492,7 +2788,7 @@ get_games:
 		SetTexture(NULL);
 		DrawBox(320-127, ylev+8, 254, 338, 0, 2, 0xff303030);
 		
-		if(mode_disc /*&& remote_DVD_disc_status!=0*/)
+		if((mode_disc & 3) && is_fat==0 /*&& remote_DVD_disc_status!=0*/)
 			{
 			int nn;
 
@@ -2694,7 +2990,7 @@ get_games:
 			PX= 26; PY=ylev+12; color= 0xff000000; 
 			bkcolor=0x0;//0xb0f0f0f0;
 
-            if(mode_disc)
+            if((mode_disc & 3))
 				{
 				if(header)
 					dol_GetProfileDatas(header->id, temp_data);
@@ -2715,7 +3011,7 @@ get_games:
 				#ifndef DONT_USE_IOS249	
 				s_printf("cIOS 249"); 
 			    #else
-				s_printf("cIOS 222");
+				s_printf("cIOS 224");
 				#endif
 			
 			else {if(game_datas[game_mode-1].config & 2)  s_printf("cIOS 223"); else s_printf("cIOS 222");}
@@ -2723,6 +3019,8 @@ get_games:
 			forcevideo=(game_datas[game_mode-1].config>>2) & 3;//if(forcevideo==3) forcevideo=0;
 
 			langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+
+			nand_mode=(game_datas[game_mode-1].config>>8) & 15;
 
 			force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
 			game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
@@ -2733,7 +3031,7 @@ get_games:
 
 			if(mode_disc && parental_control_on && game_locked_cfg)
 				parental_mode=9999;
-			if(mode_disc && !disc_header) parental_mode=0;
+			if((mode_disc & 3) && !disc_header) parental_mode=0;
 
 		
 			
@@ -2751,7 +3049,7 @@ get_games:
 			if(forcevideo==3) s_printf("F. PAL50");
 			
             
-			PX=608-6*16; if(header && !mode_disc) s_printf("%.2fGB", f_size);
+			PX=608-6*16; if(header && !(mode_disc & 3)) s_printf("%.2fGB", f_size);
 		 
 			autocenter=0;
 			PX= 26; PY=ylev+352-48;
@@ -2768,7 +3066,7 @@ get_games:
 
 		    //idioma=0;
 
-			if(!parental_mode && header && (mode_disc /*& 2*/)!=0 && multi_ciso[0].len)
+			if(!parental_mode && header && (mode_disc & 3)!=0 && multi_ciso[0].len)
 					{
 					
 					for(n=0;n<8;n++)
@@ -2790,7 +3088,7 @@ get_games:
 
 			x_temp=16;
 
-            if(!(mode_disc & 1024) && remote_DVD_disc_status!=1)
+            if((!(mode_disc & 1024) || it_have_fat) && remote_DVD_disc_status!=1)
 				if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
 
 
@@ -2802,7 +3100,7 @@ get_games:
 					if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
 				
 
-				if(test_favorite && !mode_disc)
+				if(test_favorite && !(mode_disc & 3) && is_fat==0)
 					{
 					if(is_favorite)
 						{if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][2][0])) select_game_bar=4;}
@@ -2823,7 +3121,7 @@ get_games:
 						if(Draw_button(x_temp+8, ylev+108*4-64, "Hide BCA Data")) select_game_bar=56;
 					}
 
-				if(dvd_only==1 && is_fat==0/*&& remote_DVD_disc_status==0*/)
+				if(dvd_only==1 && it_have_fat==0 && (mode_disc & 1024)/*&& remote_DVD_disc_status==0*/)
 					if(Draw_button(x_temp+8, ylev+108*4-64,"Wii Menu"/* &letrero[idioma][27][0]*/)) select_game_bar=6;
 				}
 
@@ -2892,20 +3190,46 @@ get_games:
 				if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) {select_game_bar=5;}
 
 			
-			
-
-			
 			}
 		else
 			{// edit config
 			int g;
 			select_game_bar=0;
-			PX= 36; PY=ylev+8; color= 0xff000000; 
+			PX= 36; PY=ylev+8; color= 0xff000000;
+			struct discHdr *header;
+			
+
+			if(!mode_disc)  header= &gameList[game_datas[game_mode-1].ind];
+				else header= disc_header;
+			if(!header) 
+				{
+				edit_cfg=0;
+				snd_fx_yes();
+							
+							
+				// si no existe crea uno
+				if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
+					{
+					temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;
+					temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
+					temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
+					}
+								
+				temp_data[4]=game_datas[game_mode-1].config & 255;
+				temp_data[5]=(game_datas[game_mode-1].config>>8) & 255;
+				temp_data[6]=(game_datas[game_mode-1].config>>16) & 255;
+				temp_data[7]=(game_datas[game_mode-1].config>>24) & 255;
+
+				game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
+				}
 
             if(edit_cfg==1)
 				{
-				
+				warning_time=0;
+				edit2_mode=0;
+
 				bca_saved=0; // flag to 0
+				save_exist=0;
 
 				letter_size(12,24);
 				autocenter=1;
@@ -2965,7 +3289,8 @@ get_games:
 				#ifndef DONT_USE_IOS249	
 				if(Draw_button2(x_temp+12, m+56, " cIOS 249 ",(mode_disc & 2)? -1: cios==249)) select_game_bar=302;
 				#else
-				Draw_button2(x_temp+12, m+56, " cIOS 249 ",-1);
+				//Draw_button2(x_temp+12, m+56, " cIOS 249 ",-1);
+				if(Draw_button2(x_temp+12, m+56, " cIOS 224 ",(mode_disc & 2)? -1: cios==224)) select_game_bar=302;
 				#endif
 
 
@@ -2973,47 +3298,177 @@ get_games:
 				}
 			else // edit 2
 				{
-				letter_size(12,24);
-				autocenter=0;
-				bkcolor=0xb0f0f0f0;
-				PY+=8;
-				s_printf("BCA Code:");
-				bkcolor=0;
 				
+				color= 0xff000000;
+				if(edit2_mode==0)
+					{
+					letter_size(12,24);
+					autocenter=0;
+					bkcolor=0xb0f0f0f0;
+					PY+=8;
+					s_printf("BCA Code:");
+					bkcolor=0;
+					
 
-				if(Draw_button2(PX+8, ylev+8, "From Disc", (bca_mode & 1)==0)) select_game_bar=20;
-				if(Draw_button2(x_temp+16, ylev+8, "From Database", bca_mode)) select_game_bar=21;
-				if(Draw_button2(x_temp+16, ylev+8, "Grab From Database", (mode_disc) ? -1 : bca_saved)) select_game_bar=22;
+					if(Draw_button2(PX+8, ylev+8, "From Disc", (bca_mode & 1)==0)) select_game_bar=20;
+					if(Draw_button2(x_temp+16, ylev+8, "From Database", bca_mode)) select_game_bar=21;
+					if(Draw_button2(x_temp+16, ylev+8, "Grab From Database", (mode_disc) ? -1 : bca_saved)) select_game_bar=22;
 
-				letter_size(12,24);
-				bkcolor=0xb0f0f0f0;
-				PY+=56;
-				PX=32;
-				s_printf("Hooktype For Cheats: ");
-				bkcolor=0;
+					letter_size(12,24);
+					bkcolor=0xb0f0f0f0;
+					PY+=56;
+					PX=32;
+					s_printf("Hooktype For Cheats: ");
+					bkcolor=0;
 
-				if(Draw_button2(PX+8, PY-8, "<<", 0)) select_game_bar=25;
-				PX=x_temp+8;
+					if(Draw_button2(PX+8, PY-8, "<<", 0)) select_game_bar=25;
+					PX=x_temp+8;
 
-				bkcolor=0xb000f000;
-				s_printf(" %s ", &hook_type_name[hook_selected-1][0]);
+					bkcolor=0xb000f000;
+					s_printf(" %s ", &hook_type_name[hook_selected-1][0]);
 
-				bkcolor=0;
+					bkcolor=0;
+
+					if(Draw_button2(PX+8, PY-8, ">>", 0)) select_game_bar=26;
+
+					// saves
+
+					letter_size(12,24);
+					bkcolor=0xb0f0f0f0;
+					PY+=56;
+
+					DrawLine(40, PY-16, 600, PY-16, 0, 2, 0xc0404040);
 
 
-				if(Draw_button2(PX+8, PY-8, ">>", 0)) select_game_bar=26;
-				
+					PX=32;
+					s_printf("Saves: ");
+					bkcolor=0;
+
+					if((nand_mode & 3)==3) nand_mode&=~3;
+
+					if(Draw_button2(PX+8, PY-8, "NAND", (nand_mode & 3)==0)) select_game_bar= 60;
+					PX=x_temp+8;
+					if(Draw_button2(PX+8, PY-8, "SD", !sd_ok ? (((nand_mode & 3)==1) ? 128 : -1) :(nand_mode & 3)==1)) if(sd_ok) select_game_bar= 61;
+					PX=x_temp+8;
+					if(Draw_button2(PX+8, PY-8, "USB", !ud_ok ? (((nand_mode & 3)==2) ? 128 : -1) :(nand_mode & 3)==2)) if(ud_ok) select_game_bar= 62;
+
+					PX=x_temp+100;
+					if(Draw_button2(PX+8, PY-8, "NAND Export Save", ((nand_mode & 3)==0) ? 128 :0)) select_game_bar= 63;
+
+					letter_size(12,24);
+					bkcolor=0xb0f0f0f0;
+					PY+=56;
+					PX=32;
+					
+					color=0xffff0000;
+
+					s_printf("id: /");
+					bkcolor=0;
+					
+					// generate folder from id
+					{
+					
+                   
+					if(header)
+					{
+					for(n=0;n<4;n++)
+						{
+						s_printf("%2.2x", header->id[n]);
+						}
+					if(save_exist==0)
+						{
+						create_FAT_FFS_Directory(header);
+						if(test_FAT_game(get_FAT_directory1()) || test_FAT_game(get_FAT_directory2())) save_exist=1; else save_exist=-1;
+						}
+					}
+					color= 0xff000000; 
+					}
+
+					letter_size(12,32);
+					bkcolor=0xb0f0f0f0;
+					PX+=12;
+					s_printf("Folder: ");
+					bkcolor=0;
+
+					if(Draw_button2(PX+8, PY-8, "<<", 0)) select_game_bar= 64;
+					PX=x_temp+8;
+
+					if(save_exist==1 && (nand_mode & 3)!=0) bkcolor=0xb000f000; else bkcolor=0xb00000f0;
+
+					s_printf(" /nand%c ", (nand_mode & 0xc) ? 49+((nand_mode>>2) & 3) : ' ');
+					bkcolor=0;
+
+					if(Draw_button2(PX+8, PY-8, ">>", 0)) select_game_bar= 65;
+
+					PX=x_temp+8;
+					if(Draw_button2(PX+8, PY-8, "Del Save", (((nand_mode & 1) && sd_ok) || ((nand_mode & 2) && ud_ok))  ? 0 : 128)) select_game_bar= 66;
+
+						
+					}
 				}
 
-			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
+				if(edit2_mode==1)
+					{
+					warning_time=1;
 
-			if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][54+(edit_cfg==1)][0])) select_game_bar=9;
+					if(Draw_button(36, ylev+108*4-64, &letrero[idioma][17][0])) select_game_bar=67;
 
-			if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
+					if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=69;
+					}
+				else
+				if(edit2_mode==2)
+					{
+					warning_time=1;
+
+					if(Draw_button(36, ylev+108*4-64, &letrero[idioma][17][0])) select_game_bar=68;
+
+					if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=69;
+					}
+				else
+					{
+
+					if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
+
+					if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][54+(edit_cfg==1)][0])) select_game_bar=9;
+
+					if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
+					}
+			
+
+
+				/////////////////////////////////////
+				if(warning_time)
+					{
+					SelectFontTexture(1); // selecciona la fuente de letra extra
+
+					letter_size(12,32);
+									
+					PX=0; PY= SCR_HEIGHT/2-32; color= 0xff000000; 
+									
+					bkcolor=0;
+					autocenter=1;
+					SetTexture(NULL);
+					if(warning_message && warning_message[0]=='#')
+						DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32, 540, 64, 0, 0xe000ff00);
+					else
+						DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32, 540, 64, 0, 0xe00000ff);
+
+					DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16-32, 540, 64, 0, 4, 0xa0000000);
+						
+					if(warning_message)
+						{
+						s_printf("%s",warning_message+(warning_message[0]=='#'));
+						}
+
+					autocenter=0;
+
+					SelectFontTexture(0);
+					warning_time--;
+					}
+				////////////////////////////
 
 			}
 
-		
 		
 		step_button++;
 		}
@@ -3932,11 +4387,12 @@ get_games:
 									struct discHdr *header;
 									if(!is_favorite) last_game=actual_game;
 
-									if(select_game_bar==10016)  {parental_control_on=1;snd_fx_yes();mode_disc=1;Screen_flip();goto get_games;}
+									if(select_game_bar==10016)  {is_fat=0;load_cfg(1);parental_control_on=1;snd_fx_yes();if(!(mode_disc & 2)) mode_disc=1;Screen_flip();goto get_games;}
 									if(select_game_bar==10015)  {parental_control_on=1;snd_fx_yes();is_fat=1;Screen_flip();goto get_games;}
 									
 
-									if(select_game_bar>=10000 && select_game_bar<10004)  {is_fat=0;snd_fx_yes();current_partition=select_game_bar-10000;Screen_flip();goto get_games;}
+									if(select_game_bar>=10000 && select_game_bar<10004)  
+										{is_fat=0;snd_fx_yes();current_partition=select_game_bar-10000;Screen_flip();goto get_games;}
 
 									if(temp_sel>=0)
 									     snd_fx_yes();
@@ -3986,9 +4442,10 @@ get_games:
 													if(mode_disc && game_mode && !edit_cfg) 
 														{
 														remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-														mode_disc=0;f_j=1;parental_control_on=1;parental_mode=0;
+														mode_disc&=~1;f_j=1;parental_control_on=1;parental_mode=0;
+														if(dvd_only) is_fat=it_have_fat;
 														}
-													if(!mode_disc && game_mode && !edit_cfg) parental_mode=0;
+													if(!(mode_disc & 1) && game_mode && !edit_cfg) parental_mode=0;
 
 													game_mode=0;edit_cfg=0;select_game_bar=0;
 													for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
@@ -4033,13 +4490,18 @@ get_games:
 												   if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
 												   else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
 												   #else
-												   if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;
+												   /*if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;
                                                    game_datas[game_mode-1].config &=~1;
+												   */
+												   if((game_datas[game_mode-1].config & 1)) cios=224; 
+												   else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
 												   #endif
 
 												   forcevideo=(game_datas[game_mode-1].config>>2) & 3;//if(forcevideo==3) forcevideo=0;
 
 												   langsel=(game_datas[game_mode-1].config>>4) & 15;if(langsel>10) langsel=0;
+
+												   nand_mode=(game_datas[game_mode-1].config>>8) & 15;
 
 												   force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
 												   game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
@@ -4139,6 +4601,15 @@ get_games:
 													{
 													struct discHdr *header;
 
+													if(((nand_mode & 1) && !sd_ok) || ((nand_mode & 2) && !ud_ok)) 
+														{
+														warning_osd=1;
+													    snd_fx_no();
+														goto ignore_all;
+														}
+													
+													
+
 													if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
 
 													if(!mode_disc)
@@ -4208,10 +4679,10 @@ get_games:
 														Screen_flip();
 														sleep(3);
 
-
 														//////////////////////////////////
 														break;
 														}
+													ignore_all: ;
 												   } // load game
 							// josete2k
                             if(select_game_bar==6) {if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
@@ -4250,7 +4721,219 @@ get_games:
 													 hook_selected++; if(hook_selected>8) hook_selected=1;
 													 }
 
-							if(select_game_bar==10 || select_game_bar==11) { // return from config (saving)
+							// nand ->60 sd->61 usb ->62 nand export -> 63 <<->64 >> -> 65 delete ->66 (nand_mode)
+
+							// NAND SAVES (emulation off)
+							if(select_game_bar==60)  {
+													 save_exist=-1;
+													 nand_mode&=~3;
+													 snd_fx_yes();
+													 }
+							// SD SAVES
+							if(select_game_bar==61)  {
+													 save_exist=0;
+													 nand_mode= (nand_mode & 0xc) | 1;
+													 snd_fx_yes();
+													 }
+							// USB SAVES
+							if(select_game_bar==62)  {
+													 save_exist=0;
+													 nand_mode=(nand_mode & 0xc) | 2;
+													 snd_fx_yes();
+													 }
+							 // nand export
+							if(select_game_bar==63 && (nand_mode & 3))  
+													 {
+													 struct discHdr *header;
+											
+														if(!mode_disc)  header= &gameList[game_datas[game_mode-1].ind];
+														else header= disc_header;
+														
+														if(header)
+															{
+															edit2_mode=2;
+
+															create_FAT_FFS_Directory(header);
+
+															if(test_FAT_game(get_FAT_directory1()) || test_FAT_game(get_FAT_directory2()))
+																warning_message="Save Found in FAT. Are You Sure Rewrite It?";
+															else
+																warning_message="#Save in FAT is Empty. Press YES to Start";
+															}
+
+													 warning_time=90;
+													 snd_fx_yes();
+													 }
+							 // NAND FOLDER --                
+							if(select_game_bar==64)  {
+													 save_exist=0;
+													 nand_mode=((nand_mode-4) & 0xc) | (nand_mode & 3);
+													 snd_fx_yes();
+													 }
+							// NAND FOLDER ++						
+							if(select_game_bar==65)  {
+													 save_exist=0;
+													 nand_mode=((nand_mode+4) & 0xc) | (nand_mode & 3);
+													 snd_fx_yes();
+													 }
+							if(select_game_bar==66 && (nand_mode & 3))
+													 {
+													 struct discHdr *header;
+
+														if(!mode_disc)  header= &gameList[game_datas[game_mode-1].ind];
+														else header= disc_header;
+
+														if(header)
+															{
+															create_FAT_FFS_Directory(header);
+															if(test_FAT_game(get_FAT_directory1()) || test_FAT_game(get_FAT_directory2()))
+																{
+																edit2_mode=1;
+
+																warning_message="Save Found. Are You Sure To Delete It?";
+																warning_time=90;
+																snd_fx_yes();
+																}
+															else
+																{
+																warning_message="#No Saves To Delete";
+																warning_time=90;
+																snd_fx_no();
+																}
+															}
+													 // delete saves
+													 
+													 }
+							// real delete save
+							if(select_game_bar==67)  {
+										
+													 char * name="nononono";
+
+                                                     edit2_mode=0;
+													 save_exist=0;
+													 
+														
+														if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+
+														if(nand_mode & 1)
+															{down_mess="Deleting Save From SD";}
+														if(nand_mode & 2)
+															{down_mess="Deleting Save From USB";}
+														
+														if(test_FAT_game(get_FAT_directory1())) name=get_FAT_directory1();
+														else	
+															if(test_FAT_game(get_FAT_directory2())) name=get_FAT_directory2();
+
+														down_frame=0;
+														remote_call(down_uload_gfx);usleep(1000*50);
+
+													 if(FAT_DeleteDir(name) ||  remove(name))
+														{
+														warning_message="Error Deleting Save";
+														snd_fx_no();
+														}
+													 else
+														{
+														warning_message="#Save Deleted";
+														snd_fx_yes();
+														}
+													 warning_time=90;
+													 remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+													 down_mess="";
+													 down_frame=-1;
+													
+													 if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
+													 }
+
+							 // real nand export
+							if(select_game_bar==68)  {
+													
+													 int ret=-123456;
+
+													 edit2_mode=0;
+													 save_exist=0;
+														
+														if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+
+														if(nand_mode & 1)
+															{	
+															down_mess="Exporting Datas From NAND To SD";
+															}
+														if(nand_mode & 2)
+															{
+															down_mess="Exporting Datas From NAND To USB";
+															}
+
+														down_frame=0;
+														remote_call(down_uload_gfx);usleep(1000*50);
+	
+														ret= FFS_to_FAT_Copy(get_FFS_directory1(), get_FAT_directory1());
+														if(ret==-101)
+															{
+															ret= FFS_to_FAT_Copy(get_FFS_directory2(), get_FAT_directory2());
+															}
+														
+														if(ret==0)
+															{
+															warning_time=90;
+															snd_fx_yes();
+															}
+														else
+														if(ret<0)
+															{
+															warning_time=90;
+															snd_fx_no();
+															}
+
+														switch(ret)
+															{
+															case 0:
+																warning_message="#Save Copied";
+																break;
+															case -123456:
+																warning_message="Stupid Monkey Error";
+																break;
+															case -101:
+																warning_message="No Save Found";
+																break;
+															case -1:
+																warning_message="Invalid Path";
+																break;
+															case -2:
+																warning_message="Out Of Memory";
+																break;
+															case -3:
+																warning_message="Error In Read Dir";
+																break;
+															case -4:
+																warning_message="Error Opening FFS File";
+																break;
+															case -5:
+																warning_message="Error Creating FAT File";
+																break;
+															case -6:
+																warning_message="Error Seeking FFS File";
+																break;
+															case -7:
+																warning_message="Error Reading Datas";
+																break;
+															case -8:
+																warning_message="Error Writing Datas";
+																break;
+															}
+
+
+													 remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+													 down_mess="";
+													 down_frame=-1;
+													
+													 if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
+													 }
+							// cancel delete						 
+
+							if(select_game_bar==69)  {edit2_mode=0;warning_time=0;snd_fx_no();}
+
+							if(select_game_bar==10 || select_game_bar==11) { // return from config (saving or not)
 												   edit_cfg=0;
 
 												   if(select_game_bar==10) snd_fx_yes(); else snd_fx_no();
@@ -4273,10 +4956,11 @@ get_games:
 														}
 												   else
 														{
-														if(cios==249) temp_data[4]|=1;
+														if(cios==249 || cios==224) temp_data[4]|=1;
 														if(cios==223) temp_data[4]|=2;
 														temp_data[4]|=(forcevideo & 3)<<2;
 														temp_data[4]|=(langsel & 15)<<4;
+														temp_data[5]|=(nand_mode & 15);
 														temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
 														temp_data[7]|=((game_locked_cfg!=0) & 1)<<6;
 														temp_data[7]|=(bca_mode & 1)<<5;
@@ -4287,10 +4971,13 @@ get_games:
 												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
 												   select_game_bar=0;
 												   make_rumble_off();
-												   if(!mode_disc)
-														global_SetProfileDatas(discid, temp_data);
-												   else 
-													   dol_SetProfileDatas(discid, temp_data);
+												   if(select_game_bar!=11)
+														{
+														if(!mode_disc)
+															global_SetProfileDatas(discid, temp_data);
+														else 
+															dol_SetProfileDatas(discid, temp_data);
+														}
 												   
 												   }
 							if(select_game_bar>=100 && select_game_bar<=111)
@@ -4318,7 +5005,11 @@ get_games:
 													   case 1:
 														   cios=223;break;
 													   case 2:
+														   #ifndef DONT_USE_IOS249
 														   cios=249;break;
+														   #else
+														   cios=224;break;
+														   #endif
 													   }
 												   //cios= (select_game_bar-300) ? 249 : 222;
 												   snd_fx_yes();
@@ -4355,9 +5046,18 @@ get_games:
 							}
 						else
 						if(edit_cfg)
-							{// return from config (saving)
-							edit_cfg=0;
-							snd_fx_yes();
+							{// return from config (no saving)
+
+							if(edit_cfg>1) 
+								{
+								if(edit2_mode) edit2_mode=0;
+								else edit_cfg=1;
+								snd_fx_no();
+								}
+							else
+								{
+								edit_cfg=0;
+								snd_fx_yes();
 							
 							
 								// si no existe crea uno
@@ -4368,34 +5068,46 @@ get_games:
 									temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
 									}
 								
+								temp_data[4]=game_datas[game_mode-1].config & 255;
+								temp_data[5]=(game_datas[game_mode-1].config>>8) & 255;
+								temp_data[6]=(game_datas[game_mode-1].config>>16) & 255;
+								temp_data[7]=(game_datas[game_mode-1].config>>24) & 255;
+
+								/*
 								
 								temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
-								if(cios==249) temp_data[4]|=1;
+								if(cios==249 || cios==224) temp_data[4]|=1;
 								if(cios==223) temp_data[4]|=2;
 								temp_data[4]|=(forcevideo & 3)<<2;
 								temp_data[4]|=(langsel & 15)<<4;
+								temp_data[5]|=(nand_mode & 15);
 								temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
 								temp_data[7]|=((game_locked_cfg!=0) & 1)<<6;
 								temp_data[7]|=(bca_mode & 1)<<5;
 								temp_data[7]|= (hook_selected-1) & 7;
+								*/
 
 								game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
+								/*
 								if(!mode_disc || is_fat)
 									global_SetProfileDatas(discid, temp_data);
 								else
-									dol_SetProfileDatas(discid, temp_data);
-							
+									dol_SetProfileDatas(discid, temp_data);*/
+								}
 							}
 						else
 							{
-							if(!(mode_disc & 1024) && remote_DVD_disc_status!=1)
+							if((!(mode_disc & 1024) || it_have_fat) && remote_DVD_disc_status!=1)
 								{
 								int f_j=0;
 
 								if(mode_disc && game_mode && !edit_cfg) 
 									{
 									remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-									mode_disc=0;f_j=1;parental_control_on=1;parental_mode=0;
+									//mode_disc=0;f_j=1;parental_control_on=1;parental_mode=0;
+									mode_disc&=~1;f_j=1;parental_control_on=1;parental_mode=0;
+									if(dvd_only) is_fat=it_have_fat;
+									//is_fat=it_have_fat;
 									}
 								if(!mode_disc && game_mode && !edit_cfg) parental_mode=0;
 
@@ -4494,6 +5206,15 @@ get_games:
 			{
 			struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
 
+			if(((nand_mode & 1) && !sd_ok) || ((nand_mode & 2) && !ud_ok)) 
+				{
+				warning_osd=1;
+				snd_fx_no();
+				direct_launch=0;
+				goto ignore_all2;
+				}
+													
+
 			snd_fx_yes();
 
 			memcpy(discid,header->id,6); discid[6]=0;
@@ -4502,6 +5223,7 @@ get_games:
 
 			set_cheats_list(discid);
 			create_cheats();
+
 
 			
 			Screen_flip();											
@@ -4545,6 +5267,7 @@ get_games:
 			//////////////////////////////////
 			break;
 			}
+		ignore_all2: ;
 		//
 		}
 	else direct_launch=0;
@@ -4666,13 +5389,35 @@ get_games:
 			//make_rumble_off();
 			
 			SelectFontTexture(0);
-			if(scroll_mode) {volume_osd=0;rumble_off_osd=0;icon_osd=0;}
+			if(scroll_mode) {volume_osd=0;rumble_off_osd=0;icon_osd=0;warning_osd=0;}
 			}
 	else
 		{
 
-		if(scroll_mode) {volume_osd=0;rumble_off_osd=0;icon_osd=0;}
+		if(scroll_mode) {volume_osd=0;rumble_off_osd=0;icon_osd=0;warning_osd=0;}
 
+		if(warning_osd)
+			{
+			letter_size(10, 32);
+				
+				warning_osd++;												
+				if(warning_osd>60) warning_osd=0;
+				
+				SetTexture(NULL);
+				DrawRoundFillBox((SCR_WIDTH-620)/2, SCR_HEIGHT/2-30, 620 , 40, 0, 0xcfffffff);
+				PX=0; PY= SCR_HEIGHT/2-30+4; color= 0xff000000; bkcolor=0x0;
+				autocenter=1;
+				if(nand_mode & 1)
+					s_printf("You Have Selected Emulation of NAND From SD without One!!!");
+				else
+				if(nand_mode & 2)
+					s_printf("You Have Selected Emulation of NAND From USB without One!!!");
+				else s_printf("You Have Selected One Shit!!!");
+				autocenter=0;
+				bkcolor=0;
+				DrawRoundBox((SCR_WIDTH-620)/2, SCR_HEIGHT/2-30, 620 , 40, 0, 2, 0xcf000000);
+			}
+		else
 		if(rumble_off_osd)
 			{
 				rumble_off_osd++;
@@ -4689,7 +5434,7 @@ get_games:
 				bkcolor=0;
 				DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
 			}
-
+		else
 		if(icon_osd)
 			{
 				icon_osd++;
@@ -4706,7 +5451,7 @@ get_games:
 				bkcolor=0;
 				DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
 			}
-
+		else
 		if(volume_osd)
 			{
 				volume_osd++;

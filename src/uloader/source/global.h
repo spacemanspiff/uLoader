@@ -33,6 +33,8 @@
 extern int is_fat;
 extern int sd_ok;
 extern int ud_ok;
+extern int get_fat_name_pass;
+extern int global_mount; // 1 ->sd_ok SD was mounted | 2-> ud_ok  USB was mounted | 128-> Use NAND Emulation. Used for load_fat_module()
 
 extern int use_icon2;
 
@@ -40,6 +42,8 @@ extern struct discHdr *gameList;
 extern u32 gameCnt;
 
 extern u8 *temp_data;
+
+extern char* bannerTitle;
 
 void make_rumble_off();
 

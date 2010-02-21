@@ -6,3 +6,5 @@ internally works using s64 or u64 to skip the 2GB limit and works with 4GB (FAT3
 file equal to 4GB, but .ciso compact the file).
 
 Tested with Red Steel .ciso (about 3.9GB)
+
+Replaced strncpy by strcpy

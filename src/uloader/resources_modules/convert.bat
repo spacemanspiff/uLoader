@@ -9,7 +9,7 @@ filetochar ehcmodule.elf ehcmodule -h -align 32
 copy *.c ..\source\*.c
 copy *.h ..\source\*.h
 
-filetochar fat-module.elf fat_module -h -align 32
+filetochar fatffs-module.elf fatffs_module -h -align 32
 
 copy *.c ..\source\*.c
 copy *.h ..\source\*.h

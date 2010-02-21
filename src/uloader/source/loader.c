@@ -8,17 +8,21 @@
 #include "patchcode.h"
 #include "kenobiwii.h"
 
+#include "diario.h"
+#include "asndlib.h"
 
 extern int cios;
+extern u32 nand_mode;
+
 extern u32 load_dol();
 
 #define CERTS_SIZE	0xA00
 
-static const char certs_fs[] ALIGNED(32) = "/sys/cert.sys";
+static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "/sys/cert.sys";
 
 s32 GetCerts(signed_blob** Certs, u32* Length)
 {
-	static unsigned char		Cert[CERTS_SIZE] ALIGNED(32);
+	static unsigned char		Cert[CERTS_SIZE] ATTRIBUTE_ALIGN(32);
 	memset(Cert, 0, CERTS_SIZE);
 	s32				fd, ret;
 
@@ -564,9 +568,9 @@ static void __noprint(const char *fmt, ...)
 
 int load_disc(u8 *discid)
 {
-        static struct DiscHeader Header ALIGNED(0x20);
-        static struct Partition_Descriptor Descriptor ALIGNED(0x20);
-        static struct Partition_Info Partition_Info ALIGNED(0x20);
+        static struct DiscHeader Header ATTRIBUTE_ALIGN(32);
+        static struct Partition_Descriptor Descriptor ATTRIBUTE_ALIGN(32);
+        static struct Partition_Info Partition_Info ATTRIBUTE_ALIGN(32);
         int i;
 		
 
@@ -574,17 +578,34 @@ int load_disc(u8 *discid)
         memset(&Descriptor, 0, sizeof(Descriptor));
         memset(&Partition_Info, 0, sizeof(Partition_Info));
 
-
+		
 		cabecera2( "Loading...");
+
 		if(discid[6]!=0) is_fat=0;
+        
+		if(nand_mode & 3)
+			global_mount|= (nand_mode & 3);
+		else global_mount&=~3;
+		
 
 		if(is_fat)
 			{
-			if(load_fat_module(discid)<0) return 17;
+			if(load_fatffs_module(discid)<0) return 17;
+			}
+		else
+			{
+			if(global_mount & 3)
+				{
+				
+				if(load_fatffs_module(NULL)<0) return 17;
+				}
 			}
 
+      
+
+		
 		WDVD_Init();
-        
+       
 
 		if(is_fat) // FAT device
 			{
@@ -607,7 +628,9 @@ int load_disc(u8 *discid)
 			{
 			if(cios==249 && current_partition!=0) return 101;
 
+
 			if(WDVD_SetUSBMode(discid, current_partition)!=0) return 1;
+			
 			}
 		
 
@@ -620,8 +643,23 @@ int load_disc(u8 *discid)
 
         if (*Disc_ID==0x10001 || *Disc_ID==0x10001)
                 return 2;
+		DCFlushRange((void*)0x80000000, 0x20); // very, very important: the Disc_ID is used for group attr in the saves
+		 
+		 /* enable_ffs:
+		  bit 0   -> 0 SD 1-> USB
+		  bit 1-2 -> 0-> /nand, 1-> /nand2, 2-> /nand3, 3-> /nand4
+		  bit 3   -> led on in save operations
+		  bit 4-  -> verbose level: 0-> disabled, 1-> logs from FAT operations, 2 -> logs FFS operations
+		  bit 7   -> FFS emulation enabled/disabled
+		  */
 
-		
+		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | 128 );
+
+		ISFS_Deinitialize();
+		ISFS_Initialize();
+		usleep(500*1024);
+		ISFS_Deinitialize();
+		 
         Determine_VideoMode(*Disc_Region);
 	   
 		WDVD_UnencryptedRead(&Header, sizeof(Header), 0);
@@ -658,7 +696,7 @@ int load_disc(u8 *discid)
 				return 666; // if headerid != discid (on hdd) error
 			}
 		
-		else  memcpy((char *) discid, (char *) &Header, 6);
+		//else  memcpy((char *) discid, (char *) &Header, 6);
 
 		cabecera2( "Loading...");
 
@@ -712,8 +750,8 @@ int load_disc(u8 *discid)
         unsigned int T_Length	= 0;
         unsigned int MD_Length	= 0;
         
-        static u8	Ticket_Buffer[0x800] ALIGNED(32);
-        static u8	Tmd_Buffer[0x49e4] ALIGNED(32);
+        static u8	Ticket_Buffer[0x800] ATTRIBUTE_ALIGN(32);
+        static u8	Tmd_Buffer[0x49e4] ATTRIBUTE_ALIGN(32);
         
         GetCerts(&Certs, &C_Length);
         WDVD_UnencryptedRead(Ticket_Buffer, 0x800, ((u64) Partition_Info.Offset) << 2);
@@ -752,7 +790,7 @@ int load_disc(u8 *discid)
                 return 4;
         Tmd = (signed_blob*)(Tmd_Buffer);
         MD_Length = SIGNED_TMD_SIZE(Tmd);
-        static struct AppLoaderHeader Loader ALIGNED(32);
+        static struct AppLoaderHeader Loader ATTRIBUTE_ALIGN(32);
 
         WDVD_Read(&Loader, sizeof(Loader), 0x00002440);// Offset into the partition to apploader header
         DCFlushRange((void*)(((u32)&Loader) + 0x20),Loader.Size + Loader.Trailer_Size);
@@ -925,7 +963,6 @@ int load_disc(u8 *discid)
 
         }
 		
-	
 
 		if(!strncmp((void *) AlternativeDol_infodat.id, (void *) discid, 6))
 			{
@@ -938,6 +975,10 @@ int load_disc(u8 *discid)
 
 			}
 
+		ASND_StopVoice(1);
+	    ASND_End();
+		usleep(100*1000);
+
 
 		WPAD_Shutdown();
 
@@ -945,7 +986,7 @@ int load_disc(u8 *discid)
         WDVD_Close();
 
 		
-
+		
 		#if 1
         // Identify as the game
         if (IS_VALID_SIGNATURE(Certs) 	&& IS_VALID_SIGNATURE(Tmd) 	&& IS_VALID_SIGNATURE(Ticket) 
@@ -956,8 +997,9 @@ int load_disc(u8 *discid)
                         return ret;
         }
 		#endif
-
-		
+  
+        
+		 //enable_ffs(1);
 
 		// Retrieve application entry point
         void* Entry;
@@ -987,8 +1029,13 @@ int load_disc(u8 *discid)
 		//*(u32 *)0x80003140 = *(u32 *)0x80003188; // removes 002-Error (by WiiPower: http://gbatemp.net/index.php?showtopic=158885&hl=)
         *(u32 *)0x80003188 = *(u32 *)0x80003140;
 
-	
+		  //
+       
 
+
+		DCFlushRange((void*)0x80000000, 0x17fffff);
+			
+		
         // Set Video Mode based on Configuration
 		if (vmode)
 			Set_VideoMode();
@@ -1000,8 +1047,7 @@ int load_disc(u8 *discid)
        // debug_printf("start %p\n",Entry);
 	   settime(secs_to_ticks(time(NULL) - 946684800));
 
-       //
-
+     
 	   VIDEO_SetBlack(TRUE);
 	   VIDEO_Flush();
 	   VIDEO_WaitVSync();

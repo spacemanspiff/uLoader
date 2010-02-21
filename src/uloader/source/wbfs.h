@@ -1,6 +1,8 @@
 #ifndef _WBFS_H_
 #define _WBFS_H_
 
+#include "sonido.h"
+
 /* Prototypes */
 s32 WBFS_Init(void);
 s32 WBFS_Open(void);
@@ -28,5 +30,7 @@ s32 WBFS_RenameGame(u8 *, char *);
 s32 WBFS_SetBCA(u8 *discid, u8 *bca);
 
 s32 disc_getdols(u8 *id);
+
+char* WBFS_BannerTitle(u8 *discid,  SoundInfo *snd);
 
 #endif

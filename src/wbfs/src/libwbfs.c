@@ -262,10 +262,19 @@ int ret=0;
 int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
 int discn;
 int keyinput;
-
+int bad_error=0;
 u8 id1[7],id2[7];
 
 load_freeblocks(p);
+
+i=ALIGN_LBA(p->n_wbfs_sec/8);
+
+u32 *in_use = wbfs_ioalloc(i);
+
+if(!in_use) {printf("Error: Out of Memory\n"); return;}
+
+memset(in_use,0,i);
+
 
 for(i=0;i<p->max_disc;i++)
         {
@@ -293,6 +302,22 @@ for(i=0;i<p->max_disc;i++)
 					{
 					if(flag==2) flag=0;
 					if(flag==1) flag=2;
+
+						{ // test if block is marked as free...
+					    int i = (iwlba-1)/(32);
+					    int j = (iwlba-1)&31;
+        
+                        u32 v = wbfs_ntohl(p->freeblks[i]);
+                        if((v & (1<<j)) == (u32)(1<<j))
+							{
+							//wbfs_htonl(v | 1<<j);
+							printf("Error! LBA %u is marked as 'Free' in Disc %s. Fixed!\n", iwlba, id1);
+							p->freeblks[i] = wbfs_htonl(v & ~(1<<j));
+							bad_error=1;
+							}
+
+						in_use[i]|= wbfs_htonl(v | (1<<j));
+						}
 					
 
 					for(m=0; m<p->n_wbfs_sec_per_disc; m++)
@@ -303,7 +328,7 @@ for(i=0;i<p->max_disc;i++)
 							
 							if(iwlba==iwlba2)
 								{//3
-								
+								bad_error=1;
 								printf("Error! Crossed LBA %u in Disc %s and Disc %s\n", iwlba, id1, id2);
 								if(flag==2 && keyinput)
 									{// 2
@@ -350,7 +375,33 @@ for(i=0;i<p->max_disc;i++)
 		wbfs_close_disc(d);wbfs_sync(p);
 		if(ret) load_freeblocks(p);
 		}
+if(!bad_error)
+	{
+	int j;
 
+	printf("Checking for lost blocks... (Press any key to start)\n");
+	while(1) {if(!kbhit()) break; getch();}
+	getch();
+	
+	for(i=0;i<p->n_wbfs_sec/(32);i++)
+		{
+		u32 v = wbfs_ntohl(p->freeblks[i]);
+		u32 w = wbfs_ntohl(in_use[i]);
+		for(j=0;j<32;j++)
+           if (!(v & (1<<j)) && !(w & (1<<j)))
+			{
+			printf("Block %i marked as 'Used' but really, it is 'Free'. Fixed\n", i+j);
+			v|=(1<<j);
+			}
+
+		p->freeblks[i] = wbfs_htonl(v);
+				
+		}
+
+	wbfs_sync(p);
+
+	}
+if(in_use) free(in_use);
 printf("End\n\nPress Any Key\n");
 
 while(1) {if(!kbhit()) break; getch();}

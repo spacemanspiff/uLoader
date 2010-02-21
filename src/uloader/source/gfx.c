@@ -735,10 +735,15 @@ void display_spinner_draw()
 }
 
 
+int thread_in_second_plane=0;
+
+char my_perror_error[256]="";
 
 void my_perror(char * err)
 {
 int n;
+
+if(thread_in_second_plane) {sprintf(my_perror_error,"Error: %s",err);return;}
 	Screen_flip();
 
 	for(n=0;n<240;n++)
@@ -1462,6 +1467,8 @@ while(n<15*60)
 	Screen_flip();
 	
 	wiimote_read();
+    
+	if(exit_by_reset) break;
 
 	if(new_pad && n>10)
 				{

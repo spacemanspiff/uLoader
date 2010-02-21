@@ -85,10 +85,12 @@ void wiimote_ir();
 void wiimote_guitar();
 
 
-
 /*************************************/
 
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
+
+extern int thread_in_second_plane;
+extern char my_perror_error[256];
 
 extern int flag_snow;
 

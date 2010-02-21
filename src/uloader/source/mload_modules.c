@@ -30,21 +30,48 @@ static u32 ios_38[16] ATTRIBUTE_ALIGN(32)=
 };
 
 
-/*
+static u32 ios_37[16] ATTRIBUTE_ALIGN(32)=
+{
+	0, // DI_EmulateCmd
+	0,
+	0x2022DD60, // dvd_read_controlling_data
+	0x20200F04+1, // handle_di_cmd_reentry (thumb)
+	0x2020096C+1, // ios_shared_alloc_aligned (thumb)
+	0x2020093C+1, // ios_shared_free (thumb)
+	0x20205E54+1, // ios_memcpy (thumb)
+	0x20200048+1, // ios_fatal_di_error (thumb)
+	0x20202A70+1, // ios_doReadHashEncryptedState (thumb)
+	0x2020387C+1, // ios_printf (thumb)
+};
+
+static u32 ios_57[16] ATTRIBUTE_ALIGN(32)=
+{
+	0, // DI_EmulateCmd
+	0,
+	0x2022cd60, // dvd_read_controlling_data
+	0x20200f04+1, // handle_di_cmd_reentry (thumb)
+	0x2020096c+1, // ios_shared_alloc_aligned (thumb) // no usado
+	0x2020093C+1, // ios_shared_free (thumb) // no usado
+	0x20205EF0+1, // ios_memcpy (thumb)
+	0x20200048+1, // ios_fatal_di_error (thumb)
+	0x20202944+1, // ios_doReadHashEncryptedState (thumb)
+	0x20203750+1, // ios_printf (thumb)
+};
+
 static u32 ios_60[16] ATTRIBUTE_ALIGN(32)=
 {
 	0, // DI_EmulateCmd
 	0,
 	0x2022cd60, // dvd_read_controlling_data
 	0x20200f04+1, // handle_di_cmd_reentry (thumb)
-	0, // ios_shared_alloc_aligned (thumb) // no usado
-	0, // ios_shared_free (thumb) // no usado
+	0x2020096c+1, // ios_shared_alloc_aligned (thumb) // no usado
+	0x2020093C+1, // ios_shared_free (thumb) // no usado
 	0x20205e00+1, // ios_memcpy (thumb)
 	0x20200048+1, // ios_fatal_di_error (thumb)
 	0x20202944+1, // ios_doReadHashEncryptedState (thumb)
 	0x20203750+1, // ios_printf (thumb)
 };
-*/
+
 
 u32 patch_datas[8] ATTRIBUTE_ALIGN(32);
 
@@ -117,10 +144,10 @@ if(sd_ok && !external_ehcmodule)
 
 	// Test for IOS
 
-	
+	#if 0
 	mload_seek(0x20207c84, SEEK_SET);
-	mload_read(patch_datas, 4);
-	if(patch_datas[0]==0x6e657665) 
+	mload_read(patch_datas, 32);
+	if(patch_datas[0]==0x6e657665 ) 
 		{
 		is_ios=38;
 		}
@@ -129,35 +156,77 @@ if(sd_ok && !external_ehcmodule)
 		is_ios=36;
 		}
 
-	if(is_ios==36)
+#endif
+	is_ios=mload_get_IOS_base();
+	
+	switch(is_ios)
 		{
-		// IOS 36
-		memcpy(ios_36, dip_plugin, 4);		// copy the entry_point
-		memcpy(dip_plugin, ios_36, 4*10);	// copy the adresses from the array
-		
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
 
-		// enables DIP plugin
-		mload_seek(0x20209040, SEEK_SET);
-		mload_write(ios_36, 4);
+		case 36:
+	
+			memcpy(ios_36, dip_plugin, 4);		// copy the entry_point
+			memcpy(dip_plugin, ios_36, 4*10);	// copy the adresses from the array
+			
+			mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+			mload_write(dip_plugin,size_dip_plugin);
+
+			// enables DIP plugin
+			mload_seek(0x20209040, SEEK_SET);
+			mload_write(ios_36, 4);
+			break;
 		 
-		}
-	if(is_ios==38)
-		{
-		// IOS 38
+		case 37:
 
-		memcpy(ios_38, dip_plugin, 4);	    // copy the entry_point
-		memcpy(dip_plugin, ios_38, 4*10);   // copy the adresses from the array
+			memcpy(ios_37, dip_plugin, 4);	    // copy the entry_point
+			memcpy(dip_plugin, ios_37, 4*10);   // copy the adresses from the array
+			
+			mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+			mload_write(dip_plugin,size_dip_plugin);
+
+			// enables DIP plugin
+			mload_seek(0x20209030, SEEK_SET);
+			mload_write(ios_37, 4);
+			break;
+
+		case 38:
+
+			memcpy(ios_38, dip_plugin, 4);	    // copy the entry_point
+			memcpy(dip_plugin, ios_38, 4*10);   // copy the adresses from the array
+			
+			mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+			mload_write(dip_plugin,size_dip_plugin);
+
+			// enables DIP plugin
+			mload_seek(0x20208030, SEEK_SET);
+			mload_write(ios_38, 4);
+			break;
+
+		case 57:
+
+			memcpy(ios_57, dip_plugin, 4);	    // copy the entry_point
+			memcpy(dip_plugin, ios_57, 4*10);   // copy the adresses from the array
+			
+			mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+			mload_write(dip_plugin,size_dip_plugin);
+
+			// enables DIP plugin
+			mload_seek(0x20208030, SEEK_SET);
+			mload_write(ios_57, 4);
+			break;
 		
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
+		case 60:
 
-		// enables DIP plugin
-		mload_seek(0x20208030, SEEK_SET);
-		mload_write(ios_38, 4);
+			memcpy(ios_60, dip_plugin, 4);	    // copy the entry_point
+			memcpy(dip_plugin, ios_60, 4*10);   // copy the adresses from the array
+			
+			mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
+			mload_write(dip_plugin,size_dip_plugin);
 
-		
+			// enables DIP plugin
+			mload_seek(0x20208030, SEEK_SET);
+			mload_write(ios_60, 4);
+			break;
+
 		}
 
 	mload_close();
@@ -172,40 +241,56 @@ return 0;
 #define IOCTL_FAT_MOUNTUSB	0xF2
 #define IOCTL_FAT_UMOUNTUSB	0xF3
 
+#define IOCTL_FFS_MODE		0x80
 
-
-int load_fat_module(u8 *discid)
+int load_fatffs_module(u8 *discid)
 {
 static char fs[] ATTRIBUTE_ALIGN(32) = "fat";
-static s32 hid = -1, fd = -1;
+s32 hid = -1, fd = -1;
 static char file_name[256]  ALIGNED(0x20)="sd:";
 int n;
-
+char *p;
 s32 ret;
+
+	p=&file_name[0];
 
 	if(mload_init()<0) return -1;
 
-	mload_elf((void *) fat_module, &my_data_elf);
+	mload_elf((void *) fatffs_module, &my_data_elf);
 	my_thread_id= mload_run_thread(my_data_elf.start, my_data_elf.stack, my_data_elf.size_stack, my_data_elf.prio);
 	if(my_thread_id<0) return -1;
 
-	sd_ok=ud_ok=1;
-			
-	char *p=get_fat_name(discid);
-			
-	sd_ok=ud_ok=0;
-			
-	if(!p) return -1;
-			
-	// change 'ud:' by 'usb:'
-	if(p[0]=='u') {file_name[0]='u';file_name[1]='s';file_name[2]='b';memcpy(file_name+3, (void *)p+2, 253);}			   
-	else {memcpy(file_name, (void *) p, 256);}
+    global_mount &=~0xc;
 
-	// copy filename to dip_plugin filename area
-	mload_seek(*((u32 *) (dip_plugin+14*4)), SEEK_SET);	// offset 14 (filename Address - 256 bytes)
-	mload_write(file_name, sizeof(file_name)+1);
-	mload_close();
+	if(discid)
+		{
+		sd_ok=ud_ok=1;
+				
+		p=get_fat_name(discid);
+				
+		sd_ok=ud_ok=0;
+				
+		if(!p) return -1;
+
+		global_mount &=~0xf;
+			
+		// change 'ud:' by 'usb:'
+		if(p[0]=='u') {global_mount|=2;file_name[0]='u';file_name[1]='s';file_name[2]='b';memcpy(file_name+3, (void *)p+2, 253);}			   
+		else {global_mount|=1;memcpy(file_name, (void *) p, 256);}
+
+		// copy filename to dip_plugin filename area
+		mload_seek(*((u32 *) (dip_plugin+14*4)), SEEK_SET);	// offset 14 (filename Address - 256 bytes)
+		mload_write(file_name, sizeof(file_name));
+		mload_close();
+
 		
+		}
+	else
+		{
+		if((global_mount & 3)==0) return 0;
+		if(global_mount & 1) p[0]='s';
+		if(global_mount & 2) p[0]='u';
+		}
 	usleep(350*1000);
 
 	/* Create heap */
@@ -219,15 +304,28 @@ s32 ret;
 	fd = IOS_Open(fs, 0);
 	
 	if (fd < 0)
+		{
+		if(hid>=0)
+			{
+			iosDestroyHeap(hid);
+			hid=-1;
+			}
 		return -1;
+		}
   
-	n=20; // try 20 times
+	n=30; // try 20 times
 	while(n>0)
 	{
-		if(p[0]=='u') ret=IOS_IoctlvFormat(hid, fd, IOCTL_FAT_MOUNTUSB, ":");
-		else ret=IOS_IoctlvFormat(hid, fd, IOCTL_FAT_MOUNTSD, ":");
+		if((global_mount & 10)==2) {ret=IOS_IoctlvFormat(hid, fd, IOCTL_FAT_MOUNTUSB, ":");if(ret==0) global_mount|=8;}
+		else {ret=IOS_IoctlvFormat(hid, fd, IOCTL_FAT_MOUNTSD, ":");if(ret==0) {global_mount|=4;}}
+		
+		if((global_mount & 7)==3 && ret==0)	 
+			{ret=IOS_IoctlvFormat(hid, fd, IOCTL_FAT_MOUNTSD, ":");if(ret==0) global_mount|=4;}
+
+    if((global_mount & 3)==((global_mount>>2) & 3) && (global_mount & 3)) {ret=0;break;} else ret=-1;
 	
-	if(ret==0) break;
+	//ret=IOS_IoctlvFormat(hid, fd, IOCTL_FAT_MOUNTSD, ":");
+	//if(ret==0) break;
 	usleep(500*1000);
 	n--;
 	}
@@ -246,6 +344,53 @@ s32 ret;
 	if(n==0) return -1;
 
 return 0;
+}
+
+
+int enable_ffs(int mode)
+{
+static char fs[] ATTRIBUTE_ALIGN(32) = "fat";
+ s32 hid = -1, fd = -1;
+s32 ret;
+
+	/* Create heap */
+	if (hid < 0) {
+		hid = iosCreateHeap(0x100);
+		if (hid < 0)
+			return -1; 
+	}
+
+	/* Open USB device */
+	fd = IOS_Open(fs, 0);
+	
+	if (fd < 0)
+		{
+		if(hid>=0)
+			{
+			iosDestroyHeap(hid);
+			hid=-1;
+			}
+		return -1;
+		}
+
+
+	ret=IOS_IoctlvFormat(hid, fd, IOCTL_FFS_MODE, "i:", mode);
+	
+
+    if (fd >= 0) {
+		IOS_Close(fd);
+		fd = -1;
+	}
+
+	if(hid>=0)
+		{
+		iosDestroyHeap(hid);
+		hid=-1;
+		}
+	
+
+
+return ret;
 }
 
 void enable_ES_ioctlv_vector(void)

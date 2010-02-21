@@ -292,7 +292,7 @@ int _FAT_rename_r (struct _reent *r, const char *oldName, const char *newName) {
 	memcpy (&newDirEntry, &oldDirEntry, sizeof(DIR_ENTRY));
 	
 	// Set the new name
-	strncpy (newDirEntry.filename, pathEnd, MAX_FILENAME_LENGTH - 1);
+	strcpy (newDirEntry.filename, pathEnd);//, MAX_FILENAME_LENGTH - 1);
 	
 	// Write the new entry
 	if (!_FAT_directory_addEntry (partition, &newDirEntry, dirCluster)) {
@@ -381,7 +381,7 @@ int _FAT_mkdir_r (struct _reent *r, const char *path, int mode) {
 		pathEnd += 1;
 	}
 	// Create the entry data
-	strncpy (dirEntry.filename, pathEnd, MAX_FILENAME_LENGTH - 1);
+	strcpy (dirEntry.filename, pathEnd);//, MAX_FILENAME_LENGTH - 1);
 	memset (dirEntry.entryData, 0, DIR_ENTRY_DATA_SIZE);
 	
 	// Set the creation time and date
@@ -584,7 +584,7 @@ int _FAT_dirnext_r (struct _reent *r, DIR_ITER *dirState, char *filename, struct
 	}
 
 	// Get the filename
-	strncpy (filename, state->currentEntry.filename, MAX_FILENAME_LENGTH);
+	strcpy (filename, state->currentEntry.filename);//, MAX_FILENAME_LENGTH);
 	// Get the stats, if requested
 	if (filestat != NULL) {
 		_FAT_directory_entryStat (state->partition, &(state->currentEntry), filestat);

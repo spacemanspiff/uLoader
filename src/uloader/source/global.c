@@ -20,6 +20,8 @@ extern u8 alt_dol_disc_tab[32768];
 
 dol_infodat AlternativeDol_infodat;
 
+int get_fat_name_pass=0;
+
 char * get_fat_name(u8 *id)
 {
 int n;
@@ -28,13 +30,16 @@ int n;
 		{
 		if(!strncmp((void *) fat_disc[n].id, (void *) id, 6))
 			{
-			if(!strncmp((void *) &fat_games[n][0],"sd",2))
+			if(!get_fat_name_pass)
 				{
-				if(!sd_ok) return NULL;
-				}
-			else 
-				{
-				if(!ud_ok) return NULL;
+				if(!strncmp((void *) &fat_games[n][0],"sd",2))
+					{
+					if(!sd_ok) return NULL;
+					}
+				else 
+					{
+					if(!ud_ok) return NULL;
+					}
 				}
 			fat_index=n;
 			return &fat_games[n][0];
