@@ -599,12 +599,50 @@ s32 WBFS_RenameGame(u8 *discid, char *new_name)
 {
 
 int ret=0;
-if(!hdd) WBFS_Open();
+
 if (!hdd)
 		return 0;
 	/* Try to open game disc */
-	ret= wbfs_ren_disc(hdd, (u8 *) discid,new_name);
+	ret= wbfs_ren_disc(hdd, (u8 *) discid, new_name);
 
 	
 return ret;
+}
+
+
+s32 WBFS_SetBCA(u8 *discid, u8 *bca)
+{
+u8 *buffer;
+
+wbfs_disc_t *disc = NULL;
+if (!hdd)
+		return 0;
+	
+	buffer=malloc(0x8000);
+
+if(!buffer) return 0;
+
+
+/* Try to open game disc */
+	disc = wbfs_open_disc(hdd, (u8 *) discid);
+	if (!disc)
+		{
+		free(buffer);
+	
+		return 0;
+		}
+	else 
+		{
+		wbfs_disc_read(disc, (0)>>2, buffer, 512);
+		
+		memcpy( (void *) (buffer+0x100), (void *)  bca, 64);
+
+		wbfs_disc_write(disc,(0)>>2, buffer, 512);
+		wbfs_close_disc(disc);
+		
+		}
+	
+	free(buffer);
+	
+return 1;
 }

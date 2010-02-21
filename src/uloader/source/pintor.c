@@ -130,7 +130,7 @@ for(n=0;n<HEIGHT;n++) // convierte una superficie de 256x192 32 bits a 320x240 1
 CreateTexture(&text_pintor, TILE_SRGBA8, video_text, WIDTH, HEIGHT, 0);
 
 SetTexture(NULL);
-DrawFillBox(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0xffff0000);
+DrawFillBox(-128, 0, SCR_WIDTH+256, SCR_HEIGHT, 0, 0xffff0000);
 
 SetTexture(&text_pintor);
 DrawFillBox(8, 8, SCR_WIDTH-16, SCR_HEIGHT-16, 0, 0xffffffff);
@@ -980,6 +980,7 @@ extern unsigned temp_pad,new_pad,old_pad;
 extern int exit_by_reset;
 extern unsigned wiimote_read();
 extern void wiimote_rumble(int status);
+extern int time_sleep;
 
 static short pcmout[2][2048] ATTRIBUTE_ALIGN(32);
 int pcm_flip=0;
@@ -1050,6 +1051,12 @@ if(PADEVENT) // lectura del PAD por interrupciones :D
 
 		temp_pad= wiimote_read(); 
 	    new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+		
+		if(new_pad)
+			{
+			time_sleep=5*60;
+			SetVideoSleep(0);
+			}
         
 		if(exit_by_reset) goto sal_del_juego;
 

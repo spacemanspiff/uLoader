@@ -1,4 +1,4 @@
-uLoader v3.5 - by Hermes (www.elotrolado.net)
+uLoader v3.6 - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (3.0 required). Now you can select the IOS used to install
@@ -11,6 +11,18 @@ to launch backups from USB mass storage devices with a graphical user interface 
 Features:
 ---------
 
+- Support for Cover commands in dip_plugin and ehcmodule. cIOS 249 support are removed in uLoader-
+
+- Support 16:9 and screensaver added
+
+- Added alternative menu from game configuration to select BCA mode: From Disc (read it from 0x100 offset), From Database (sd:/bca_database.txt)
+	or Grab from Database (sd:/bca_database.txt -> to offset 0x100 in WBFS disc)
+
+
+- Added button (d. pad DOWN) to on/off the rumble. 
+  Se añade boton (d. pad UP) to select 4 icons and 2 size for the pointer.
+
+- Support added to update uLoader from Internet (Enter in Menu HOME)
 
 - Support for DVD USB Devices: It can run only DVD backups from .iso (original don't work
   because DVD drivers don´t support the Wii format). Remember you must insert a DVD

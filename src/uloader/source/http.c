@@ -210,7 +210,7 @@ struct header_block
 
 #define HTTP_BUFFER_SIZE 1024*5
 
-#define HTTP_MAX_BUFFER 512*1024
+#define HTTP_MAX_BUFFER 2*1024*1024
 
 struct header_block * read_block(s32 s)
 {
@@ -326,10 +326,11 @@ bool http_request (const char *url, const u32 max_size) {
 		
 		if(content_start == NULL) goto error;
 		
-        http_data = (u8 *) malloc (content_length);
+        http_data = (u8 *) malloc (content_length+16);
 		  
         if(http_data == NULL) goto error;
 
+        memset(http_data,0,content_length+16);
 		memcpy(http_data, content_start, content_length);
 
 		free (response->data); response->data=NULL;

@@ -5,6 +5,8 @@ filetochar button3.png button3 -h
 filetochar defpng.png defpng -h
 filetochar lotus3_2.mod lotus3_2 -h
 
+filetochar sound.raw sound -h
+
 copy *.c ..\source\resources\*.c
 copy *.h ..\source\resources\*.h
 

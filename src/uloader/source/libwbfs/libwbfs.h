@@ -231,6 +231,7 @@ u32 wbfs_add_cfg(wbfs_t *p, read_wiidisc_callback_t read_src_wii_disc, void *cal
 
 int wbfs_ren_disc(wbfs_t* p, u8 *discid, char *new_name);
 
+
 #ifdef __cplusplus
    }
 #endif /* __cplusplus */

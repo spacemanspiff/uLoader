@@ -15,12 +15,12 @@ extern "C" {
 #define icon_bits_per_color 8
 
 
-#define icon_palette_colors 221
+#define icon_palette_colors 56
 #define icon_palette_bits 16
 #define icon_palette_base 0
 
 
-extern unsigned short icon_palette[221];
+extern unsigned short icon_palette[56];
 
 typedef struct
 {
@@ -29,10 +29,10 @@ unsigned short sx,sy;
 } type_sprite_list_icon;  // Sprite list Struct type
 
 
-#define icon_num_sprites 5 // Number of Sprites
+#define icon_num_sprites 9 // Number of Sprites
 
 
-extern type_sprite_list_icon icon_sprites[5]; // Sprite List
+extern type_sprite_list_icon icon_sprites[9]; // Sprite List
 
 
 #define icon_sprite_1_sx 64
@@ -64,6 +64,30 @@ extern unsigned char icon_sprite_4[16384];
 
 
 extern unsigned char icon_sprite_5[4096];
+
+#define icon_sprite_6_sx 64
+#define icon_sprite_6_sy 64
+
+
+extern unsigned char icon_sprite_6[4096];
+
+#define icon_sprite_7_sx 64
+#define icon_sprite_7_sy 64
+
+
+extern unsigned char icon_sprite_7[4096];
+
+#define icon_sprite_8_sx 64
+#define icon_sprite_8_sy 64
+
+
+extern unsigned char icon_sprite_8[4096];
+
+#define icon_sprite_9_sx 64
+#define icon_sprite_9_sy 64
+
+
+extern unsigned char icon_sprite_9[4096];
 
 #ifdef __cplusplus
 }

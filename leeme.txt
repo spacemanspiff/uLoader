@@ -1,4 +1,4 @@
-uLoader v3.5 - por Hermes (www.elotrolado.net)
+uLoader v3.6 - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (3.0 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -11,6 +11,17 @@ para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz 
 Caracteristicas:
 ---------------
 
+- Soporte para comandos Cover en dip_plugin y ehcmodule. Se suprime el uso del cIOS 249
+
+- Se añade soporte 16:9 y se añade salvapantallas
+
+- Se añade menu alternativo de configuracion, donde podremos seleccionar si BCA se toma de disco, de la base de datos (sd:/bca_database.txt)
+  o en el caso de disco en HDD/pendrive obtener el BCA de la base de datos y programarlo en el offset 0x100 del juego
+
+- Se añade boton (cruceta Abajo) para suprimir la vibracion del mando. 
+  Se añade boton (cruceta Arriba) para seleccionar 4 iconos y 2 tamaños distintos para el puntero.
+
+- Añadido soporte de actualizacion de la aplicacion  desde Internet (Entra Menu HOME)
 
 - Soporte para dispositivos DVD USB: Ello solo puede correr backups de DVD desde .iso (los juegos originales no funcionan debido a que los lectores
   de DVD no soportan el formato Wii). Recuerda que debes insertar un DVD al empezar el programa para trabajar. Mira "Modo DVD USB" abajo en este leeme.txt

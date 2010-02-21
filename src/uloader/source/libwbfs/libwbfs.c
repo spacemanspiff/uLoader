@@ -451,8 +451,10 @@ int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
         u32 len_copied;
         int err = 0;
         u8  *ptr = data;
+
         if(unlikely(iwlba==0))
                 return 1;
+
         if(unlikely(off)){
                 off*=4;
 				len_copied = p->hd_sec_sz - off;
@@ -462,14 +464,13 @@ int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
 				err = p->read_hdsector(p->callback_data,
                                        p->part_lba + (iwlba<<iwlba_shift) + lba, 1, p->tmp_buffer);
 				if(err)
-                        return err;
+                        goto error;
 			    wbfs_memcpy(p->tmp_buffer + off, ptr, len_copied);
                 err = p->write_hdsector(p->callback_data,
                                        p->part_lba + (iwlba<<iwlba_shift) + lba, 1, p->tmp_buffer);
                 if(err)
-                        return err;
+                        goto error;
                 
-                //
                 len -= len_copied;
                 ptr += len_copied;
                 lba++;
@@ -477,7 +478,7 @@ int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
                         lba=0;
                         iwlba =  wbfs_ntohs(d->header->wlba_table[++wlba]);
                         if(unlikely(iwlba==0))
-                                return 1;
+					{wbfs_sync(p);return 1;}
                 }
         }
         while(likely(len>=p->hd_sec_sz))
@@ -489,7 +490,8 @@ int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
                 err = p->write_hdsector(p->callback_data,
                                  p->part_lba + (iwlba<<iwlba_shift) + lba, nlb, ptr);
                 if(err)
-                        return err;
+                        goto error;
+				
                 len -= nlb<<p->hd_sec_sz_s;
                 ptr += nlb<<p->hd_sec_sz_s;
                 lba += nlb;
@@ -497,22 +499,28 @@ int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
                         lba = 0;
                         iwlba =wbfs_ntohs(d->header->wlba_table[++wlba]);
                         if(unlikely(iwlba==0))
-                                return 1;
+					{wbfs_sync(p);return 1;}
                 }
         }
         if(unlikely(len)){
 				err = p->read_hdsector(p->callback_data,
                                  p->part_lba + (iwlba<<iwlba_shift) + lba, 1, p->tmp_buffer);
 				if(err)
-                        return err;
+                        goto error;
 			    wbfs_memcpy(p->tmp_buffer, ptr, len);
                 err = p->write_hdsector(p->callback_data,
                                  p->part_lba + (iwlba<<iwlba_shift) + lba, 1, p->tmp_buffer);
-                if(err)
-                        return err;
+				
+                if(err) 
+					goto error;
+                        
                
         }     
+		wbfs_sync(p);
         return 0;
+error:
+		wbfs_sync(p);
+        return err;
 }
 
 // disc listing
@@ -770,13 +778,13 @@ u32 wbfs_add_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc,
                                 u32 offset = (i*(p->wbfs_sec_sz>>2)) + (j*(p->wii_sec_sz>>2));
 								if(abort_signal)
 									ERROR("Aborted");
-                                read_src_wii_disc(callback_data,offset,p->wii_sec_sz,copy_buffer);
+                                if(read_src_wii_disc(callback_data,offset,p->wii_sec_sz,copy_buffer)<0) {abort_signal=1;ERROR("Reading Error");}
 
                                 //fix the partition table
                                 if(offset == (0x40000>>2))
                                              wd_fix_partition_table(d, sel, copy_buffer);
-                                p->write_hdsector(p->callback_data,p->part_lba+bl*(p->wbfs_sec_sz/p->hd_sec_sz)+j*(p->wii_sec_sz/p->hd_sec_sz),
-                                             p->wii_sec_sz/p->hd_sec_sz,copy_buffer);
+                                if(p->write_hdsector(p->callback_data,p->part_lba+bl*(p->wbfs_sec_sz/p->hd_sec_sz)+j*(p->wii_sec_sz/p->hd_sec_sz),
+                                             p->wii_sec_sz/p->hd_sec_sz,copy_buffer)<0) {abort_signal=1;ERROR("Reading Error");}
                                 cur++;
                                 if(spinner)
                                              spinner(cur,tot);
@@ -786,7 +794,7 @@ u32 wbfs_add_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc,
         }
         // write disc info
         int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
-        p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,info);
+        if(p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,info)<0) ERROR("Writing Error");
         wbfs_sync(p);
 		
 		if(d)
@@ -811,12 +819,13 @@ error:
 				}
 			memset(info,0,p->disc_info_sz);
 			int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
-			p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,info); 
+			if(p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,info)<0) {wbfs_sync(p);wbfs_error("Writing error");goto error2;}
 			p->head->disc_table[discn] = 0;
 
 			wbfs_sync(p);
        
 			}
+error2:
         if(d)
                 wd_close_disc(d);
         if(used)
@@ -922,7 +931,7 @@ u32 wbfs_add_cfg
 					}
 				memset(info,0,p->disc_info_sz);
 				int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
-				p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,info); 
+				if(p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,info) <0) ERROR("Writing Error");
 				p->head->disc_table[discn] = 0;
 
 				wbfs_sync(p);
@@ -933,7 +942,7 @@ u32 wbfs_add_cfg
 
 			wbfs_memset(copy_buffer, 0, p->wbfs_sec_sz);
 			
-			p->write_hdsector(p->callback_data, p->part_lba + bl * (p->wbfs_sec_sz / p->hd_sec_sz), p->wbfs_sec_sz / p->hd_sec_sz, copy_buffer);
+			if(p->write_hdsector(p->callback_data, p->part_lba + bl * (p->wbfs_sec_sz / p->hd_sec_sz), p->wbfs_sec_sz / p->hd_sec_sz, copy_buffer) <0) ERROR("Writing Error");
 			}
 		
 
@@ -942,7 +951,7 @@ u32 wbfs_add_cfg
 	
 	// write disc info
 	disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
-	p->write_hdsector(p->callback_data, p->part_lba + 1 + discn * disc_info_sz_lba,disc_info_sz_lba, info);
+	if(p->write_hdsector(p->callback_data, p->part_lba + 1 + discn * disc_info_sz_lba,disc_info_sz_lba, info) <0) ERROR("Writing Error");
         
 	wbfs_sync(p);
 
@@ -979,7 +988,8 @@ u32 wbfs_rm_disc(wbfs_t*p, u8* discid)
                         free_block(p,iwlba);
         }
         memset(d->header,0,p->disc_info_sz);
-        p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,d->header);
+        if( p->write_hdsector(p->callback_data,p->part_lba+1+discn*disc_info_sz_lba,disc_info_sz_lba,d->header) <0) ERROR("Writing Error");
+error:
         p->head->disc_table[discn] = 0;
         wbfs_close_disc(d);
         wbfs_sync(p);
@@ -1009,38 +1019,46 @@ u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,v
                         
                         if(spinner)
                                 spinner(i,p->n_wbfs_sec_per_disc);
-                        p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
-                        write_dst_wii_sector(callback_data, i*dst_wbs_nlb, dst_wbs_nlb, copy_buffer);
+                        if(p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer)<0) ERROR("Reading Error");
+                        if(write_dst_wii_sector(callback_data, i*dst_wbs_nlb, dst_wbs_nlb, copy_buffer)<0) ERROR("Writing Error");
                 }
         }
         wbfs_iofree(copy_buffer);
         return 0;
 error:
+		if(copy_buffer) wbfs_iofree(copy_buffer);
         return 1;
 }
+
 
 int wbfs_ren_disc(wbfs_t* p, u8 *discid, char *new_name)
 {
         u32 i;
         int disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
+
+		wbfs_sync(p);
        
         for(i=0;i<p->max_disc;i++)
         {
                 if (p->head->disc_table[i]){
-                        p->read_hdsector(p->callback_data,
-                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer);
+                        if(p->read_hdsector(p->callback_data,
+                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer)<0) ERROR("Reading Error");
                         if(wbfs_memcmp(discid,p->tmp_buffer,6)==0){
-							wbfs_memcpy(p->tmp_buffer+0x20, new_name, 64);
-						p->write_hdsector(p->callback_data,
-                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer);
+						
+						wbfs_memcpy(p->tmp_buffer+0x20, new_name, 64);
+						
+						if(p->write_hdsector(p->callback_data,
+                                         p->part_lba+1+i*disc_info_sz_lba,1,p->tmp_buffer)<0) ERROR("Writing Error");
 
 						return 1;
                         }
                 }
         }
-     
-return 0;
+
+error:     
+	return 0;
         
 }
+
 
 u32 wbfs_extract_file(wbfs_disc_t*d, char *path);

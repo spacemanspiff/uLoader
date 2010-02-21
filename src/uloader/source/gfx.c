@@ -27,11 +27,12 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gfx.h"
 
+extern Mtx	modelView;
 
 int scroll_text=-20;
 
 GXTlutObj palette_icon;
-GXTexObj text_icon[6];
+GXTexObj text_icon[10];
 
 GXTexObj text_button[4], default_game_texture, text_background[3], text_background2,text_game_empty[4];
 GXTexObj text_screen_fx;
@@ -46,10 +47,15 @@ void *mem_move_chan= NULL;
 
 void splash_scr()
 {
-
 			autocenter=1;
 			draw_background();
+
+			guMtxIdentity(modelView);
+			GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
+			GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
 			
+			ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,SCR_WIDTH,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
+
 			#ifndef ALTERNATIVE_VERSION
 			PX=0; PY= 16; color= 0xffffffff; 
 			#else
@@ -109,10 +115,10 @@ void splash_scr()
 			letter_size(8,16);
 			SelectFontTexture(1);
 			#ifndef ALTERNATIVE_VERSION
-			s_printf("v3.5");
+			s_printf("v%s",uloader_version);
 		    #endif
 			PX=SCR_WIDTH-20-32;
-			s_printf("v3.5");
+			s_printf("v%s",uloader_version);
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000;
@@ -325,6 +331,12 @@ int n;
 int y,dx;
 
 	if(!flag_snow) return;
+/*
+	ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,SCR_WIDTH,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
+	guMtxIdentity(modelView);
+	GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
+	GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
+*/
 
 	SetTexture(&text_icon[4]);
 
@@ -343,7 +355,7 @@ int y,dx;
 			
 			if(init) tab_snow[n].y=(-(get_rnd() % SCR_HEIGHT)-32)<<3;
 			else tab_snow[n].y=(-(get_rnd() & 63)-32)<<3;
-			tab_snow[n].x=(get_rnd() % (SCR_WIDTH+32))-32;
+			tab_snow[n].x=(get_rnd() % (SCR_WIDTH+32+208*is_16_9))-32-108*is_16_9;
 			tab_snow[n].velocity=2+(get_rnd() & 3);
 			y=tab_snow[n].y>>3;
 			}
@@ -400,14 +412,50 @@ int y,dx;
 /* GUI routines and datas*/
 //---------------------------------------------------------------------------------
 
+float angle_icon=1.0f;
+Mtx	temp_mtx;
+
 void DrawIcon(int px,int py, u32 frames2)
 {
+float f;
+
 	#ifndef ALTERNATIVE_VERSION
-	DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-24,py-24, 48, 48, 0, 0xffffffff);
+	f=angle_icon+ ((use_icon2 & 3)!=0 ? 0.0f : 20.0f);
 	#else
-	DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],px-24,py-24, 64, 64, 0, 0xffffffff); //OGG
+	f=angle_icon;
 	#endif
+
+	f=(2.0f*3.141592f)*f/360.0f;
 	
+	guMtxIdentity(temp_mtx);
+	guMtxRotRad(temp_mtx,'Z',f);
+
+	#ifndef ALTERNATIVE_VERSION
+	guMtxTransApply(temp_mtx, temp_mtx, (float) (px+8), (float) (py+8), 0.0f);
+	#else
+	guMtxTransApply(temp_mtx, temp_mtx, (float) (px+8), (float) (py+8), 0.0f);
+	#endif
+
+	guMtxConcat(modelView, temp_mtx, temp_mtx);
+	GX_LoadPosMtxImm(temp_mtx,	GX_PNMTX0); // carga la matriz mundial como identidad
+	GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
+
+	#ifndef ALTERNATIVE_VERSION
+	if(!(use_icon2 & 3))
+		DrawSurface(&text_icon[(frames2 & 8)!=0 && ( (frames2 & (255))<16) ], -24,-24, (use_icon2 & 4) ? 64 : 48, (use_icon2 & 4) ? 64 : 48, 0, 0xffffffff);
+	else
+		DrawSurface(&text_icon[4+(use_icon2 & 3)+((use_icon2 & 3)>1)+(((frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)) && (use_icon2 & 3)==1) ],
+		-24,-24, (use_icon2 & 4) ? 64 : 48, (use_icon2 & 4) ? 64 : 48, 0, 0xffffffff);
+	#else
+	//DrawSurface(&text_icon[(frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)],/*px*/-24,/*py*/-24, 64, 64, 0, 0xffffffff); //OGG
+	if(!(use_icon2 & 3))
+		DrawSurface(&text_icon[(frames2 & 8)!=0 && ( (frames2 & (255))<16) ], -24,-24, (use_icon2 & 4) ? 64 : 48, (use_icon2 & 4) ? 64 : 48, 0, 0xffffffff);
+	else
+		DrawSurface(&text_icon[4+(use_icon2 & 3)+((use_icon2 & 3)>1)+(((frames2 & 4)!=0 && ((frames2 & 128)>110 || (frames2 & 32)!=0)) && (use_icon2 & 3)==1) ],
+		-24,-24, (use_icon2 & 4) ? 64 : 48, (use_icon2 & 4) ? 64 : 48, 0, 0xffffffff);
+	#endif
+
+	GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
 }
 
 void draw_text(char *text)
@@ -485,6 +533,7 @@ int len=strlen(cad);
 unsigned color=0xffcfcfcf;
 
 if(selected) color= 0xff3fcf3f;
+if(selected==128) color= 0xff3f3fcf;
 
 if(selected<0) color=0x80cfcfcf;
 
@@ -568,18 +617,64 @@ static int frames2=0;
 static int frames=0;
 static int frames1=0;
 
+static int vaiven=0;
+static float anglez=0.0f;
 
+
+guMtxIdentity(modelView);
+GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
+GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
+
+ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,SCR_WIDTH,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
 if(frames==(12+2*(SCR_HEIGHT<=480))) {frames1++;frames=0;}
 SetTexture(&text_background[(frames1 % 3)]);
 frames++;
 	ConfigureForTexture(10);
 	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
-	AddTextureVertex(0, 0, 999, BACK_COLOR, 0, (frames2 & 1023));
-	AddTextureVertex(SCR_WIDTH, 0, 999, BACK_COLOR, 1023, (frames2 & 1023)); 
-	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT, 999, BACK_COLOR, 1023, 1024+(frames2 & 1023)); 
-	AddTextureVertex(0, SCR_HEIGHT, 999, BACK_COLOR, 0, 1024+(frames2 & 1023)); 
+	AddTextureVertex(0, -12, 999, BACK_COLOR, 0, (frames2 & 1023));
+	AddTextureVertex(SCR_WIDTH, -12, 999, BACK_COLOR, 1023, (frames2 & 1023)); 
+	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT+24, 999, BACK_COLOR, 1023, 1024+(frames2 & 1023)); 
+	AddTextureVertex(0, SCR_HEIGHT+24, 999, BACK_COLOR, 0, 1024+(frames2 & 1023)); 
 	GX_End();
-	//frames2++;
+
+
+if(is_16_9)
+	{
+	ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,848,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
+	guMtxIdentity(modelView);
+
+	GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
+	guMtxTrans(modelView, 104.0f, 0.0f, 0.0f);
+	GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
+	
+	}
+
+if(time_sleep==1)
+	{
+	if(vaiven==0)
+		{
+		anglez+=0.002f;
+		if(anglez>=0.261f) {vaiven=1;}
+		}
+	else
+		{
+		anglez-=0.002f;
+		if(anglez<=-0.261f) {vaiven=0;}
+		}
+	guMtxIdentity(temp_mtx);
+	guMtxTransApply(modelView, modelView, -320.0f, (float) (-SCR_HEIGHT/2), 0.0f);
+
+	guMtxRotRad(temp_mtx,'Z',anglez);
+	guMtxTransApply(temp_mtx,temp_mtx, 320.0f, (float) (SCR_HEIGHT/2), 0.0f);
+
+	guMtxConcat(temp_mtx, modelView, modelView);
+	GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
+	GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
+	}
+else {vaiven=0;anglez=0.0f;}
+
+
+
 }
 
 void display_spinner_draw()

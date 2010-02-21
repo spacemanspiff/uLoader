@@ -55,6 +55,16 @@ extern char letrero[2][60][64];
 
 extern int mode_disc;
 
+extern int is_16_9;
+
+extern int time_sleep;
+
+extern int use_icon2;
+
+extern Mtx	modelView;
+
+extern char uloader_version[5];
+
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
 
 extern int flag_snow;
@@ -70,7 +80,7 @@ extern int px, py;
 extern int abort_signal;
 
 extern GXTlutObj palette_icon;
-extern GXTexObj text_icon[6];
+extern GXTexObj text_icon[10];
 
 extern GXTexObj text_button[4], default_game_texture, text_background[3], text_background2,text_game_empty[4];
 extern GXTexObj text_screen_fx;
@@ -88,6 +98,7 @@ extern int signal_draw_cabecera2;
 extern char cabecera2_str[128];
 
 extern int altdol_frames2;
+
 
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
 

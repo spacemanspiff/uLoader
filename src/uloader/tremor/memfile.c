@@ -67,7 +67,7 @@ if(fd>=0x666 && fd<=0x669 ) // it is a memory file descriptor?
     file[fd].size=0;
 	return 0;
 	}
-else return f_close((int ) fd);
+else return f_close((void *) fd);
 
 }
 
@@ -92,9 +92,10 @@ if(*f>=0x666 && *f<=0x669 )
 	{
 	d=(*f)-0x666;
     if(file[d].size==0) return -1;
-	if((file[d].pos+b)>file[d].size) b=file[d].size-file[d].pos;
+	if((file[d].pos+b)>=file[d].size) b=file[d].size-file[d].pos;
 	if(b>0)
-		{memcpy(punt,file[d].mem+file[d].pos,b);
+		{
+		memcpy(punt,file[d].mem+file[d].pos,b);
 		file[d].pos+=b;
 		}
 	}
@@ -150,6 +151,7 @@ if(k<0) k=-1; else k=0;
 return k;
 
 }
+
 int f_close(int *f)
 {
 int d;
