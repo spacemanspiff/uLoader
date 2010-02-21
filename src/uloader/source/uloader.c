@@ -76,6 +76,8 @@
 #include "mload.h"
 
 
+extern int pintor();
+
 //#include "logmodule.h"
 
 extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
@@ -3091,6 +3093,7 @@ int ret=0;
 
 static char url[512];
 static char region[3][8]={"pal","ntsc","ntscj"};
+static char region2[3][8]={"PAL","NTSC","NTSC-J"};
 char *flag;
 int sizex=0,sizex2=0;
 
@@ -3238,9 +3241,8 @@ for(n=0;n<=gameCnt;n++)
 /*	sprintf(url, "http://www.wiiboxart.com/wii/resize/%s/160/224/%c%c%c%c%c%c.png", 
 		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);*/
 
- 
-    sprintf(url, "http://www.wiiboxart.com/%s/%c%c%c%c%c%c.png", 
-		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+
+   
 	
 	memset(temp_data,0,256*1024);
 	WBFS_GetProfileDatas(header->id, temp_data);
@@ -3278,6 +3280,14 @@ for(n=0;n<=gameCnt;n++)
 					}
 			}
 
+		sprintf(url, "http://www.wiiboxart.com/%s/%c%c%c%c%c%c.png", 
+		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+		if(ret!=0)
+			ret=download_file(url, &temp_buf, &temp_size);
+		
+		sprintf(url, "http://www.muntrue.nl/covers/%s/160/225/boxart/%c%c%c%c%c%c.png", 
+		&region2[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+		
 		if(ret!=0)
 			ret=download_file(url, &temp_buf, &temp_size);
 
@@ -3369,9 +3379,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.4");
+			s_printf("v2.5");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.4");
+			s_printf("v2.5");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -3828,7 +3838,7 @@ int main(int argc, char **argv) {
 		#endif
 		
 		
-
+		
 get_games:
 		
 		frames=0;frames2=0;
@@ -4037,6 +4047,8 @@ get_games:
 	int temp_sel=-1;
 	int test_gfx_page=0;
 	int go_home=0;
+	int go_game=0;
+
 	if(direct_launch && game_mode==1 && gameList!=NULL)
 		{
 		partial_counter--;
@@ -5492,6 +5504,9 @@ get_games:
 							}
 						
 						}
+					// launch pintor game
+					if((new_pad & WPAD_BUTTON_2) && game_mode==0 && insert_favorite==0 && scroll_mode==0 && parental_mode==0) go_game=1;
+
 					if((new_pad & WPAD_BUTTON_HOME) && game_mode==0 && insert_favorite==0 && scroll_mode==0 && parental_mode==0) 
 						{
 						if(parental_control_on)
@@ -5647,6 +5662,12 @@ get_games:
 			}
 
 	Screen_flip();
+
+	if(go_game)
+		{
+		rumble=0;pintor();
+		go_game=0;
+		}
 
 	if(go_home)
 		{

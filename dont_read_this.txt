@@ -1,0 +1,22 @@
+Press the Wiimote button '2' in uLoader main screen to access to the 'pintor' game.
+
+Pintor game instructions
+------------------------
+
+Use the wiimote in horizontal
+
+Use LEFT - RIGHT to change the number of bugs in the Pintor screen
+
+Use A to Start.
+
+Use PLUS to pause
+
+Use HOME to return to uLoader
+
+Use LEFT, RIGHT, UP, DOWN to move the little painter man
+
+You must complete the squares to change the screen
+
+enjoy!
+
+
