@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app>
+	<name> uLoader </name>
+	<coder>Hermes</coder>
+	<version>1.0</version>
+<short_description>USB Loader</short_description>
+<long_description>Loader based on the work of Kwiirk and Waninkoko</long_description>
+</app>

@@ -1,0 +1,103 @@
+uLoader v1.0 BETA - por Hermes (www.elotrolado.net)
+---------------------------------------------------
+
+uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
+para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii
+
+Caracteristicas:
+---------------
+
+- Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe que adjunto (ver mas abajo "Notas sobre wbfs_win").
+
+- Dispone de una pantalla de Juegos Favoritos (hasta 16 juegos)
+
+- Permite seleccionar el cIOS a utilizar entre cIOS 222 y CIOS 249.
+
+- Textos en Inglés y Español (autodetecta)
+
+CONTROLES
+---------
+
+- Manejo con el puntero del Wiimote o con el stick de la guitarra de GH3
+
+- A o Boton Verde: Seleccionar
+
+- B o Boton Rojo: Salir/Descartar
+
+- Boton +/-: Pagina Siguiente/Anterior
+
+- Boton 1 o Boton Amarillo: Ir a la pagina de favoritos/volver a la ultima 			   pagina
+
+ICONOS
+------
+
+Si el juego no tiene icono, por defecto se añade uno. Ver mas abajo "Notas sobre wbfs_win" para saber como añadir un icono a tu gusto.
+
+Favoritos
+---------
+
+Por defecto no verás la pantalla al arrancar, hasta que no haya sido añadido al menos un juego.
+
+la configuración requiere 256 bytes en la SD que se guardarán en:
+
+fat:/apps/uloader/uloader.cfg
+fat:/uloader/uloader.cfg
+fat:/uloader.cfg
+
+En orden de preferencia.
+
+Para hacerlo, pulsa A sobre el icono del juego y accederás a una pantalla que te permitirá añadir/borrar el juego desde favoritos (borrar solo aparece si accedes desde favoritos)
+
+Al añadir irás a al pantalla de favoritos y verás el icono sombreado, pegado al cursor: solo tienes que soltarlo en alguno de los canales para REEMPLAZARLO por el nuevo.
+
+Si lo que quieres es intercambiar canales, manten presionado B y pulsa A y aparecerá el icono sombreado. Sueltalo donde gustes para INTERCAMBIAR.
+
+Solo se pueden mover los iconos de la pantalla de favoritos
+
+Recuerda que puedes volver desde favoritos a la pagina de procedencia, pulsando el boton 1.
+
+
+LANZAR JUEGOS
+-------------
+
+La pantalla de lanzar juegos te permite seleccionar el custom IOS a lanzar (si cIOS 222 no está disponible, se bloqueará en cIOS 249), añadir a favoritos y obviamente, cargar el juego sin más dilación
+
+
+
+Notas sobre wbfs_win
+--------------------
+
+wbfs_win es una utilidad de linea de comandos que puede ser utilizada desde GUI como WBFS Gui:
+
+http://www.elotrolado.net/hilo_yal-juegos-sin-usbloader-desde-homebrew-channel_1213714
+
+La utilidad tiene algunos cambios que permiten extraer a .ciso por defecto (si lo renombras a .iso funcionará igual en otros GUI que fuerzan el tipo de fichero), con lo cual nos ahorraremos unos GB de disco, subir tanto .iso como .ciso y la posibilidad de añadir un icono a la iso subida.
+
+Tambien se soporta la extracción como iso usando el comando "isoextract" (ver readme_new.txt)
+
+
+Para añadir un icono basta hacer:
+
+wbfs_win.exe Z png RSPP01 HBC_icono_WiiSports.png
+
+Donde:
+
+ -Z es la letra de la unidad
+ -png es el comando
+ -RSPP01 es la id de wiisports
+ -HBC_icono_WiiSports.png fichero png
+
+El fichero PNG debe medir menos de 200KB. Si mide menos de 100KB mejor, porque eso afectará a la hora de mostrar la pantalla bastante.
+
+Tanto el ancho como el alto es mejor que sean divisibles entre 16 para evitar problemas con las texturas y si no supera 256x192 mejor. Yo recomendaría unas dimensiones de 128x96 como promedio.
+
+Si tienes dudas, pregunta en el foro.
+
+
+ 
+
+
+wbfs_win.exe Z png RSPP01 HBC_icono_WiiSports.png
+
+
+
