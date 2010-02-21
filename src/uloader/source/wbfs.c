@@ -243,7 +243,7 @@ return 0;
 
 int CWIIDisc_getdols(wbfs_disc_t *d);
 
-int WBFS_getdols(u8 *id)
+s32 WBFS_getdols(u8 *id)
 {
 int ret=0;
 
@@ -265,6 +265,18 @@ if (!hdd)
 	}
 return -1;
 }
+
+s32 disc_getdols(u8 *id)
+{
+int ret=0;
+wbfs_disc_t *disc = NULL;
+
+	if(CWIIDisc_getdols(disc)<0) ret=-1;
+
+return ret;
+
+}
+
 s32 WBFS_Format(u32 lba, u32 size)
 {
 	wbfs_t *partition = NULL;

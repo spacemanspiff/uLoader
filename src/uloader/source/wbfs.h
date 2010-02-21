@@ -26,4 +26,6 @@ s32 WBFS_SaveDolInfo(void *data);
 
 s32 WBFS_RenameGame(u8 *, char *);
 
+s32 disc_getdols(u8 *id);
+
 #endif

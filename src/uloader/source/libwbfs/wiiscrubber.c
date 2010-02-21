@@ -312,6 +312,8 @@ void CWIIDisc_destroy()
 	free(pBlankSector0);
 }
 
+extern s32 WDVD_UnencryptedRead(void *buf, u32 len, u64 offset);
+
 int CWIIDisc_io_read (unsigned char  *ptr, size_t size, struct image_file *image, u64 offset)
 {
 	#if 0
@@ -342,10 +344,35 @@ int CWIIDisc_io_read (unsigned char  *ptr, size_t size, struct image_file *image
 	else	
 		
 	#else
+	// from WBFS
 	if (image->d)
 	{
 		return size *(wbfs_wiiscrub_read_disc(image->d, offset, size ,(char*)ptr));
-	} else return 0;
+	} 
+	// from DVD DISC
+	else
+	{
+	void *temp_ptr;
+	int size2=(size+31+(offset & 3)) & ~31;
+
+		temp_ptr=memalign(32, size2);
+
+		if(!temp_ptr) return 0;
+
+
+		if(WDVD_UnencryptedRead(temp_ptr, size2, offset & ~3)<0) size=0;
+
+
+		if(size)
+			{
+			memcpy(ptr, temp_ptr+(offset & 3), size);
+			}
+
+		free(temp_ptr);
+
+	return size;
+	}
+	//else return 0;
 
 	return 0;
 	#endif
@@ -1074,6 +1101,10 @@ int CWIIDisc_image_parse (struct image_file *image)
         nvp = 0;
         for (i = 0; i < image->nparts; ++i)
         {
+
+		if(image->parts[i].type!=PART_DATA) continue;
+
+		
 				AddToLog("------------------------------------------------------------------------------\n");
 
                 AddToLog("partition: %i\n", i);
@@ -1109,10 +1140,14 @@ int CWIIDisc_image_parse (struct image_file *image)
 				strcpy(hPartition[i],csText);
 ///				hPartition[i] = m_pParent->AddItemToTree(csText, hDisc);
 
+				
+
                 if (!CWIIDisc_io_read_part (buffer, 0x440, image, i, 0)) {
 ///                        AfxMessageBox("partition header");
                         return 1;
                 }
+
+				
 
                 valid = 1;
                 for (j = 0; j < 6; ++j) {

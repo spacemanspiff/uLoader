@@ -3269,6 +3269,9 @@ dol_infodat AlternativeDol_infodat;
 extern void *dol_data;
 extern int dol_len;
 
+int load_alt_game_disc=0; // 0->from WBFS 1-> from DVD
+
+u8 alt_dol_disc_tab[32768]  __attribute__ ((aligned (32))); // temp dol alternative table for DVD mode
 
 int Get_AlternativeDol(u8 *id)
 {
@@ -3278,7 +3281,10 @@ int indx=0;
 	dol_len= 0;dol_data=0;
 	memset(temp_data,0,32768);
 
+if(!load_alt_game_disc)
 	WBFS_LoadDolInfo(temp_data);
+else
+   dol_infop=(dol_infodat *) alt_dol_disc_tab;
 
 	AlternativeDol_infodat.id[0]=0;
 
@@ -3297,6 +3303,7 @@ return 0;
 }
 
 static int altdol_frames2=0;
+
 void draw_altdolscr()
 {
 
@@ -3401,7 +3408,14 @@ int max_dol=0;
 
 memset(temp_data,0,32768);
 
-WBFS_LoadDolInfo(temp_data);
+
+if(!load_alt_game_disc)
+	WBFS_LoadDolInfo(temp_data);
+else
+	{
+    dol_infop=(dol_infodat *) alt_dol_disc_tab;
+	//memset((void *) alt_dol_disc_tab,0,32768);
+	}
 
 
 for(indx=0;indx<1024;indx++)
@@ -3739,7 +3753,7 @@ while(1)
 							if(indx>=1024)
 								{
 								if(last_indx==1023)
-									memcpy(temp_data, temp_data+32, 32768-32);
+									memcpy((char *) &dol_infop[0], ((char *) &dol_infop[0])+32, 32768-32);
 								indx=last_indx;
 								}
 							memset((void *) &dol_infop[indx],0,32);
@@ -3777,7 +3791,10 @@ while(1)
 		altdol_frames2=0;
 		remote_call(draw_altdolscr);
 
-		WBFS_getdols(id);
+        if(!load_alt_game_disc)
+			WBFS_getdols(id);
+		else
+			disc_getdols(id);
 
 		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 		/*
@@ -3820,7 +3837,9 @@ while(1)
 	CWIIDisc_first_file=CWIIDisc_last_file=NULL;
 	}
 
-WBFS_SaveDolInfo(temp_data);
+if(!load_alt_game_disc)
+	WBFS_SaveDolInfo(temp_data);
+
 if(mode==129) sleep(2);
 }
 
@@ -4373,7 +4392,7 @@ int load_game_routine(u8 *discid, int game_mode);
 
 
 extern u32 load_dol();
-//int load_file_dol(char *name);
+int load_file_dol(char *name);
 
 void splash_scr()
 {
@@ -4409,9 +4428,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v3.0C");
+			s_printf("v3.1");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v3.0C");
+			s_printf("v3.1");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -4471,6 +4490,42 @@ int len;
 #endif
 
 
+
+int remote_DVD_disc_status=0;
+static struct discHdr mydisc_header ATTRIBUTE_ALIGN(32);
+
+void remote_DVD_disc()
+{
+int r;
+
+	if(Disc_Wait()==0)
+		{
+		if(remote_DVD_disc_status==0)
+			{
+			remote_DVD_disc_status=1;
+			
+			r=Disc_Open();
+
+			if(r>=0) 
+				{
+				r=Disc_IsWii();
+				if(r>=0) 
+					{
+					Disc_ReadHeader(&mydisc_header);
+					remote_DVD_disc_status=2;
+					}
+				else remote_DVD_disc_status=r;
+				}
+			else remote_DVD_disc_status=r;
+			}
+		}
+	else {remote_DVD_disc_status=0;}
+
+
+	usleep(50*1024);
+}
+
+
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 //---------------------------------------------------------------------------------
@@ -4511,7 +4566,11 @@ int main(int argc, char **argv) {
 		int partial_counter;
 
 		int volume_osd=0;
+
+		int mode_disc=0;
+
 		
+		struct discHdr *disc_header=NULL;
 
        
         if (*(u32*)0x80001800)  return_reset=1;
@@ -4808,7 +4867,9 @@ int main(int argc, char **argv) {
 				}
 			else
 			if(ret2==-100) 
-				{n=0;
+				{
+				static int conta=0;
+				n=0;
 				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
 				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
 
@@ -4818,7 +4879,20 @@ int main(int argc, char **argv) {
 				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32+80, 540, 64, 999, 4, 0xa0000000);
 				
 				PY+=80;
-				s_printf("Maybe you need plug the device on USB port 0...");
+				if(!(conta & 64))
+					s_printf("Maybe you need plug the device on USB port 0...");
+				else
+					s_printf("Press < 2 > for DVD Mode");
+
+				conta++;
+
+				if((new_pad & WPAD_BUTTON_2)) 
+					{
+					mode_disc=1;
+					ret2=0;
+					}
+
+				//if(mode_disc) ret2=0; // mode disc
 
 				}
 			else
@@ -4869,6 +4943,7 @@ int main(int argc, char **argv) {
 
 			temp_pad= wiimote_read(); 
 			new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+
 			if(mod>1)
 				{
 				mod++;if(mod>30) {mod=0;break;}
@@ -4888,7 +4963,7 @@ int main(int argc, char **argv) {
 
 		#ifdef MEM_PRINT
 		
-		if(test_mode)
+		if(test_mode && mode_disc==0)
 			{
 				if(ret2>=0)
 				{
@@ -4967,13 +5042,18 @@ int main(int argc, char **argv) {
 		if(ret2>=0) 
 			{
 		    ret2=WBFS_Init();
+			if(mode_disc && ret2<0) {mode_disc|=1024;ret2=0;} // mode disc
 			if(ret2>=0) ret2=Disc_Init();
 			}
 		
 		#endif
    
-		__io_usbstorage2.startup();
-		ud_ok = fatMountSimple("ud", &__io_usbstorage2);
+		if(ret2>=0 && (mode_disc & 1024)==0)
+			{
+			__io_usbstorage2.startup();
+			ud_ok = fatMountSimple("ud", &__io_usbstorage2);
+			}
+		else ud_ok=0;
 
 
 
@@ -5166,13 +5246,20 @@ get_games:
 		// locate WBFS Partitions and number of games from the partitions
 		for(n=0;n<4;n++)
 			{
-			ret = WBFS_Open2(n);
-			if(ret==0) {partition_cnt[n]=0;ret = WBFS_GetCount((u32 *) &partition_cnt[n]);if(ret<0) partition_cnt[n]=0;}
-			else partition_cnt[n]=-1;
+			partition_cnt[n]=-1;
+
+			if(!(mode_disc & 1024))
+				{
+				ret = WBFS_Open2(n);
+				if(ret==0) {partition_cnt[n]=0;ret = WBFS_GetCount((u32 *) &partition_cnt[n]);if(ret<0) partition_cnt[n]=0;}
+				}
+			 
 			}
+		
 		
 
 		// get a valid partition from current partition selected
+		if(!(mode_disc & 1024))
         for(n=0;n<4;n++)
 			{
 			ret = WBFS_Open2((current_partition+n) & 3);
@@ -5180,25 +5267,26 @@ get_games:
 			else partition_cnt[(current_partition+n) & 3]=-1;
 			}
 	
-		
-		
-		if (ret < 0) {
+		if(!(mode_disc & 1024) && (mode_disc & 1023)==0)
+		if (ret < 0) 
+			{
 			
-			for(n=0;n<60*4;n++)
-				{
-				splash_scr();
-				letter_size(16,32);
-				PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
-						
-				bkcolor=0;
-				autocenter=1;
-				SetTexture(NULL);
-				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
-				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
-			
-				s_printf("No WBFS partition found!\n");
-				Screen_flip();
-				}
+				for(n=0;n<60*4;n++)
+					{
+					splash_scr();
+					letter_size(16,32);
+					PX=0; PY= SCR_HEIGHT/2+32; color= 0xff000000; 
+							
+					bkcolor=0;
+					autocenter=1;
+					SetTexture(NULL);
+					DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 0xa00000ff);
+					DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16+32, 540, 64, 999, 4, 0xa0000000);
+				
+					s_printf("No WBFS partition found!\n");
+					Screen_flip();
+					}
+
 			if(menu_format()==0) 
 				{
 				// locate WBFS Partitions and number of games from the partitions
@@ -5241,7 +5329,9 @@ get_games:
 
 			s_printf("No Game found\n");
 			Screen_flip();
-			sleep(4);
+
+			if(mode_disc) mode_disc|=1024;
+			else sleep(4);
 			//goto error_w;
 			}
 		else
@@ -5294,8 +5384,10 @@ get_games:
 		/* Set values */
 		gameList = buffer;
 		gameCnt  = cnt;
-
-		load_cfg();
+		
+		memset(&config_file,0, sizeof (config_file));
+		if(!mode_disc) // mode disc
+			load_cfg();
 
 		MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
 
@@ -5304,6 +5396,8 @@ get_games:
 
 	autocenter=0;
 	
+	if(mode_disc & 1024) direct_launch=0;
+
     if(direct_launch)
 		{
 		
@@ -5332,6 +5426,25 @@ get_games:
 		if(n==gameCnt) direct_launch=0;
 		}
 
+	if(mode_disc)
+	{
+	game_mode=1;gameList=NULL;
+	game_datas[0].ind=0;
+	discid[0]=0;
+	memset(temp_data,0,256*1024);
+	create_game_png_texture(0);
+	parental_mode=0;
+	disc_header=NULL;
+	WDVD_SetUSBMode(NULL, 0);
+
+	remote_DVD_disc_status=0;
+
+	remote_call(remote_DVD_disc);
+	usleep(1000*50);
+
+	}
+	
+
 	guitar_pos_x=SCR_WIDTH/2-32;guitar_pos_y=SCR_HEIGHT/2-32;
 
 	
@@ -5349,7 +5462,7 @@ get_games:
 	int test_gfx_page=0;
 	int go_home=0;
 	int go_game=0;
-
+						
 	if(direct_launch && game_mode==1 && gameList!=NULL)
 		{
 		partial_counter--;
@@ -5392,46 +5505,138 @@ get_games:
 
 	if(game_mode)
 		{
-		struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+		 
+		struct discHdr *header;
+
+		altdol_frames2+=20;
+		
+		if(remote_DVD_disc_status==2) disc_header=&mydisc_header;
+		else
+		if(remote_DVD_disc_status<0)
+			{
+			disc_header=NULL;altdol_frames2=0;
+			}
+	    else {disc_header=NULL;if(remote_DVD_disc_status==0) altdol_frames2=0;}
+		
+		
+		if(!mode_disc)
+		    header= &gameList[game_datas[game_mode-1].ind];
+		else header= disc_header;
+
+		
 
 		SetTexture(NULL);
 		DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
-
+		
+		if(mode_disc)
+			SetTexture(&default_game_texture);
+		else
 		if(game_datas[game_mode-1].png_bmp) 
 			SetTexture(&game_datas[game_mode-1].texture);
 		else SetTexture(&default_game_texture);
 
 		SetTexture(&text_button[0]);
 		DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffffffff);
+
+		
 			
 		SetTexture(NULL);
 			
 		DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
+		if(mode_disc)
+			SetTexture(&default_game_texture);
+		else
 		if(game_datas[game_mode-1].png_bmp) 
 			SetTexture(&game_datas[game_mode-1].texture);
 		else SetTexture(&default_game_texture);
 
+
 		DrawFillBox(320-127, ylev+8, 254, 338, 0, 0xffffffff);
+		
 		SetTexture(NULL);
 		DrawBox(320-127, ylev+8, 254, 338, 0, 2, 0xff303030);
+		
+		if(mode_disc /*&& remote_DVD_disc_status!=0*/)
+			{
+			int nn;
+
+			SetTexture(&text_icon[3]);
+
+			#define SLICE_LEN 200
+
+			//DrawFillBox(20, ylev, 148*4, 352, 0, 0xffffffff);
+			for(nn=0;nn<8;nn++)
+				{
+				u32 color;
+				int vel=7-(altdol_frames2>>6);
+				if(vel<0) vel=0;
+				int ang=(((altdol_frames2>>vel) & 127)<<7)-2048+(nn<<11);
+				//vel=7;
+				//int ang=((frames2) & 31)<<10;
+				int xx1=SCR_WIDTH/2+(SLICE_LEN*seno2((ang) & 16383))/16384,yy1=ylev+352/2-(SLICE_LEN*coseno2((ang) & 16383))/16384;
+				int xx2=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096) & 16383))/16384,yy2=ylev+352/2-(SLICE_LEN*coseno2((ang+4096) & 16383))/16384;
+				int xx3=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*2) & 16383))/16384,yy3=ylev+352/2-(SLICE_LEN*coseno2((ang+4096*2) & 16383))/16384;
+				int xx4=SCR_WIDTH/2+(SLICE_LEN*seno2((ang+4096*3) & 16383))/16384,yy4=ylev+352/2-(SLICE_LEN*coseno2((ang+4096*3) & 16383))/16384;
+
+				if(remote_DVD_disc_status==0) color=0x57ffffff;
+					else
+				if(nn==0) color=0xffffffff; else color=0x27ffffff;
+
+				SetTexture(&text_icon[3]);
+				ConfigureForTexture(10);
+				GX_Begin(GX_TRIANGLESTRIP,  GX_VTXFMT0, 5);
+
+				AddTextureVertex(xx1, yy1, 0, color, 1, 1);
+				AddTextureVertex(xx2, yy2, 0, color, 1024, 1); 
+				AddTextureVertex(xx3, yy3, 0, color, 1024, 1024); 
+				AddTextureVertex(xx4, yy4, 0, color, 1, 1024);
+				AddTextureVertex(xx1, yy1, 0, color, 1, 1);
+				GX_End();
+
+				if(vel!=0) break;
+
+				#undef SLICE_LEN
+
+				}
 
 
-		if(strlen(header->title)<=37) letter_size(16,32);
-		else if(strlen(header->title)<=45) letter_size(12,32);
-		else letter_size(8,32);		
+			SetTexture(NULL);
+			}
+
+        
+		if(header)
+			{
+			if(strlen(header->title)<=37) letter_size(16,32);
+			else if(strlen(header->title)<=45) letter_size(12,32);
+			else letter_size(8,32);
+			}
+		else letter_size(16,32);
 
 		PX= 0; PY=ylev-32;/* 8+ylev+2*110*/; color= 0xff000000; 
 				
 		bkcolor=0;//0xc0f08000;
 		
 		autocenter=1;
-		s_printf("%s",header->title);
+
+		if(!header)
+			{
+			if(remote_DVD_disc_status==0) s_printf("%s",&letrero[idioma][38][0]);
+			else if(remote_DVD_disc_status<0) s_printf("DVD Error %i",remote_DVD_disc_status);
+				else s_printf("%s",&letrero[idioma][41][0]);
+			//s_printf("Scanning DVD...");
+			}
+		else
+			s_printf("%s",header->title);
+		
 		autocenter=0;
 
 		letter_size(16,32);
 		
 		bkcolor=0;
+
+		
+
 		if(cheat_mode)
 		{
 
@@ -5559,7 +5764,7 @@ get_games:
 			if(Draw_button(600-32-strlen(&letrero[idioma][12][0])*8, ylev+108*4-64, &letrero[idioma][12][0])) select_game_bar=1001;
 
 			}
-
+       
 		}
 		else
         if(!edit_cfg)
@@ -5577,15 +5782,21 @@ get_games:
 
 			force_ingame_ios=1*((game_datas[game_mode-1].config>>31)!=0);
 			game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
+
+		
 			
-			PX=608-6*16; s_printf("%c%c%c%c%c%c", header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+			PX=608-6*16; 
+			if(header)
+				s_printf("%c%c%c%c%c%c", header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+			
 
 			PX= 26; PY=ylev+12+48;
 			if(forcevideo==1) s_printf("F. PAL60");
 			if(forcevideo==2) s_printf("F. NTSC");
 			if(forcevideo==3) s_printf("F. PAL50");
 			
-			PX=608-6*16; s_printf("%.2fGB", f_size);
+
+			PX=608-6*16; if(header && !mode_disc) s_printf("%.2fGB", f_size);
 		 
 			autocenter=0;
 			PX= 26; PY=ylev+352-48;
@@ -5601,11 +5812,16 @@ get_games:
 					}
 
 		    //idioma=0;
+			x_temp=16;
 
-			if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
-			if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
+            if(!(mode_disc & 1024) && remote_DVD_disc_status!=1)
+				if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=1;
+
+			if(header)
+				if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][1][0])) select_game_bar=2;
 			
-			if(test_favorite)
+
+			if(test_favorite && !mode_disc)
 				{
 				if(is_favorite)
 					{if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][2][0])) select_game_bar=4;}
@@ -5613,8 +5829,16 @@ get_games:
 					if(Draw_button(x_temp+8, ylev+108*4-64, &letrero[idioma][3][0])) select_game_bar=3;
 				}
 
-			if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8-78, ylev+108*4-64, "A.Dol")) select_game_bar=55;
-			if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) select_game_bar=5;
+            if(header)
+				{
+				if(!mode_disc)
+					{if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8-78, ylev+108*4-64, "A.Dol")) {load_alt_game_disc=0;select_game_bar=55;}}
+				else
+					{if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8-78, ylev+108*4-64, "A.Dol")) {load_alt_game_disc=1;select_game_bar=55;}}
+				}
+
+			if(header)
+				if(Draw_button(600-32-strlen(&letrero[idioma][4][0])*8, ylev+108*4-64, &letrero[idioma][4][0])) {select_game_bar=5;}
 
 			
 			}
@@ -5681,6 +5905,8 @@ get_games:
 			if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
 
 			}
+
+		
 		
 		step_button++;
 		}
@@ -5717,6 +5943,18 @@ get_games:
 				DrawRoundBox(22+50*n, ylev-32, 48, 32, 0, 4, 0xa0000000);
 		
 			}
+
+		SetTexture(NULL);
+		DrawRoundFillBox(600-64, ylev-32, 80, 32, 0, 0xa0ffffff);
+		PX=600-48; PY=ylev-26; color= 0xff000000;s_printf("DVD"); 
+
+		if(px>=600-64 && px<600-64+80 && py>=ylev-32 && py<ylev)
+				{
+				DrawRoundBox(600-64, ylev-32, 80, 32, 0, 4, 0xfff08000);
+				select_game_bar=10016;
+				}
+            else
+				DrawRoundBox(600-64, ylev-32, 80, 32, 0, 4, 0xa0000000);
 
 		PX= 0; PY=ylev-32; color= 0xff000000; 
 				
@@ -6316,7 +6554,7 @@ get_games:
 							}
 						else config_file.music_mod=128+15;
 						MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
-						save_cfg();
+						if(!mode_disc) save_cfg();
 						}
 					if((new_pad & WPAD_BUTTON_RIGHT)  || (volume_osd && (frames2 & 7)==0 && (old_pad & WPAD_BUTTON_RIGHT)))
 						{
@@ -6328,7 +6566,7 @@ get_games:
 							}
 						else config_file.music_mod=128+15;
 						MODPlay_SetVolume( &mod_track,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16,(config_file.music_mod & 128) ?  (config_file.music_mod & 15): 16); // fix the volume to 16 (max 64)
-						save_cfg();
+						if(!mode_disc) save_cfg();
 						}
 
 					 if(cheat_mode && txt_cheats)
@@ -6344,7 +6582,7 @@ get_games:
 							}
 						}
 
-					 if(!game_mode && !insert_favorite && !cheat_mode && gameList!=NULL && parental_mode==0) //limit left/right
+					 if(!mode_disc && !insert_favorite && !cheat_mode && gameList!=NULL && parental_mode==0) //limit left/right
 						{
 						
 						if(new_pad & WPAD_BUTTON_MINUS)
@@ -6362,7 +6600,7 @@ get_games:
 						} // limit left_right
 
                    
-					if((new_pad & WPAD_BUTTON_A) && gameList!=NULL)
+					if((new_pad & WPAD_BUTTON_A) && (gameList!=NULL || (mode_disc && game_mode)))
 						{
 						if(parental_mode)
 							{
@@ -6476,7 +6714,7 @@ get_games:
 										insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
 										temp_sel=-1;
 										for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-										save_cfg();
+										if(!mode_disc) save_cfg();
 										load_png=1;
 	
 										}
@@ -6486,6 +6724,8 @@ get_games:
 									int n;
 									struct discHdr *header;
 									if(!is_favorite) last_game=actual_game;
+
+									if(select_game_bar==10016)  {snd_fx_yes();mode_disc=1;Screen_flip();goto get_games;}
 
 									if(select_game_bar>=10000 && select_game_bar<10004)  {snd_fx_yes();current_partition=select_game_bar-10000;Screen_flip();goto get_games;}
 
@@ -6526,7 +6766,13 @@ get_games:
 						else
 							{
 							if(select_game_bar==1) {int n;  // return
+													int f_j=0;
 													snd_fx_no();
+													if(mode_disc && game_mode && !edit_cfg) 
+														{
+														remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+														mode_disc=0;f_j=1;
+														}
 													game_mode=0;edit_cfg=0;select_game_bar=0;
 													for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
 												   
@@ -6537,11 +6783,17 @@ get_games:
 													usleep(60*1000);
 													wiimote_rumble(0);
 												    WPAD_ScanPads();
+													if(f_j) {Screen_flip();goto get_games;}
 													} 
 
 							if(select_game_bar==2) 
 												  { // Configuration (load)
-							                       struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+							                       struct discHdr *header;
+
+												   if(!mode_disc)
+														header= &gameList[game_datas[game_mode-1].ind];
+												   else header= disc_header;
+
 												   direct_launch=0;
 
 												   memcpy(discid,header->id,6); discid[6]=0;
@@ -6549,9 +6801,15 @@ get_games:
 												   snd_fx_yes();
 
 												   select_game_bar=0;
-
+												   
 												   memset(temp_data,0,256*1024);
-												   WBFS_GetProfileDatas(discid, temp_data);
+
+												   if(!mode_disc)
+													  {
+													  
+													  WBFS_GetProfileDatas(discid, temp_data);
+													  }
+
 												   game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
 												   
 												   if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
@@ -6605,7 +6863,13 @@ get_games:
 
 							if(select_game_bar==55)
 													{
-													struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+													struct discHdr *header;
+
+													if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+
+													if(!mode_disc)
+														header= &gameList[game_datas[game_mode-1].ind];
+												    else header= disc_header;
 
 													direct_launch=0;
 												    select_game_bar=0;is_favorite=1; 
@@ -6617,6 +6881,8 @@ get_games:
 													new_pad=0;
 //													new_pad &=~ WPAD_BUTTON_A | WPAD_BUTTON_B;
 
+													if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
+
 													}
 
 							if(select_game_bar>=500 && select_game_bar<500+MAX_LIST_CHEATS)
@@ -6626,7 +6892,14 @@ get_games:
 													}
 							if(select_game_bar==5 || select_game_bar==1000 || select_game_bar==1001) 
 													{
-													struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
+													struct discHdr *header;
+
+													if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+
+													if(!mode_disc)
+														header= &gameList[game_datas[game_mode-1].ind];
+												    else header= disc_header;
+
 													direct_launch=0;
 
 													snd_fx_yes();
@@ -6651,7 +6924,8 @@ get_games:
 														{
 														select_game_bar=0;
 														
-														ret=load_game_routine(discid, game_mode);
+
+														ret=load_game_routine(discid, game_mode | (0x800000 *(mode_disc!=0)));
 
 														//////////////////////////////////
 														remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
@@ -6725,7 +6999,8 @@ get_games:
 												   usleep(60*1000);
 												   wiimote_rumble(0);
 												   WPAD_ScanPads();
-												   WBFS_SetProfileDatas(discid, temp_data);
+												   if(!mode_disc)
+														WBFS_SetProfileDatas(discid, temp_data);
 												   
 												   }
 							if(select_game_bar>=100 && select_game_bar<=111)
@@ -6794,65 +7069,80 @@ get_games:
 							{// return from config (saving)
 							edit_cfg=0;
 							snd_fx_yes();
-						    // si no existe crea uno
-						    if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
+							if(!mode_disc)
 								{
-								temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;
+								// si no existe crea uno
+								if(!(temp_data[0]=='H' && temp_data[1]=='D' && temp_data[2]=='R'))
+									{
+									temp_data[0]='H'; temp_data[1]='D'; temp_data[2]='R';temp_data[3]=0;
+									temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
+									temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
+									}
+								
+								
 								temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
-								temp_data[8]=temp_data[9]=temp_data[10]=temp_data[11]=0;
+								if(cios==249) temp_data[4]|=1;
+								if(cios==223) temp_data[4]|=2;
+								temp_data[4]|=(forcevideo & 3)<<2;
+								temp_data[4]|=(langsel & 15)<<4;
+								temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
+								temp_data[7]|=((game_locked_cfg!=0) & 1)<<6;
+
+								game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
+
+								WBFS_SetProfileDatas(discid, temp_data);
 								}
-							
-							
-						    temp_data[4]=temp_data[5]=temp_data[6]=temp_data[7]=0;
-						    if(cios==249) temp_data[4]|=1;
-							if(cios==223) temp_data[4]|=2;
-						    temp_data[4]|=(forcevideo & 3)<<2;
-						    temp_data[4]|=(langsel & 15)<<4;
-							temp_data[7]|=((force_ingame_ios!=0) & 1)<<7;
-							temp_data[7]|=((game_locked_cfg!=0) & 1)<<6;
-
-						    game_datas[game_mode-1].config=temp_data[4]+(temp_data[5]<<8)+(temp_data[6]<<16)+(temp_data[7]<<24);
-
-						    WBFS_SetProfileDatas(discid, temp_data);
 							}
 						else
 							{
-							
-							if(game_mode)
+							if(!(mode_disc & 1024) && remote_DVD_disc_status!=1)
 								{
-								snd_fx_no();
-								for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-													   
-								load_png=1;
-								}
-							else
-								if(insert_favorite) snd_fx_no();
-							
-							if(is_favorite)
-								{
-								int flag=0,g;
-								for(n=0;n<15;n++)
-										if(config_file.id[n][0]!=0)	
-											{
-											for(g=0;g<gameCnt;g++)
-												{
-												struct discHdr *header = &gameList[g];
-												if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
-													{
-													flag=1;break;
-													}
-												 }
-											}
-								if(!flag) 
-									{is_favorite=0;
-									for(n=0;n<15;n++) {game_datas[n+16].ind=game_datas[n].ind;game_datas[n+16].png_bmp=NULL;}
+								int f_j=0;
+
+								if(mode_disc && game_mode && !edit_cfg) 
+									{
+									remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+									mode_disc=0;f_j=1;
+									}
+
+								if(game_mode)
+									{
+									snd_fx_no();
+									for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
+														   
 									load_png=1;
 									}
-								}
-				
+								else
+									if(insert_favorite) snd_fx_no();
+								
+								if(is_favorite)
+									{
+									int flag=0,g;
+									for(n=0;n<15;n++)
+											if(config_file.id[n][0]!=0)	
+												{
+												for(g=0;g<gameCnt;g++)
+													{
+													struct discHdr *header = &gameList[g];
+													if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
+														{
+														flag=1;break;
+														}
+													 }
+												}
+									if(!flag) 
+										{is_favorite=0;
+										for(n=0;n<15;n++) {game_datas[n+16].ind=game_datas[n].ind;game_datas[n+16].png_bmp=NULL;}
+										load_png=1;
+										}
+									}
+					
 
-							game_mode=0;edit_cfg=0;
-							insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
+								game_mode=0;edit_cfg=0;
+								insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
+
+								if(f_j) {Screen_flip();goto get_games;}
+								}
 							}
 						}
 
@@ -6862,7 +7152,7 @@ get_games:
 
 						scroll_text=-20;
 
-						if(!game_mode && !insert_favorite)
+						if(!mode_disc && !insert_favorite)
 							{
 							if(is_favorite)
 								{
@@ -7091,7 +7381,7 @@ get_games:
 		pintor();
 		config_file.hi_score=hiscore;
 		
-		save_cfg();
+		if(!mode_disc) save_cfg();
 
 		go_game=0;
 		}
@@ -7185,17 +7475,21 @@ int load_game_routine(u8 *discid, int game_mode)
 int n, ret,ret2;
 int force_ingame_ios=0;
 
+int flag_disc=game_mode & 0x800000;
+
 	Screen_flip();
 	wiimote_rumble(0); 
 	WPAD_ScanPads();
 	temp_pad= wiimote_read(); 
 	new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
 	//WPAD_Shutdown();
-	
+
+	game_mode &= ~0x800000;
 
 	add_game_log(discid);
 
-	save_cfg();
+	if(!flag_disc)
+		save_cfg();
 
 	if((game_datas[game_mode-1].config & 1) || force_ios249) cios=249; 
 		else { if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;}
@@ -7212,8 +7506,17 @@ int force_ingame_ios=0;
 //	sprintf((char *) temp_data,"sd:/games/%s.dol",(char *) discid);
 //	load_file_dol((char *) temp_data);
 
-	Get_AlternativeDol(discid);
-	
+	//if(!flag_disc)
+		Get_AlternativeDol(discid);
+	/*else 
+		{
+		if(load_alt_game_disc)
+			{
+			sprintf((char *) temp_data,"sd:/games/%s.dol",(char *) discid);
+			load_file_dol((char *) temp_data);
+			}
+		}
+	*/
 	if(sd_ok)
 		{
 		fatUnmount("sd");
@@ -7261,6 +7564,7 @@ int force_ingame_ios=0;
 		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); // ajusta el formato para acelerometros en todos los wiimotes
 		WPAD_SetVRes(WPAD_CHAN_ALL, SCR_WIDTH, SCR_HEIGHT);	
 		
+
 		for(n=0;n<25;n++)
 			{
 			cabecera2("Loading...");
@@ -7284,7 +7588,10 @@ int force_ingame_ios=0;
 		
 	mload_close();
 	
+	if(flag_disc) discid[6]=1;
+
 	ret = load_disc(discid);
+
 return ret;
 }
 
@@ -7525,6 +7832,7 @@ int ret=0;
 FILE *fp=NULL;
 int n,m, size;
 
+AlternativeDol_infodat.id[0]=0;
 dol_len= 0;
 
 	if(sd_ok)
@@ -7540,7 +7848,7 @@ dol_len= 0;
 		{
 		fseek(fp, 0, SEEK_END);
 		size=dol_len = ftell(fp);
-		dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len,32);//0x92000000;//malloc(dol_len);
+		dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len+32768,32);//0x92000000;//malloc(dol_len);
 		if(!dol_data) {fclose(fp);return -1;}
 
 		fseek(fp, 0, SEEK_SET);
@@ -7565,7 +7873,7 @@ dol_len= 0;
 		
 		}
 
-
+	
 return 0;
 }
 #endif 
@@ -7607,9 +7915,19 @@ int load_disc(u8 *discid)
         memset(&Descriptor, 0, sizeof(Descriptor));
         memset(&Partition_Info, 0, sizeof(Partition_Info));
 
+		cabecera2( "Loading...");
+
 		WDVD_Init();
-        if(WDVD_SetUSBMode(discid, current_partition)!=0) return 1;
-		//WDVD_SetUSBMode(NULL,0);
+
+		if(discid[6]!=0)
+			{
+			if(WDVD_SetUSBMode(NULL,0)!=0) return 1;
+			}
+		else
+			{
+           if(WDVD_SetUSBMode(discid, current_partition)!=0) return 1;
+			}
+		
 
         WDVD_Reset();
 		//return -456;
@@ -7624,9 +7942,11 @@ int load_disc(u8 *discid)
         Determine_VideoMode(*Disc_Region);
         WDVD_UnencryptedRead(&Header, sizeof(Header), 0);
 
-
-		if(strncmp((char *) &Header, (char *) discid, 6)) 
-		    return 666; // if headerid != discid (on hdd) error
+		if(discid[6]==0)
+			{
+			if(strncmp((char *) &Header, (char *) discid, 6)) 
+				return 666; // if headerid != discid (on hdd) error
+			}
 
 		cabecera2( "Loading...");
 

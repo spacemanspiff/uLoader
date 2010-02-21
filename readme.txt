@@ -1,4 +1,4 @@
-uLoader v3.0C - by Hermes (www.elotrolado.net)
+uLoader v3.1 - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (3.0 required). Now you can select the IOS used to install
@@ -10,6 +10,9 @@ to launch backups from USB mass storage devices with a graphical user interface 
 
 Features:
 ---------
+
+- Support to load games from DVD with alternative DOL (press '2' without USB device or press the DVD icon from the upper-right corner 
+  in the selection game screen)
 
 - New dev/mload and EHCI module based in interruptions. New cIOS based in IOS 38 base (I have done test reading 21000+ seconds without errors).
   See operational mode below.
