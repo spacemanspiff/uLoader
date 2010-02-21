@@ -88,11 +88,12 @@ s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf)
 	u32 mod, size;
 	s32 ret;
 
+
 	/* Calculate offset */
 	offset = ((u64)lba) << 2;
 
 	/* Calculate sizes */
-	mod  = len % 32;
+	mod  = ((u32) iobuf) & 31;
 
 	if (mod) {  // Offset not aligned...
       u32 left = ((0x20 - mod) < len) ? 0x20 - mod : len;
