@@ -560,7 +560,7 @@ int PNGU_DecodeTo4x4RGBA8 (IMGCTX ctx, PNGU_u32 width, PNGU_u32 height, void *bu
 	PNGU_u64 alphaMask;
 
 	// width and height need to be divisible by four
-	if ((width % 4) || (height % 4))
+	if ((width % 4) /*|| (height % 4)*/)
 		return PNGU_INVALID_WIDTH_OR_HEIGHT;
 
 	result = pngu_decode (ctx, width, height, 0);

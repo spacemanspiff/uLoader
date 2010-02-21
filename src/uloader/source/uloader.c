@@ -50,6 +50,8 @@
 
 #include <network.h>
 
+
+
 #define CIOS 222
 
 #include <stdarg.h>
@@ -135,11 +137,14 @@ int size_external_ehcmodule=0;
 
 int sd_ok=0;
 
+
+
 int load_ehc_module()
 {
 int is_ios=0;
 FILE *fp;
 
+//if(0)
 if(sd_ok && !external_ehcmodule)
 	{
 
@@ -2744,7 +2749,16 @@ for(n=0;n<=gameCnt;n++)
 
 	//if(!strncmp((void *) discid, (void *) header->id,6))
    
+   /*
 	sprintf(url, "http://www.theotherzone.com/wii/resize/%s/160/224/%c%c%c%c%c%c.png", 
+		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+	*/
+
+/*	sprintf(url, "http://www.wiiboxart.com/wii/resize/%s/160/224/%c%c%c%c%c%c.png", 
+		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);*/
+
+ 
+    sprintf(url, "http://www.wiiboxart.com/%s/%c%c%c%c%c%c.png", 
 		&region[(header->id[3]=='E')+(header->id[3]=='J')*2][0], header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
 	
 	memset(temp_data,0,256*1024);
@@ -2755,11 +2769,23 @@ for(n=0;n<=gameCnt;n++)
 		ret=download_file(url, &temp_buf, &temp_size);
 		if(ret==0)
 			{
-			sprintf(url, "sd:/covers/%c%c%c%c%c%c.png", header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+			#if 0
+			sprintf(url, "sd:/caratulas/%c%c%c%c%c%c.png", header->id[0], header->id[1], header->id[2], header->id[3], header->id[4], header->id[5]);
+            if(sd_ok && temp_size!=0)
+				{
+				FILE *fp;
+				//flag[n]=1;
+				fp=fopen(url,"wb"); // escribe el fichero
 
-			 
+				if(fp!=0)
+					{
+					fwrite(temp_buf,1, temp_size ,fp);
+					fclose(fp);
+					}
+				}
+			#endif
 			flag[n]=2;
-			if(temp_size<(200*1024-8))
+			if(temp_size>4 && temp_size<(200*1024-8))
 				{
 				void * texture_png=create_png_texture(&png_texture, temp_buf, 0);
 				if(texture_png)
@@ -2772,6 +2798,8 @@ for(n=0;n<=gameCnt;n++)
 					WBFS_SetProfileDatas(header->id, temp_data);
 					flag[n]=1;
 					}
+					
+				
 				}
 			if(temp_buf) free(temp_buf); temp_buf=NULL;
 
@@ -2785,6 +2813,7 @@ for(n=0;n<=gameCnt;n++)
 	
 	}
 
+http_deinit();
 sleep(1);
 }
 
@@ -2826,15 +2855,42 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.2");
+			s_printf("v2.3");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.2");
+			s_printf("v2.3");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
 			s_printf("%s","40 Years Old - 25 Years Programming (11-06-1969)");
 		
 }
+
+#if 0
+void save_log()
+{
+FILE *fp;
+	
+	mload_init();
+
+	mload_seek(0x13750000, SEEK_SET);
+	mload_read(temp_data, 128*1024);
+
+	mload_close();
+
+	if(sd_ok )
+		{
+
+		fp=fopen("sd:/log_ehc.txt","wb");
+
+		if(fp!=0)
+			{
+			fwrite(temp_data,1, strlen(temp_data) ,fp);
+				
+			fclose(fp);
+			}
+		}
+}
+#endif
 
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
@@ -3097,6 +3153,8 @@ int main(int argc, char **argv) {
 
 	
 		}
+
+		//save_log();
 
 		if(ret2<0)  goto error;
 

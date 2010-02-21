@@ -367,10 +367,19 @@ bool http_get_result (u32 *_http_status, u8 **content, u32 *length) {
 }
 
 
+static int netInit = 0;
+
+extern void net_deinit(void);
+
+void http_deinit(void)
+{
+	net_deinit();
+	netInit=0;
+}
 
 int download_file(char *url, u8 **outbuf, u32 *outlen)
 {
-static int netInit = 0;
+
 int retval;
 u32 http_status;
 int retry=2;
