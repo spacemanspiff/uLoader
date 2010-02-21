@@ -1,5 +1,7 @@
-uLoader v1.2 BETA - by Hermes (www.elotrolado.net)
+uLoader v1.4 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
+
+WARNING: run at first cios_installer.dol
 
 uLoader is a work based on Kwiirk's YAL and Waninkoko's usbloader that tries to give support to both custom IOS (cIOS222 and cIOS249) 
 to launch backups from USB mass storage devices with a graphical user interface similar to Wii channels.
@@ -9,7 +11,7 @@ Features:
 
 - 16 games per screen, showing an icon that can be inserted in the device, using the attached wbfs_win.exe revision (see below "Notes about wbfs_win").
 
-- It has a Favorites Screen (up to 16 games)
+- It has a Favorites Screen (up to 16 games) (save __CFG_ in HDD)
 
 - Allows to select the cIOS to use between cIOS 222 and CIOS 249.
 
@@ -30,6 +32,11 @@ CONTROLS
 - +/- Button: Next page/Previous page
 
 - 1 or Yellow button: Go to favorites page/back to last page
+
+
+- HOME: Special Menu
+
+- HOME (pointing one game): Complete Special Menu
 
 CONFIGURE BUTTON
 -------------------

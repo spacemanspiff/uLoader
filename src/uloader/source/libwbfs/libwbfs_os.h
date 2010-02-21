@@ -4,10 +4,11 @@
 #include <gctypes.h>
 
 #define debug_printf(fmt, ...);
+void my_perror(char * err);
 
 #include <stdio.h>
-#define wbfs_fatal(x) do{debug_printf("\nwbfs panic:%s\n\n",x);while(1);}while(0)
-#define wbfs_error(x) do{debug_printf("\nwbfs error:%s\n\n",x);}while(0)
+#define wbfs_fatal(x) do{my_perror(x);while(1);}while(0)
+#define wbfs_error(x) do{my_perror(x);}while(0)
 #include <stdlib.h>
 #include <malloc.h>
 

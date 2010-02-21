@@ -31,7 +31,7 @@ distribution.
 #include <stdio.h>
 #include <string.h>
 
-/* Constants */
+/* IOCTL commands */
 #define UMS_BASE			(('U'<<24)|('M'<<16)|('S'<<8))
 #define USB_IOCTL_UMS_INIT	        (UMS_BASE+0x1)
 #define USB_IOCTL_UMS_GET_CAPACITY      (UMS_BASE+0x2)
@@ -40,6 +40,9 @@ distribution.
 #define USB_IOCTL_UMS_READ_STRESS	(UMS_BASE+0x5)
 #define USB_IOCTL_UMS_SET_VERBOSE	(UMS_BASE+0x6)
 
+#define WBFS_BASE (('W'<<24)|('F'<<16)|('S'<<8))
+#define USB_IOCTL_WBFS_SPEED_LIMIT			(WBFS_BASE+0x123)
+
 #define UMS_HEAPSIZE			0x10000
 
 /* Variables */
@@ -47,6 +50,20 @@ static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb/ehc";
  
 static s32 hid = -1, fd = -1;
 static u32 sector_size;
+
+
+s32 USBStorage2_WFS_Speed_Fix(u32 speed)
+{
+	if (fd >= 0) {
+		s32 ret;
+
+		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_WBFS_SPEED_LIMIT, "i:", speed);
+
+		return ret;
+	}
+
+	return IPC_ENOENT;
+}
 
 
 inline s32 __USBStorage2_isMEM2Buffer(const void *buffer)
@@ -59,7 +76,7 @@ inline s32 __USBStorage2_isMEM2Buffer(const void *buffer)
 
 s32 USBStorage2_GetCapacity(u32 *_sector_size)
 {
-	if (fd > 0) {
+	if (fd >= 0) {
 		s32 ret;
 
 		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_GET_CAPACITY, ":i", &sector_size);
@@ -76,13 +93,9 @@ s32 USBStorage2_GetCapacity(u32 *_sector_size)
 s32 USBStorage2_Init(void)
 {
 	s32 ret;
-	int n=5;
-	
-	while(n>0)
-	{
 
 	/* Already open */
-	if (fd > 0)
+	if (fd >= 0)
 		return 0;
 
 	/* Create heap */
@@ -96,100 +109,183 @@ s32 USBStorage2_Init(void)
 	fd = IOS_Open(fs, 0);
 	if (fd < 0)
 		return fd;
-	
 
-	
-		
 	/* Initialize USB storage */
-	IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_INIT, ":");
-	sleep(1);
-	
+	ret=IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_INIT, ":");
+	if(ret<0) goto err;
+
 	/* Get device capacity */
 	ret = USBStorage2_GetCapacity(NULL);
-/*	if (!ret)
+	if (!ret)
+		{
+		ret=-1;
 		goto err;
+		}
 
-	return 0;*/
-	if(ret) return 0;
-	n--;
-
-	if (fd > 0) {
-		IOS_Close(fd);
-		fd = -1;
-	}
-
-	
-	}
+	return 0;
 
 err:
 	/* Close USB device */
-	if (fd > 0) {
+	if (fd >= 0) {
 		IOS_Close(fd);
 		fd = -1;
 	}
+	
 
-	return -1;
+	return ret;
 }
 
 void USBStorage2_Deinit(void)
 {
 	/* Close USB device */
-	if (fd > 0) {
+	if (fd >= 0) {
 		IOS_Close(fd);
 		fd = -1;
 	}
 }
 
+s32 USBStorage2_ReadSectors2(u32 sector, u32 numSectors, void *buffer)
+{
+	void *buf = NULL;
+	s32   ret = IPC_ENOENT;
+    u32 max_sectors=UMS_HEAPSIZE/sector_size;
+	u32 sectors;
+
+	if(max_sectors>32) max_sectors=32;
+
+	if (fd < 0)
+		goto out;
+
+	/* MEM1 buffer */
+	if (!__USBStorage2_isMEM2Buffer(buffer)) {
+		u32 cnt;
+		
+		buf = iosAlloc(hid, max_sectors*sector_size);
+		if (!buf)
+			return IPC_ENOMEM;
+
+		for (cnt = 0; cnt < numSectors; cnt+=max_sectors) {
+			void *ptr = ((u8 *)buffer) + (sector_size * cnt);
+			
+			sectors=numSectors-cnt;if(sectors>max_sectors) sectors=max_sectors;
+
+			ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_READ_SECTORS, "ii:d", sector + cnt, sectors, buf, sector_size*sectors);
+			if (ret < 0)
+				goto out;
+
+			memcpy(ptr, buf, sector_size*sectors);
+		}
+	} else
+		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_READ_SECTORS, "ii:d", sector, numSectors, buffer, sector_size * numSectors);
+
+out:
+	/* Free memory */
+	if (buf)
+		iosFree(hid, buf);
+
+	return ret;
+}
+
+s32 USBStorage2_WriteSectors2(u32 sector, u32 numSectors, const void *buffer)
+{
+	void *buf = NULL;
+	s32   ret = IPC_ENOENT;
+	u32 max_sectors=UMS_HEAPSIZE/sector_size;
+	u32 sectors;
+
+	if(max_sectors>32) max_sectors=32;
+
+	if (fd < 0)
+		goto out;
+
+	/* MEM1 buffer */
+	if (!__USBStorage2_isMEM2Buffer(buffer)) {
+		u32 cnt;
+		
+		buf = iosAlloc(hid, max_sectors*sector_size);
+		if (!buf)
+			return IPC_ENOMEM;
+
+		for (cnt = 0; cnt < numSectors; cnt+=max_sectors) {
+			void *ptr = ((u8 *)buffer) + (sector_size * cnt);
+			
+			sectors=numSectors-cnt;if(sectors>max_sectors) sectors=max_sectors;
+			memcpy(buf, ptr, sector_size*sectors);
+
+			ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WRITE_SECTORS, "ii:d", sector + cnt, sectors, buf, sector_size*sectors);
+			if (ret < 0)
+				goto out;
+		}
+	} else
+		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WRITE_SECTORS, "ii:d", sector, numSectors, buffer, sector_size * numSectors);
+
+out:
+	/* Free memory */
+	if (buf)
+		iosFree(hid, buf);
+
+	return ret;
+}
+
 s32 USBStorage2_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 {
-	/* Read sectors from USB */
-	if (fd > 0) {
-		/* MEM2 buffer */
-		if (!__USBStorage2_isMEM2Buffer(buffer)) {
-			u8 *_buffer = iosAlloc(hid, sector_size * numSectors);
-			s32 ret;
+	void *buf = (void *)buffer;
+	u32   len = (sector_size * numSectors);
 
-			if (!_buffer)
-				return IPC_ENOMEM;
+	s32 ret;
 
-			ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_READ_SECTORS, "ii:d", sector, numSectors, _buffer, sector_size * numSectors);
+	/* Device not opened */
+	if (fd < 0)
+		return fd;
 
-			memcpy(buffer, _buffer, sector_size * numSectors);
-
-			iosFree(hid, _buffer);
-
-			return ret;
-		}
-
-		return  IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_READ_SECTORS, "ii:d", sector, numSectors, buffer, sector_size * numSectors);
+	/* MEM1 buffer */
+	if (!__USBStorage2_isMEM2Buffer(buffer)) {
+		/* Allocate memory */
+		buf = iosAlloc(hid, len);
+		if (!buf)
+			return IPC_ENOMEM;
 	}
 
-	return IPC_ENOENT;
+	/* Read data */
+	ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_READ_SECTORS, "ii:d", sector, numSectors, buf, len);
+
+	/* Copy data */
+	if (buf != buffer) {
+		memcpy(buffer, buf, len);
+		iosFree(hid, buf);
+	}
+
+	return ret;
 }
 
 s32 USBStorage2_WriteSectors(u32 sector, u32 numSectors, const void *buffer)
 {
-	/* Write sectors to USB */
-	if (fd > 0) {
-		/* MEM2 buffer */
-		if (!__USBStorage2_isMEM2Buffer(buffer)) {
-			u8 *_buffer = iosAlloc(hid, sector_size * numSectors);
-			s32 ret;
+	void *buf = (void *)buffer;
+	u32   len = (sector_size * numSectors);
 
-			if (!_buffer)
-				return IPC_ENOMEM;
+	s32 ret;
 
-			memcpy(_buffer, buffer, sector_size * numSectors);
+	/* Device not opened */
+	if (fd < 0)
+		return fd;
 
-			ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WRITE_SECTORS, "ii:d", sector, numSectors, _buffer, sector_size * numSectors);
+	/* MEM1 buffer */
+	if (!__USBStorage2_isMEM2Buffer(buffer)) {
+		/* Allocate memory */
+		buf = iosAlloc(hid, len);
+		if (!buf)
+			return IPC_ENOMEM;
 
-			iosFree(hid, _buffer);
-
-			return ret;
-		}
-
-		return IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WRITE_SECTORS, "ii:d", sector, numSectors, buffer, sector_size * numSectors);
+		/* Copy data */
+		memcpy(buf, buffer, len);
 	}
 
-	return IPC_ENOENT;
+	/* Write data */
+	ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_WRITE_SECTORS, "ii:d", sector, numSectors, buf, len);
+
+	/* Free memory */
+	if (buf != buffer)
+		iosFree(hid, buf);
+
+	return ret;
 }

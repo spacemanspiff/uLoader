@@ -80,6 +80,8 @@ wbfs_t*wbfs_open_hd(
         }
         return 0;
 }
+
+extern int block_ciso;
 wbfs_t*wbfs_open_partition(rw_sector_callback_t read_hdsector,
                            rw_sector_callback_t write_hdsector,
 						   close_callback_t close_hd,
@@ -131,6 +133,14 @@ wbfs_t*wbfs_open_partition(rw_sector_callback_t read_hdsector,
         p->wbfs_sec_sz = 1<<p->wbfs_sec_sz_s;
         p->n_wbfs_sec = p->n_wii_sec >> (p->wbfs_sec_sz_s - p->wii_sec_sz_s);
         p->n_wbfs_sec_per_disc = p->n_wii_sec_per_disc >> (p->wbfs_sec_sz_s - p->wii_sec_sz_s);
+
+        block_ciso=0;
+        if(p->n_wbfs_sec_per_disc>32760)
+			{
+			block_ciso=1;
+			printf("WARNING! n_wbfs_sec_per_disc is too big for .ciso extraction!!!\nSize: %u\n\nPress any key\n\n",  p->n_wbfs_sec_per_disc);
+			getch();
+			}
         p->disc_info_sz = ALIGN_LBA(sizeof(wbfs_disc_info_t) + p->n_wbfs_sec_per_disc*2);
 
         //printf("hd_sector_size %X wii_sector size %X wbfs sector_size %X\n",p->hd_sec_sz,p->wii_sec_sz,p->wbfs_sec_sz);
@@ -696,6 +706,121 @@ error:
 	return 0;
 }
 
+u32 wbfs_add_cfg
+	(
+		wbfs_t *p,
+		read_wiidisc_callback_t read_src_wii_disc,
+		void *callback_data,
+		progress_callback_t spinner,
+		partition_selector_t sel
+	)
+{
+	int i, discn;
+	u32 tot, cur;
+	u32 wii_sec_per_wbfs_sect = 1 << (p->wbfs_sec_sz_s-p->wii_sec_sz_s);
+	wiidisc_t *d = 0;
+	u8 *used = 0;
+	wbfs_disc_info_t *info = 0;
+	u8* copy_buffer = 0;
+	u8 *b;
+	int disc_info_sz_lba;
+
+	set_cios_mode(NULL, 0);
+
+	used = wbfs_malloc(p->n_wii_sec_per_disc);
+	
+	if (!used)
+	{
+		ERR("unable to alloc memory");
+	}
+	
+	
+	wbfs_memset(used,0,p->n_wii_sec_per_disc);
+	
+	
+	for (i = 0; i < p->max_disc; i++) // find a free slot.
+	{
+		if (p->head->disc_table[i] == 0)
+		{
+			break;
+		}
+	}
+	
+	if (i == p->max_disc)
+	{
+		ERR("no space left on device (table full)");
+	}
+	
+	p->head->disc_table[i] = 1;
+	discn = i;
+	load_freeblocks(p);
+	
+	// build disc info
+	info = wbfs_ioalloc(p->disc_info_sz);
+	b = (u8 *)info;
+	//read_src_wii_disc(callback_data, 0, 0x100, info->disc_header_copy);
+    wbfs_memset(info->disc_header_copy,0,0x100);
+	{
+	char *p=(char *) info->disc_header_copy;
+	wbfs_memcpy(p,"__CFG_",6);
+	
+	p[0x18]=0x5D;p[0x19]=0x1C;p[0x1A]=0x9E;p[0x1B]=0xA3;
+
+	wbfs_memcpy(p+0x20,"uLoader CFG Entry",17);
+	}
+	fprintf(stderr, "adding %c%c%c%c%c%c %s...\n",b[0], b[1], b[2], b[3], b[4], b[5], b + 0x20);
+	
+	copy_buffer = wbfs_ioalloc(p->wbfs_sec_sz);
+	if (!copy_buffer)
+	{
+		ERR("alloc memory");
+	}
+	
+	tot = 0;
+	cur = 0;
+	
+	
+	for (i = 0; i < p->n_wbfs_sec_per_disc; i++)
+	{
+		u16 bl = 0;
+		
+		if(i==0) 
+			{
+			bl = alloc_block(p); // only one block
+				if (bl == 0xffff)
+				{
+				ERR("no space left on device (disc full)");
+				}
+
+			wbfs_memset(copy_buffer, 0, p->wbfs_sec_sz);
+			
+			p->write_hdsector(p->callback_data, p->part_lba + bl * (p->wbfs_sec_sz / p->hd_sec_sz), p->wbfs_sec_sz / p->hd_sec_sz, copy_buffer);
+			}
+		
+
+		info->wlba_table[i] = wbfs_htons(bl);
+	}
+	
+	// write disc info
+	disc_info_sz_lba = p->disc_info_sz>>p->hd_sec_sz_s;
+	p->write_hdsector(p->callback_data, p->part_lba + 1 + discn * disc_info_sz_lba,disc_info_sz_lba, info);
+        
+	wbfs_sync(p);
+
+error:
+	set_cios_mode(NULL, 0);
+	if(d)
+		wd_close_disc(d);
+	if(used)
+		wbfs_free(used);
+	if(info)
+		wbfs_iofree(info);
+	if(copy_buffer)
+		wbfs_iofree(copy_buffer);
+	
+	// init with all free blocks
+	return 0;
+}
 
 u32 wbfs_estimate_disc
 	(

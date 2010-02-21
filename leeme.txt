@@ -1,5 +1,7 @@
-uLoader v1.2 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.4 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
+
+ATENCION: ejecuta primero cios_installer.dol
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
 para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii
@@ -10,7 +12,7 @@ Caracteristicas:
 - Visualiza 16 juegos por pantalla, mostrando un icono que puede ser insertado en el propio disco, utilizando la revisión de wbfs_win.exe 
   que adjunto (ver mas abajo "Notas sobre wbfs_win").
 
-- Dispone de una pantalla de Juegos Favoritos (hasta 16 juegos)
+- Dispone de una pantalla de Juegos Favoritos (hasta 16 juegos). (salva __CFG_ en HDD)
 
 - Permite seleccionar el cIOS a utilizar entre cIOS 222 y CIOS 249.
 
@@ -30,6 +32,10 @@ CONTROLES
 - Boton +/-: Pagina Siguiente/Anterior
 
 - Boton 1 o Boton Amarillo: Ir a la pagina de favoritos/volver a la ultima pagina
+
+- HOME: Menu especial
+
+- HOME (apuntando a juego): Menu especial completo
 
 
 BOTON DE CONFIGURAR

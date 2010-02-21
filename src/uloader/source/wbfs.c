@@ -5,6 +5,8 @@
 #include "usbstorage2.h"
 #include "utils.h"
 
+#include "wdvd.h"
+
 #include "libwbfs/libwbfs.h"
 
 /* Constants */
@@ -15,27 +17,34 @@ static wbfs_t *hdd = NULL;
 static u32 nb_sectors, sector_size;
 
 
+void display_spinner(int mode, int percent, char *str);
+
 void __WBFS_Spinner(s32 x, s32 max)
 {
 	static time_t start;
 	static u32 expected;
-
+	static u32 old_d,dd;
+    char string[128];
+	u32 wii_sec_per_wbfs_sect = 1<<(hdd->wbfs_sec_sz_s-hdd->wii_sec_sz_s);
 	f32 percent, size;
 	u32 d, h, m, s;
+	s32 max2= max*wii_sec_per_wbfs_sect;
 
 	/* First time */
 	if (!x) {
 		start    = time(0);
 		expected = 300;
+		old_d=start;
 	}
 
 	/* Elapsed time */
-	d = time(0) - start;
+	dd=time(0);
+	d =dd  - start;
 
-	if (x != max) {
+	if (x != max2) {
 		/* Expected time */
 		if (d)
-			expected = (expected * 3 + d * max / x) / 4;
+			expected = (expected * 3 + d * max2 / x) / 4;
 
 		/* Remaining time */
 		d = (expected > d) ? (expected - d) : 0;
@@ -47,18 +56,27 @@ void __WBFS_Spinner(s32 x, s32 max)
 	s =  d % 60;
 
 	/* Calculate percentage/size */
-	percent = (x * 100.0) / max;
+	percent = (x * 100.0) / (max2);
 	size    = (hdd->wbfs_sec_sz / GB_SIZE) * max;
 
-	Con_ClearLine();
+//	return;);
 
 	/* Show progress */
-	if (x != max) {
-		printf("    %.2f%% of %.2fGB (%c) ETA: %d:%02d:%02d\r", percent, size, "/|\\-"[(x / 10) % 4], h, m, s);
-		fflush(stdout);
+	if (x != max2 ) {
+
+	    if((dd-old_d)>0)
+			{
+			old_d=dd;
+			snprintf(string, sizeof(string), "%.2fGB ETA: %d:%02d:%02d", size, h, m, s);
+			display_spinner(0,(int)percent,string);
+			}
 	} else
-		printf("    %.2fGB copied in %d:%02d:%02d\n", size, h, m, s);
+		{
+		snprintf(string, sizeof(string), "%.2fGB copied in %d:%02d:%02d", size, h, m, s);
+		display_spinner(1,(int)percent,string);
+		}
 }
+
 
 s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf)
 {
@@ -193,6 +211,15 @@ s32 WBFS_Open(void)
 	return 0;
 }
 
+s32 WBFS_Close(void)
+{
+	if (hdd)
+		wbfs_close(hdd);
+	hdd=0;
+return 0;
+}
+
+
 s32 WBFS_Format(u32 lba, u32 size)
 {
 	wbfs_t *partition = NULL;
@@ -256,12 +283,12 @@ s32 WBFS_CheckGame(u8 *discid)
 
 	return 0;
 }
-
 // added by Hermes
 s32 WBFS_GetProfileDatas(u8 *discid, u8 *buff)
 {
 	wbfs_disc_t *disc = NULL;
-	int n;
+if (!hdd)
+		return 0;
 
 	/* Try to open game disc */
 	disc = wbfs_open_disc(hdd, discid);
@@ -285,8 +312,8 @@ s32 WBFS_GetProfileDatas(u8 *discid, u8 *buff)
 s32 WBFS_SetProfileDatas(u8 *discid, u8 *buff)
 {
 	wbfs_disc_t *disc = NULL;
-	int n;
-
+if (!hdd)
+		return 0;
 	/* Try to open game disc */
 	disc = wbfs_open_disc(hdd, discid);
 	if (disc) {
@@ -305,18 +332,73 @@ s32 WBFS_SetProfileDatas(u8 *discid, u8 *buff)
 	return 0;
 }
 
+s32 WBFS_LoadCfg(void *data, s32 size)
+{
+wbfs_disc_t *disc = NULL;
+if (!hdd)
+		return 0;
 
+	/* Try to open game disc */
+	disc = wbfs_open_disc(hdd, "__CFG_");
+	if (!disc)
+		{
+		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
+		return 1;
+		}
+	else 
+		{
+        wbfs_disc_read(disc,(256>>2), data, size); // from 0x100 to 0x1ff is cfg datas (of the 2MB)
+		wbfs_close_disc(disc);
+		
+		return 1;
+		}
 
-s32 WBFS_AddGame(void)
+return 0;
+}
+
+s32 WBFS_SaveCfg(void *data, s32 size)
+{
+wbfs_disc_t *disc = NULL;
+if(!hdd) WBFS_Open();
+if (!hdd)
+		return 0;
+	/* Try to open game disc */
+	disc = wbfs_open_disc(hdd, "__CFG_");
+	if (!disc)
+		{
+		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
+	   
+		disc = wbfs_open_disc(hdd, "__CFG_");
+		}
+   
+	if(disc)
+		{
+        wbfs_disc_write(disc,(256>>2), data, size); // from 0x100 to 0x1ff is cfg datas (of the 2MB)
+		wbfs_close_disc(disc);
+		
+		return 1;
+		}
+
+return 0;
+}
+s32 WBFS_AddGame(int mode)
 {
 	s32 ret;
 
 	/* No USB device open */
 	if (!hdd)
 		return -1;
+	u32 count = wbfs_count_usedblocks(hdd);
+	u32 estimation = wbfs_estimate_disc(hdd,  __WBFS_ReadDVD,__WBFS_Spinner, (mode==0)  ? ONLY_GAME_PARTITION : ALL_PARTITIONS);
+
+	if( ((double)estimation)> ( ((double)count) * ((double)hdd->wbfs_sec_sz)))
+			{
+			my_perror("no space left on device (disc full)");
+			return -666;
+			}
 
 	/* Add game to USB device */
-	ret = wbfs_add_disc(hdd, __WBFS_ReadDVD, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION, 0);
+	ret = wbfs_add_disc(hdd, __WBFS_ReadDVD, NULL, __WBFS_Spinner,(mode==0) ? ONLY_GAME_PARTITION : ALL_PARTITIONS, 0);
 	if (ret < 0)
 		return ret;
 

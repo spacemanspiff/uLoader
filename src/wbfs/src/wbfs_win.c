@@ -26,8 +26,13 @@
 #define snprintf _snprintf
 #endif
 
+
+int block_ciso=0;
+
 wbfs_t *wbfs_try_open(char *disc, char *partition, int reset);
 wbfs_t *wbfs_try_open_partition(char *fn, int reset);
+
+u32 wbfs_add_cfg(wbfs_t *p, read_wiidisc_callback_t read_src_wii_disc, void *callback_data, progress_callback_t spinner, partition_selector_t sel);
 
 void wbfs_integrity_check(wbfs_t* p);
 
@@ -45,15 +50,15 @@ int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
 	DWORD read;
 	u64 offset = _offset;
 	
-	offset <<= 2;
+	offset <<= 2L;
 	
 
 	if(cios_mode== (int) _handle)
 	{
-	int off=cios_map_off[offset/(u64)cios_size];
+	int off=cios_map_off[(u32)(offset/(u64)cios_size)];
 	if(off<0) {memset(buf,0,count);if(off==-2) return 1; return 0;}
 //	printf("coffset %i size %i\n",_offset,count);
-	large.QuadPart = (offset & ((u64)(cios_size-1)))+(((u64)off)* (u64)cios_size)+32768ULL;
+	large.QuadPart = (offset & ((u64)(cios_size-1)))+(((u64) ((u32)off))* (u64)cios_size)+32768ULL;
 	}
 	else {large.QuadPart = offset;}
 
@@ -88,7 +93,7 @@ else
 	cios_mode=0;
 	read_wii_disc_sector(d->fp,0, 0x8000,cios_map);
 	cios_mode=(int) d->fp;
-	cios_size=((int)cios_map[4])+(((int)cios_map[5])<<8)+(((int)cios_map[6])<<16)+(((int)cios_map[7])<<24);
+	cios_size=((u32)((u8)cios_map[4]))+(((u32)((u8)cios_map[5]))<<8)+(((u32)((u8)cios_map[6]))<<16)+(((u32)((u8)cios_map[7]))<<24);
 
     for(n=0;n<32760;n++)
 		{
@@ -292,6 +297,28 @@ void wbfs_applet_estimate(wbfs_t *p, char *argv)
 
 static void _spinner(int x, int y){ spinner(x, y); }
 
+
+
+void wbfs_applet_addcfg(wbfs_t *p)
+{
+	wbfs_disc_t *d;
+
+
+		d = wbfs_open_disc(p, "__CFG_");
+		
+		if (d)
+		{
+			fprintf(stderr, "%s already in disc...\n", "__CFG_");
+			wbfs_close_disc(d);
+		}
+		else
+		{
+			wbfs_add_cfg(p, read_wii_disc_sector, NULL, _spinner, ONLY_GAME_PARTITION);
+        }
+
+}
+
+
 void wbfs_applet_add(wbfs_t *p, char *argv)
 {
 	u8 discinfo[7];
@@ -434,6 +461,9 @@ void wbfs_applet_png(wbfs_t *p, char *argv, char *png)
 void wbfs_applet_extract(wbfs_t *p, char *argv)
 {
 	wbfs_disc_t *d;
+
+	if(block_ciso) {wbfs_applet_isoextract(p, argv);return;}
+
 	d = wbfs_open_disc(p, (u8 *)argv);
 	
 	if (d)
@@ -647,7 +677,10 @@ int main(int argc, char *argv[])
 		if(k==80 && pos_list>=0) pos_list++;
 		if(k==72 && pos_list>=0) {pos_list--;if(pos_list<0) pos_list=0;}
 		}
-
+	/*if(k=='7')
+		{
+		wbfs_applet_addcfg(p);
+		}*/
     // add game
 	if(k=='1') 
 		{

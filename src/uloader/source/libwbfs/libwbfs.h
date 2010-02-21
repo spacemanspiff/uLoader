@@ -158,7 +158,9 @@ u32 wbfs_sector_used(wbfs_t *p,wbfs_disc_info_t *di);
  */
 // offset is pointing 32bit words to address the whole dvd, although len is in bytes
 int wbfs_disc_read(wbfs_disc_t*d,u32 offset, u8 *data, u32 len);
+// offset is pointing 32bit words to address the whole dvd, although len is in bytes
 int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len);
+
 /*! @return the number of discs inside the paritition */
 u32 wbfs_count_discs(wbfs_t*p);
 /*! get the disc info of ith disc inside the partition. It correspond to the first 0x100 bytes of the wiidvd
@@ -187,6 +189,9 @@ u32 wbfs_add_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, void *call
                   progress_callback_t spinner,partition_selector_t sel,int copy_1_1);
 
 
+u32 wbfs_estimate_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, void *callback_data,
+                  partition_selector_t sel);
+
 /*! remove a wiidvd inside a partition */
 u32 wbfs_rm_disc(wbfs_t*p, u8* discid);
 
@@ -208,6 +213,10 @@ u32 wbfs_extract_file(wbfs_disc_t*d, char *path);
 
 // remove some sanity checks
 void wbfs_set_force_mode(int force);
+
+// for uloader: it creates __CFG_ file
+u32 wbfs_add_cfg(wbfs_t *p, read_wiidisc_callback_t read_src_wii_disc, void *callback_data, progress_callback_t spinner, partition_selector_t sel);
+
 
 #ifdef __cplusplus
    }
