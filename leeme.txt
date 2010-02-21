@@ -1,4 +1,4 @@
-uLoader v1.8E BETA - por Hermes (www.elotrolado.net)
+uLoader v1.9 BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (1.6 requerido)

@@ -124,6 +124,7 @@ u32 patch_datas[8] ATTRIBUTE_ALIGN(32);
 data_elf my_data_elf;
 
 int my_thread_id=0;
+
 int load_ehc_module()
 {
 int is_ios=0;
@@ -195,6 +196,28 @@ int is_ios=0;
 
 return 0;
 }
+
+// Based in Waninkoko patch
+
+void __Patch_CoverRegister(void *buffer, u32 len)
+{
+   const u8 oldcode[] = { 0x54, 0x60, 0xF7, 0xFF, 0x40, 0x82, 0x00, 0x0C, 0x54, 0x60, 0x07, 0xFF, 0x41, 0x82, 0x00, 0x0C };
+   const u8 newcode[] = { 0x54, 0x60, 0xF7, 0xFF, 0x40, 0x82, 0x00, 0x0C, 0x54, 0x60, 0x07, 0xFF, 0x48, 0x00, 0x00, 0x0C };
+
+int n;
+
+   /* Patch cover register */
+
+for(n=0;n<(len-sizeof(oldcode));n+=4)
+	{
+	if (memcmp(buffer+n, (void *) oldcode, sizeof(oldcode)) == 0) 
+		{
+		memcpy(buffer+n, (void *) newcode, sizeof(newcode));
+		}
+	}
+
+}
+
 
 #define USE_MODPLAYER 1
 
@@ -871,7 +894,7 @@ int n=0;
 	return;
 	}
 
-	if(sd_ok)
+	/*if(sd_ok)
 	{
 
 	fp=fopen("sd:/apps/uloader/uloader.cfg","rb"); // lee el fichero de texto
@@ -886,7 +909,7 @@ int n=0;
 		fclose(fp);
 		}
 	}
-
+*/
 	if(n!=sizeof (config_file) || !fp || config_file.magic!=0xcacafea1)
 		{
 		memset(&config_file,0, sizeof (config_file));
@@ -904,6 +927,7 @@ if(WBFS_SaveCfg(&config_file,sizeof (config_file)))
 	return;
 	}
 
+/*
 if(!sd_ok) return;
 
 	
@@ -918,7 +942,7 @@ if(!sd_ok) return;
 		fwrite(&config_file,1, sizeof (config_file) ,fp);
 		fclose(fp);
 		}
-
+*/
 }
 
 #define MAX_LIST_CHEATS 25
@@ -1150,8 +1174,9 @@ while(1)
 	GX_End();
 		
 
-	SetTexture(NULL);
+	SetTexture(&text_button[0]);
     DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
 	SelectFontTexture(1); // selecciona la fuente de letra extra
@@ -1370,13 +1395,18 @@ while(1)
 						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
 							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
 						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
-							{guitar_pos_x-=8;if(px<16) px=16;}
+							{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
 							
 
 						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
 							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
 						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
 							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+
+						if(guitar_pos_x<0) guitar_pos_x=0;
+						if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+						if(guitar_pos_y<0) guitar_pos_y=0;
+						if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
 						
 						px=guitar_pos_x; py=guitar_pos_y;
 
@@ -1402,6 +1432,8 @@ while(1)
 						}
 					 else
 					   {px=-100;py=-100;}
+
+				
 
 				if(new_pad & WPAD_BUTTON_B)
 					{
@@ -1484,8 +1516,9 @@ void cabecera(int frames2, char *cab)
 	GX_End();
 		
 
-	SetTexture(NULL);
+	SetTexture(&text_button[0]);
     DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
 	PX= 0; PY=ylev-32; color= 0xff000000; 
@@ -1811,8 +1844,9 @@ while(1)
 	AddTextureVertex(0, SCR_HEIGHT, 999, 0xffa0a0a0, 0, 1024+(frames2 & 1023)); 
 	GX_End();
 
-	SetTexture(NULL);
+	SetTexture(&text_button[0]);
     DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
 	PX= 0; PY=ylev-32; color= 0xff000000; 
@@ -1868,13 +1902,18 @@ while(1)
 						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
 							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
 						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
-							{guitar_pos_x-=8;if(px<16) px=16;}
+							{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
 							
 
 						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
 							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
 						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
 							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+
+						if(guitar_pos_x<0) guitar_pos_x=0;
+						if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+						if(guitar_pos_y<0) guitar_pos_y=0;
+						if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
 						
 						px=guitar_pos_x; py=guitar_pos_y;
 
@@ -2077,8 +2116,9 @@ while(1)
 	if(mode==2)
 		{
 
-		SetTexture(NULL);
+		SetTexture(&text_button[0]);
 		DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+		SetTexture(NULL);
 		DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
 		letter_size(16,24);
@@ -2136,13 +2176,19 @@ while(1)
 						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
 							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
 						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
-							{guitar_pos_x-=8;if(px<16) px=16;}
+							{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
 							
 
 						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
 							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
 						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
 							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+						
+						if(guitar_pos_x<0) guitar_pos_x=0;
+						if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+						if(guitar_pos_y<0) guitar_pos_y=0;
+						if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
+
 						
 						px=guitar_pos_x; py=guitar_pos_y;
 
@@ -2309,13 +2355,18 @@ char buff[64];
 						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
 							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
 						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
-							{guitar_pos_x-=8;if(px<16) px=16;}
+							{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
 							
 
 						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
 							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
 						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
 							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+
+						if(guitar_pos_x<0) guitar_pos_x=0;
+						if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+						if(guitar_pos_y<0) guitar_pos_y=0;
+						if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
 						
 						px=guitar_pos_x; py=guitar_pos_y;
 
@@ -2543,12 +2594,12 @@ int main(int argc, char **argv) {
 			}
 		}
 		
-
-		for(n=0;n<25;n++)
+	ret2=-1;
+		for(n=0;n<3;n++)
 		{
 			ret2 = USBStorage2_Init(); 
-			if(!ret2) break;
-			usleep(200*1000);
+			if(!ret2) break; else ret2=-1;
+			usleep(500*1000);
 		}
 	
 		
@@ -2565,16 +2616,22 @@ int main(int argc, char **argv) {
 			
 		}
 		
-		//fatInit(8, true);
+		
 		__io_wiisd.startup();
 		sd_ok = fatMountSimple("sd", &__io_wiisd);
+		
+		/*
+		// mount ums test
+		__io_usbstorage2.startup();
+		sd_ok = fatMountSimple("sd", &__io_usbstorage2);
+		*/
 		
 		InitScreen();  // Inicialización del Vídeo
 		
 		create_png_texture(&text_background, background, 1);
 		
 		bkcolor=0;
-
+       
 		if(ret2>=0) 
 			{
 		    ret2=WBFS_Init();
@@ -2613,9 +2670,9 @@ int main(int argc, char **argv) {
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v1.8");
+			s_printf("v1.9");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v1.8");
+			s_printf("v1.9");
 			autocenter=1;
 			if(n!=2) Screen_flip();
 			}
@@ -2762,6 +2819,8 @@ get_games:
 		last_game=-1;
 		test_favorite=0;
 
+		if(buffer) free(buffer);
+		buffer=NULL;
 	    
 
 		SetTexture(&text_background);
@@ -3675,13 +3734,18 @@ get_games:
 						if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
 							{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
 						if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
-							{guitar_pos_x-=8;if(px<16) px=16;}
+							{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
 							
 
 						if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
 							{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
 						if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
 							{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+
+						if(guitar_pos_x<0) guitar_pos_x=0;
+						if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+						if(guitar_pos_y<0) guitar_pos_y=0;
+						if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
 						
 						px=guitar_pos_x; py=guitar_pos_y;
 
@@ -3711,6 +3775,8 @@ get_games:
 						}
 					 else
 					   {px=-100;py=-100;}
+
+
 
 					 if(cheat_mode && txt_cheats)
 						{
@@ -4033,7 +4099,7 @@ get_games:
 															frames3+=16;
 															Screen_flip();
 															load_ehc_module();
-															for(n=0;n<25;n++)
+															for(n=0;n<3;n++)
 																{
 																cabecera2(frames3, "Loading...");
 																frames3+=16;
@@ -4041,7 +4107,7 @@ get_games:
 
 																	ret2 = USBStorage2_Init(); 
 																	if(!ret2) break;
-																	usleep(200*1000);
+																	usleep(500*1000);
 																}
 															USBStorage2_Deinit();
 															}
@@ -4627,6 +4693,8 @@ int load_disc(u8 *discid)
                 WDVD_Read(Address, Section_Size, Partition_Offset << 2);
 
 				Screen_flip();
+
+				__Patch_CoverRegister(Address, Section_Size);
                 
 				/*HOOKS STUFF - FISHEARS*/
 				dogamehooks(Address, Section_Size);

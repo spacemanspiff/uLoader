@@ -1,3 +1,3 @@
-#define size_button3 1035
+#define size_button3 18015
 
-extern unsigned char button3[1035];
+extern unsigned char button3[18015];
