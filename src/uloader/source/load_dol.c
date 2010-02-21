@@ -38,7 +38,7 @@ typedef struct _dolheader {
 void *dol_data=NULL;
 int dol_len=0;
 
-extern void patch_dol(void *Address, int Section_Size);
+extern void patch_dol(void *Address, int Section_Size, int sel);
 
 u32 load_dol() 
 {
@@ -65,7 +65,7 @@ if(dol_header->bss_start)
 			DCFlushRangeNoSync ((void *) dol_header->section_start[i], dol_header->section_size[i]);
 			}
 
-		patch_dol((void *) dol_header->section_start[i], dol_header->section_size[i]);
+		patch_dol((void *) dol_header->section_start[i], dol_header->section_size[i],1);
 		}
    
 

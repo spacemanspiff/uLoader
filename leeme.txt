@@ -1,4 +1,4 @@
-uLoader v2.6 BETA - por Hermes (www.elotrolado.net)
+uLoader v2.7 BETA - por Hermes (www.elotrolado.net)
 ----------------------------------------------------
 
 ATENCION: ejecuta primero cios_installer.dol (2.6 requerido). Ahora puedes seleccionar el IOS usado para instalar
@@ -36,7 +36,7 @@ Caracteristicas:
 - Posibilidad de añadir/borrar iconos/caratulas desde la SD a los juegos, directamente (el PNG  es añadido al HDD directamente).
   Ahora puedes descargar caratulas desde Internet o adquirir automaticamente las carátulas desde el directorio actual de la SD
 
-- Ahora puedes cargar juegos como Red Steel usando un .dol alternativo (mira NOTAS DE DOL ALTERNATIVO en este documento)
+- Ahora puedes cargar juegos como Red Steel u otros usando un .dol alternativo (mira NOTAS DE DOL ALTERNATIVO en este documento)
 
 - Ahora puedes cargar ehcmodule.elf externamente (mete en sd:/apps/uloader/ehcmodule.elf) para
   utilizar versiones antiguas del modulo (mira en src/uloader/resources)
@@ -72,9 +72,9 @@ CONTROLES
 
 - Boton 1 o Boton Amarillo: Ir a la pagina de favoritos/volver a la ultima pagina
 
-- HOME: Menu especial
+- HOME: Menu especial (Añadir juegos, formatear, control parental, salir...)
 
-- HOME (apuntando a juego): Menu especial completo
+- HOME (apuntando a juego): Menu especial completo (opciones para PNG, dol altenativo, borrar...) 
 
 ************************************************************************************************************************************************************
 
@@ -206,24 +206,26 @@ NOTAS DE DOL ALTERNATIVO
 ------------------------
 
 
-Primero necesitas crear un directorio "games" en raiz de la SD o USB (FAT).
+NOTA: El viejo metodo para dol alternativo ya no es soportado.
+
+- Pulsa HOME (apuntando a un juego)
+
+- Pulsa PLUS para  cambiar de pagina y entra en "altertanive.dol"
+
+- Si ves la opcion "Delete Alternative .dol" usala para eliminar la carga del dol alternativo
+
+- Pulsa "Buscar .dol" para encontrar dols alternativos
+
+- Selecciona uno (si encuentra alguno, por supuesto)
+
+NOTA: Ello puede listar 5 dols solamente, pero pienso que es suficiente por el momento (normalmente encuentra uno o ninguno). 
+Cuando seleccionas uno, ellos is salvado en el fichero WBFS _CFG_ creado por uLoader. Soporta 1024 juegos
 
 
-El fichero dol es cargado de forma automatica usando la id del juego como nombre de fichero
-
-Por ejemplo REDP41.dol para Red Steel: sd:/games/REDP41.dol
+NOTE2: Por supuesto, cuando usas "delete alternative .dol"ello borra la entrada de lista en _CFG_ y no el .dol :P
 
 
-Como extraer el dichero dol para Red Steel.
+NOTE3: Puedes borrar los viejos directorios sd:/games o usb:/games
 
-- Usa wiiscrubber y abre la iso de red steel y selecciona la particion 1
-
-- Extrae redsteel.dol y renombralo como REDP41.dol
-
-- Mete el fichero dol file en el directorio "games" de la SD
-
-- Por supuesto: instala la iso de red steel iso en el hdd.
-
-NOTA: no quites o cambies el main.dol original
 
 

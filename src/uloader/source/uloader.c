@@ -37,6 +37,7 @@
 
 #include "libpng/pngu/pngu.h"
 #include "libwbfs/libwbfs.h"
+#include "libwbfs/wiiscrubber.h"
 #include "wbfs.h"
 #include "usbstorage2.h"
 
@@ -345,32 +346,37 @@ char month[2][12][4]=
 	{"ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"}
 	
 	};
-char letrero[2][50][64]=
+char letrero[2][60][64]=
 	{
 	{"Return", "Configure", "Delete Favorite", "Add Favorite", "Load Game", "Add to Favorites", "Favorites", "Page", "Ok" ,"Discard",
 	" Cheats Codes found !!! ", "Apply Codes ", "Skip Codes ", "Format WBFS", "Selected", "You have one WBFS partition", "Are You Sure You Can Format?",
 	" Yes ", " No ", "Formatting...","Formatting Disc Successfull","Formatting Disc Failed",
 //22 
-	"Return", "Add New Game", "Add PNG Bitmap", "Delete PNG Bitmap",  "Fix Parental Control","Return to Wii Menu", "Rename Game", "Delete Game", "Format Disc", "",
-//32
+	"Return", "Add New Game", "Add PNG Bitmap", "Delete PNG Bitmap",  "Fix Parental Control","Return to Wii Menu", "Rename Game", "Delete Game", "Format Disc", 
+	"Alternative .dol","","","","",
+//36
 	"Are you sure you want delete this?", "Press A to accept or B to cancel", 
-// 34
+// 38
 "Insert the game DVD disc...", "ERROR! Aborted", "Press B to Abort","Opening DVD disc...", "ERROR: Not a Wii disc!!",
-"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done", "Change the password", "Use this password?","Restore Name"
+"ERROR: Game already installed!!!", "Installing game, please wait... ", "Done", "Change the password", "Use this password?","Restore Name",
+//49
+"Delete Alternative .dol", ".dol Search", "Searching for .dol...","Alternative .dol Selected","Alternative .dol Deleted",
 	},
     // spanish
 	{"Retorna", "Configurar", "Borra Favorito", "Añade Favorito", "Carga juego", "Añade a Favoritos", "Favoritos", "Página", "Hecho", "Descartar",
 	" Códigos de Trucos encontrados !!! ","Usa Códigos", "Salta Códigos", "Formatear WBFS", "Seleccionado", "Ya tienes una partición WBFS", 
 	"¿Estas seguro que quieres formatear?", " Si ", " No ", "Formateando...", "Exito Formateando el Disco", "Error al Formatear el Disco",
 //22	
-	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Bitmap PNG", "Fijar Control Parental", "Retorna al Menu de Wii", "Renombrar Juego", "Borrar Juego", "Formatear Disco","",
+	"Retornar", "Añadir Nuevo Juego", "Añadir Bitmap PNG", "Borrar Bitmap PNG", "Fijar Control Parental", "Retorna al Menu de Wii", "Renombrar Juego", "Borrar Juego", "Formatear Disco",
+	".dol Alternativo","","","","",
 
-//32
+//36
 	"¿Estás seguro de que quieres borrar éste?", "Pulsa A para aceptar o B para cancelar",
-// 34
+// 38
 "Inserta el DVD del juego ...", "ERROR! Abortado", "Pulsa B para Abortar","Abriendo el disco DVD...", "ERROR: No es un disco de Wii!!",
-"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado", "Cambia la contraseña", "¿Usar esta contraseña?", "Restaurar Nombre"
-
+"ERROR: Juego ya instalado!!!", "Instalando el juego, espera... ", "Terminado", "Cambia la contraseña", "¿Usar esta contraseña?", "Restaurar Nombre",
+//49
+"Borrar .dol Alternativo", "Buscar .dol", "Buscando ficheros .dol...","Alternativo .dol Seleccionado","Alternativo .dol Borrado"
 	},
 	};
 
@@ -1155,7 +1161,12 @@ int n_sectors;
     if(ret<0) return -2;
     
 	///find wbfs partition
-	if(temp_data[0x1bc]!=0 || temp_data[0x1bd]!=0 || temp_data[0x1fe]!=0x55 || temp_data[0x1ff]!=0xaa) 
+	if(temp_data[0x1fe]!=0x55 || temp_data[0x1ff]!=0xaa 
+			|| !strncmp((void *) &temp_data[3],"NTFS",4) 
+			|| !strncmp((void *) &temp_data[0x36],"FAT",3)
+			|| !strncmp((void *) &temp_data[0x52],"FAT",3))
+
+//	if(temp_data[0x1bc]!=0 || temp_data[0x1bd]!=0 || temp_data[0x1fe]!=0x55 || temp_data[0x1ff]!=0xaa) 
 		{
 		memset(part_table,0,16*4);
 		partition_type[num_partitions].lba=0;
@@ -1750,9 +1761,9 @@ char str_id[7];
 		cabecera(frames2, &letrero[idioma][23][0]);
 	
 		PX=0;PY=ylev+352/2-16;
-		s_printf("%s",&letrero[idioma][34][0]);
+		s_printf("%s",&letrero[idioma][38][0]);
 		PX=0;PY+=64;
-		s_printf("%s",&letrero[idioma][36][0]);
+		s_printf("%s",&letrero[idioma][40][0]);
 
 		if(rumble) 
 			{
@@ -1772,7 +1783,7 @@ char str_id[7];
 			cabecera(frames2, &letrero[idioma][23][0]);
 			PX=0;PY=ylev+352/2-16;
 
-			s_printf("%s",&letrero[idioma][35][0]);
+			s_printf("%s",&letrero[idioma][39][0]);
 			snd_fx_no();
 			Screen_flip();
 			autocenter=0;
@@ -1798,7 +1809,7 @@ char str_id[7];
 	cabecera(frames2, &letrero[idioma][23][0]);
 	PX=0;PY=ylev+352/2-16;
 
-	s_printf("%s",&letrero[idioma][37][0]);
+	s_printf("%s",&letrero[idioma][41][0]);
 	Screen_flip();	
 
 		/* Open disc */
@@ -1820,7 +1831,7 @@ char str_id[7];
 
 		cabecera(frames2, &letrero[idioma][23][0]);
 		PX=0;PY=ylev+352/2-16;
-		s_printf("%s",&letrero[idioma][38][0]);
+		s_printf("%s",&letrero[idioma][42][0]);
 		Screen_flip();
 		snd_fx_no();
 		autocenter=0;
@@ -1842,7 +1853,7 @@ char str_id[7];
 		cabecera(frames2, &letrero[idioma][23][0]);
 		PX=0;PY=ylev+352/2-16;
 		
-		s_printf("%s",&letrero[idioma][39][0]);
+		s_printf("%s",&letrero[idioma][43][0]);
 		Screen_flip();
 		snd_fx_no();
 		autocenter=0;
@@ -1890,7 +1901,7 @@ char str_id[7];
 
 		PX=0;PY=ylev+352/2+32; 
 
-		s_printf(&letrero[idioma][33][0]);
+		s_printf(&letrero[idioma][37][0]);
 
 		Screen_flip();
 
@@ -1904,7 +1915,7 @@ char str_id[7];
 			{
 			cabecera(frames2, &letrero[idioma][23][0]);
 			PX=0;PY=ylev+352/2-16;
-			s_printf("%s",&letrero[idioma][35][0]);
+			s_printf("%s",&letrero[idioma][39][0]);
 			snd_fx_no();
 			Screen_flip();
 			autocenter=0;
@@ -1919,7 +1930,7 @@ char str_id[7];
 	cabecera(frames2, &letrero[idioma][23][0]);
 	PX=0;PY=ylev+352/2-16;
 	
-	s_printf("%s",&letrero[idioma][40][0]);
+	s_printf("%s",&letrero[idioma][44][0]);
 	snd_fx_yes();
 	Screen_flip();	
     sleep(1);
@@ -1959,7 +1970,7 @@ char str_id[7];
 	PX=0;PY=ylev+352/2-16;
 
 	
-	s_printf("%s",&letrero[idioma][41][0]);
+	s_printf("%s",&letrero[idioma][45][0]);
 	snd_fx_yes();
 	Screen_flip();
 	WPAD_Init();
@@ -2034,7 +2045,7 @@ while(1)
 	
 	PX=0;PY=ylev+352/2-32;
 	autocenter=1;letter_size(12,32);
-	s_printf("%s", &letrero[idioma][32][0]);
+	s_printf("%s", &letrero[idioma][36][0]);
 
 	if(strlen(name)<=37) letter_size(16,32);
 	else if(strlen(name)<=45) letter_size(12,32);
@@ -2301,7 +2312,7 @@ while(1)
 			m+=40;
 		    }
 		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=61;
-		if(Draw_button(600-32-strlen(&letrero[idioma][42][0])*8, ylev+108*4-64, &letrero[idioma][42][0])) select_game_bar=70;
+		if(Draw_button(600-32-strlen(&letrero[idioma][46][0])*8, ylev+108*4-64, &letrero[idioma][46][0])) select_game_bar=70;
 		}
 	
 	if(mode==2)
@@ -2332,7 +2343,7 @@ while(1)
 		color= 0xff000000; bkcolor=0;
 		PX=0;PY=ylev+352/2-32;
 		autocenter=1;letter_size(12,32);
-		s_printf("%s", &letrero[idioma][43][0]);
+		s_printf("%s", &letrero[idioma][47][0]);
 
 		autocenter=0;
 		
@@ -2683,7 +2694,7 @@ while(1)
 		
 		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=60;
 
-		if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][44][0])) select_game_bar=65;
+		if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][48][0])) select_game_bar=65;
 			
 		if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=61;
 	
@@ -2845,6 +2856,392 @@ while(1)
 	}
 return 0;
 }
+extern int WBFS_getdols(u8 *id);
+
+typedef struct
+{
+u64 offset;
+u32 size;
+u8 id[6];
+u16 pad1;
+u32 pad2[3];
+
+} dol_infodat;
+
+dol_infodat AlternativeDol_infodat;
+
+extern void *dol_data;
+extern int dol_len;
+
+
+int Get_AlternativeDol(u8 *id)
+{
+dol_infodat *dol_infop=(dol_infodat *) temp_data;
+int indx=0;
+
+	dol_len= 0;dol_data=0;
+	memset(temp_data,0,32768);
+
+	WBFS_LoadDolInfo(temp_data);
+
+	AlternativeDol_infodat.id[0]=0;
+
+	for(indx=0;indx<1024;indx++)
+		{
+		if(!strncmp((void *) dol_infop[indx].id, (void *) id, 6))
+			{
+			AlternativeDol_infodat=dol_infop[indx];
+			dol_len=AlternativeDol_infodat.size;
+			dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len+32768,32);
+            if(!dol_data) AlternativeDol_infodat.id[0]=0; // cancel
+			return 1;
+			}
+		}
+return 0;
+}
+
+void menu_alternativedol(u8 *id)
+{
+int frames2=0;
+int old_select=-1;
+
+char buff[65];
+int mode=0,n;
+dol_infodat *dol_infop=(dol_infodat *) temp_data;
+int indx=0;
+int last_indx=1023;
+
+memset(temp_data,0,32768);
+
+WBFS_LoadDolInfo(temp_data);
+
+
+for(indx=0;indx<1024;indx++)
+	{
+	if(dol_infop[indx].id[0]==0 && last_indx==1023)  last_indx=indx;
+	if(!strncmp((void *) dol_infop[indx].id, (void *) id, 6)) break;
+	}
+
+while(1)
+	{
+	int ylev=(SCR_HEIGHT-440);
+	int select_game_bar=-1;
+
+	if(SCR_HEIGHT>480) ylev=(SCR_HEIGHT-440)/2;
+
+	if(rumble) 
+		{
+		if(rumble<=7) wiimote_rumble(0); 
+		rumble--;
+		}
+	else wiimote_rumble(0);
+
+	WPAD_ScanPads(); // esto lee todos los wiimotes
+
+	//SetTexture(NULL);
+    //DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+
+	SetTexture(&text_background);
+
+
+	ConfigureForTexture(10);
+	GX_Begin(GX_QUADS,  GX_VTXFMT0, 4);
+	AddTextureVertex(0, 0, 999, 0xfff0f0f0, 0, (frames2 & 1023));
+	AddTextureVertex(SCR_WIDTH, 0, 999, 0xffa0a0a0, 1023, (frames2 & 1023)); 
+	AddTextureVertex(SCR_WIDTH, SCR_HEIGHT, 999, 0xfff0f0f0, 1023, 1024+(frames2 & 1023)); 
+	AddTextureVertex(0, SCR_HEIGHT, 999, 0xffa0a0a0, 0, 1024+(frames2 & 1023)); 
+	GX_End();
+
+	SetTexture(&text_button[0]);
+    DrawRoundFillBox(20, ylev, 148*4, 352, 0, 0xffafafaf);
+	SetTexture(NULL);
+	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
+
+	PX= 0; PY=ylev-32; color= 0xff000000; 
+				
+	bkcolor=0;
+	letter_size(16,32);
+
+	autocenter=1;
+	bkcolor=0;
+	s_printf("%s", &letrero[idioma][31][0]);
+	bkcolor=0;
+	
+	
+	autocenter=0;
+	letter_size(16,32);
+	
+	if(mode==0)
+		{
+		PX=0;PY=ylev+352/2-32;
+		autocenter=1;letter_size(16,32);
+		s_printf("Based in Wiiscrubber Code");
+		autocenter=0;
+			
+		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=60;
+
+		if(indx<1024)
+			if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][49][0])) select_game_bar=61;	
+
+		if(Draw_button(600-32-strlen(&letrero[idioma][50][0])*8, ylev+108*4-64, &letrero[idioma][50][0])) select_game_bar=62;
+
+		}
+	else
+	if(mode==1)
+		{
+		iso_files *file =CWIIDisc_first_file;
+
+		for(n=0;n<5;n++)
+		{
+		memset(buff,32,64);buff[64]=0;
+		
+		if (file != NULL)
+			{
+			
+			int l1=strlen((char *)file->path);
+			
+			int l2=strlen((char *)file->name);
+			int c1=l1,c2=l2;
+			//printf("%i) %s ->%s %llx %x\n",file->part, file->path, file->name, file->offset, file->size);
+			
+            if((l1+l2)>64)
+				{
+				if(l1>16) 
+					{
+				    c1=16;
+					if(l2<(64-16)) c1=64-l2;
+					if(c1>l1) c1=l1;
+					}
+				c2=64-c1;
+				
+            
+				if(l1<=c1)
+					{
+					memcpy(buff, (char *) file->path, c1);buff[c1]=0;
+					}
+				else
+					{
+					int c=c1/2-3;
+					memcpy(buff, (char *)file->path, c);buff[c]=0;
+					strcat(buff,"...");
+					c=c1-c-3;
+					strcat(buff, (char *)&file->path[l1-c]);
+					}
+
+				if(l2<=c2)
+					{
+					strcat(buff, (char *) &file->name);
+					}
+				else
+					{
+					int c=c2/2-3;
+					int k=strlen(buff);
+
+					memcpy(&buff[k], (char *) file->name, c);buff[k+c]=0;
+					strcat(buff,"...");
+					c=c2-c-3;
+					strcat(buff, (char *)&file->name[l2-c]);
+					}
+				}
+			else
+				{
+				memcpy(buff+(64-(l1+l2))/2, (char *) file->path, l1);
+				memcpy(buff+(64-(l1+l2))/2+l1, (char *) file->name, l2);
+				}
+
+			if(Draw_button2(30+16, ylev+32-8+64*n, buff, 0)) select_game_bar=1024+n;
+			file = file->next;
+			}
+	      else
+			{
+			Draw_button2(30+16, ylev+32-8+64*n, buff, -1);
+			
+			}
+		
+		//punt=&letrero[idioma][22+n+index][0];
+		//memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
+		}
+
+		if(Draw_button(36, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=60;
+			
+		if(Draw_button(600-32-strlen(&letrero[idioma][0][0])*8, ylev+108*4-64, &letrero[idioma][0][0])) select_game_bar=60;
+		}
+		else
+		if(mode==2)
+			{
+			PX=0;PY=ylev+352/2-32;
+			autocenter=1;letter_size(16,32);
+			s_printf("%s", &letrero[idioma][51][0]);
+			autocenter=0;
+			mode=128;
+			}
+		
+		else
+		if(mode==3)
+			{
+			PX=0;PY=ylev+352/2-32;
+			autocenter=1;letter_size(16,32);
+			s_printf("%s", &letrero[idioma][52][0]);
+			autocenter=0;
+			mode=129;
+			}
+		else
+		if(mode==4)
+			{
+			PX=0;PY=ylev+352/2-32;
+			autocenter=1;letter_size(16,32);
+			s_printf("%s", &letrero[idioma][53][0]);
+			autocenter=0;
+			mode=129;
+			}
+
+	if(select_game_bar>=0)
+		{
+		if(old_select!=select_game_bar)
+			{
+			snd_fx_tick();if(rumble==0) {wiimote_rumble(1);rumble=10;}
+			old_select=select_game_bar;
+			}
+		}
+	else 
+		old_select=-1;
+		
+   if(mode<128)
+		{
+
+		temp_pad= wiimote_read(); 
+		new_pad=temp_pad & (~old_pad);old_pad=temp_pad;
+
+		if(wmote_datas!=NULL)
+				{
+				SetTexture(NULL);		// no uses textura
+
+						if(wmote_datas->ir.valid)
+							{
+							px=wmote_datas->ir.x;py=wmote_datas->ir.y;
+							
+							SetTexture(NULL);
+							DrawIcon(px,py,frames2);
+							}
+						 else 
+						 if(wmote_datas->exp.type==WPAD_EXP_GUITARHERO3)
+							{
+
+							if(wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x+8)
+								{guitar_pos_x+=8;if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);}
+							if(wmote_datas->exp.gh3.js.pos.x<=wmote_datas->exp.gh3.js.center.x-8)
+								{guitar_pos_x-=8;if(guitar_pos_x<16) guitar_pos_x=16;}
+								
+
+							if(wmote_datas->exp.gh3.js.pos.y>=wmote_datas->exp.gh3.js.center.y+8)
+								{guitar_pos_y-=8;if(guitar_pos_y<16) guitar_pos_y=16;}
+							if(wmote_datas->exp.gh3.js.pos.y<=wmote_datas->exp.gh3.js.center.y-8)
+								{guitar_pos_y+=8;if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);}
+
+							if(guitar_pos_x<0) guitar_pos_x=0;
+							if(guitar_pos_x>(SCR_WIDTH-16)) guitar_pos_x=(SCR_WIDTH-16);
+							if(guitar_pos_y<0) guitar_pos_y=0;
+							if(guitar_pos_y>(SCR_HEIGHT-16)) guitar_pos_y=(SCR_HEIGHT-16);
+							
+							px=guitar_pos_x; py=guitar_pos_y;
+
+							
+							SetTexture(NULL);
+							DrawIcon(px,py,frames2);
+							
+							if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) new_pad|=WPAD_BUTTON_A;
+							if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) old_pad|=WPAD_BUTTON_A;
+
+							if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) new_pad|=WPAD_BUTTON_B;
+							if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) old_pad|=WPAD_BUTTON_B;
+
+							if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) new_pad|=WPAD_BUTTON_1;
+							if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) old_pad|=WPAD_BUTTON_1;
+
+							if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS) new_pad|=WPAD_BUTTON_MINUS;
+							if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS) old_pad|=WPAD_BUTTON_MINUS;
+
+							if(new_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) new_pad|=WPAD_BUTTON_PLUS;
+							if(old_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) old_pad|=WPAD_BUTTON_PLUS;
+
+							}
+						 else
+						   {px=-100;py=-100;}
+
+					if(new_pad & WPAD_BUTTON_B)
+						{
+						Screen_flip();snd_fx_no();return;
+						}
+
+					
+
+					if(new_pad & WPAD_BUTTON_A) 
+						{
+						if(select_game_bar==60) {Screen_flip();snd_fx_no();return;} // exit
+						
+						if(select_game_bar==61) {Screen_flip();snd_fx_yes();if(indx<1024) memset((void *) &dol_infop[indx],0,32);mode=4;}
+						
+						if(select_game_bar==62) {Screen_flip();snd_fx_yes();mode=2;}
+					   //
+						if(select_game_bar>=1024)
+							{
+							iso_files *file =CWIIDisc_first_file;
+
+							if(indx>=1024)
+								{
+								if(last_indx==1023)
+									memcpy(temp_data, temp_data+32, 32768-32);
+								indx=last_indx;
+								}
+							memset((void *) &dol_infop[indx],0,32);
+							
+							n=1024;
+
+							while(n<select_game_bar) {if(!file) break; file=file->next;}
+
+							if(file)
+								{
+								snd_fx_yes();
+								dol_infop[indx].offset= file->offset;
+								dol_infop[indx].size=	 file->size;
+								memcpy((void *) &dol_infop[indx].id, id, 6);
+								}
+							else snd_fx_no(); // error!
+
+							mode=3;
+							}
+							//
+
+						}
+					}
+		}
+
+	
+
+	Screen_flip();
+	if(exit_by_reset) break;
+
+	if(mode==128) {WBFS_getdols(id);mode=1;}
+	if(mode==129) break;
+
+	frames2++;
+	}
+
+
+	// FREE FILES
+	{
+	iso_files *file =CWIIDisc_first_file;
+	while(file)
+		{
+		iso_files *file2=file->next;
+		free(file); file=file2;
+		}
+	CWIIDisc_first_file=CWIIDisc_last_file=NULL;
+	}
+
+WBFS_SaveDolInfo(temp_data);
+if(mode==129) sleep(2);
+}
 
 void select_file(int flag, struct discHdr *header);
 
@@ -2911,7 +3308,7 @@ int index=0;
 		int m=n+index;
 
 		memset(buff,32,56);buff[56]=0;
-		if(m>8)
+		if(m>9)
 			{
 			Draw_button2(30+48, ylev+32+64*n, buff, 0);
 			continue;
@@ -2920,7 +3317,8 @@ int index=0;
 		punt=&letrero[idioma][22+n+index][0];
 		memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 	
-		if(Draw_button2(30+48, ylev+32+64*n, buff,(!header && (m==2 || m==3 || m==6 || m==7 || (parental_control_on && m!=0 && m!=5))) ? -1 : 0)) select_game_bar=m+1;
+		if(Draw_button2(30+48, ylev+32+64*n, buff,
+			(!header && (m==2 || m==3 || m==6 || m==7 || m==9 || (parental_control_on && m!=0 && m!=5))) ? -1 : 0)) select_game_bar=m+1;
 		}
 
 		if(px>=0 && px<=80 && py>=ylev+220-40 && py<=ylev+220+40)
@@ -3081,6 +3479,7 @@ int index=0;
 						if(select_game_bar==7) {snd_fx_yes();Screen_flip(); if(rename_game(header->title))  {WBFS_RenameGame(header->id, header->title);WBFS_Close();return 2;} else return 0;}
 						// delete game
 						if(select_game_bar==8) {snd_fx_yes();Screen_flip(); if(delete_test(26, header->title)) WBFS_RemoveGame(header->id);WBFS_Close();return 2;}
+						if(select_game_bar==10) {snd_fx_yes();Screen_flip(); menu_alternativedol(header->id);return 0;}
 						}
 					
 					// parental control
@@ -3411,11 +3810,9 @@ sleep(1);
 
 int load_game_routine(u8 *discid, int game_mode);
 
-extern void *dol_data;
-extern int dol_len;
 
 extern u32 load_dol();
-int load_file_dol(char *name);
+//int load_file_dol(char *name);
 
 void splash_scr()
 {
@@ -3447,9 +3844,9 @@ void splash_scr()
 			PX=20; PY= 32; color= 0xff000000; 
 			letter_size(8,16);
 			SelectFontTexture(1);
-			s_printf("v2.6");
+			s_printf("v2.7");
 			PX=SCR_WIDTH-20-32;
-			s_printf("v2.6");
+			s_printf("v2.7");
 			autocenter=1;
 			//letter_size(12,16);
 			PX=20; PY= 480-40; color= 0xff000000; 
@@ -3483,6 +3880,7 @@ FILE *fp;
 		}
 }
 #endif
+
 
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
@@ -3524,12 +3922,15 @@ int main(int argc, char **argv) {
 		int partial_counter;
 		
 
-        return_reset=1;
-
+       
+        if (*(u32*)0x80001800)  return_reset=1;
+		else return_reset=2;
+		/*
 		if(argc<1) return_reset=2;
 
 		else 
 			if(*((char *) argv[0])=='s') return_reset=2;
+		*/
 
 		current_partition=0;
 
@@ -3937,6 +4338,7 @@ int main(int argc, char **argv) {
 		bkcolor=0;
 		autocenter=1;
 		SetTexture(NULL);
+		
 		#if 1
 		/* Get list length */
 
@@ -4904,17 +5306,19 @@ get_games:
 			}
 
 			if(selected_panel>=0 && scroll_mode==0  && parental_mode==0)
-				{struct discHdr *header = &gameList[game_datas[selected_panel].ind];
-		
+				{
+				struct discHdr *header = &gameList[game_datas[selected_panel].ind];
+				int py=ylev+((selected_panel>=10) ? 0 : 3*110+55);
+				if(SCR_HEIGHT>480) py=SCR_HEIGHT-108/2;
 					SetTexture(NULL);
-					DrawRoundFillBox(20, ylev+ ((selected_panel>=10) ? 0 : 3*110+55), 150*4, 108/2, 0, 0xcfcfffff);
-					DrawRoundBox(20, ylev+ ((selected_panel>=10) ? 0 : 3*110+55), 150*4, 108/2, 0, 6, 0xcff08000);
+					DrawRoundFillBox(20, py, 150*4, 108/2, 0, 0xcfcfffff);
+					DrawRoundBox(20, py, 150*4, 108/2, 0, 6, 0xcff08000);
 		
 					if(strlen(header->title)<=37) letter_size(16,32);
 					else if(strlen(header->title)<=45) letter_size(12,32);
 					else letter_size(8,32);		
 
-					PX= 0; PY=ylev+ ((selected_panel>=10) ? 0 : 3*110+55)+(54-32)/2; color= 0xff000000; 
+					PX= 0; PY=py+(54-32)/2; color= 0xff000000; 
 							
 					bkcolor=0;
 					
@@ -4937,6 +5341,7 @@ get_games:
 					autocenter=1;
 					s_printf("Select Partition #%i",select_game_bar-9999);
 					autocenter=0;
+					parental_control_on=1;
 
 				}
 
@@ -5952,8 +6357,10 @@ int force_ingame_ios=0;
 	//game_locked_cfg=1*((game_datas[game_mode-1].config & (1<<30))!=0);
 	
 	// load alternative DOL
-	sprintf((char *) temp_data,"sd:/games/%s.dol",(char *) discid);
-	load_file_dol((char *) temp_data);
+//	sprintf((char *) temp_data,"sd:/games/%s.dol",(char *) discid);
+//	load_file_dol((char *) temp_data);
+
+	Get_AlternativeDol(discid);
 	
 	if(sd_ok)
 		{
@@ -6262,7 +6669,7 @@ void __Patch_Error001(void *buffer, u32 len)
 	}
 }
 
-
+#if 0
 
 int load_file_dol(char *name)
 {
@@ -6273,7 +6680,6 @@ int n,m, size;
 
 dol_len= 0;
 
-	
 	if(sd_ok)
 		fp=fopen(name,"rb"); // lee .dol desde sd
 
@@ -6319,10 +6725,11 @@ dol_len= 0;
 
 return 0;
 }
+#endif 
 
-void patch_dol(void *Address, int Section_Size)
+void patch_dol(void *Address, int Section_Size, int mode)
 {
-	if(dol_data)
+	if(mode)
 		__Patch_Error001((void *) Address, Section_Size);
 
 	__Patch_CoverRegister(Address, Section_Size);
@@ -6554,8 +6961,23 @@ int load_disc(u8 *discid)
 						
 				Screen_flip();
 
-				patch_dol(Address, Section_Size);
+				patch_dol(Address, Section_Size,0);
         }
+		#if 1
+	
+
+		if(!strncmp((void *) AlternativeDol_infodat.id, (void *) discid, 6))
+			{
+			
+			cabecera2(frames3, "Loading Alternative .dol");
+			Screen_flip();
+		
+			WDVD_Read(dol_data, dol_len, AlternativeDol_infodat.offset);
+
+			}
+
+		
+#endif
 
 		WPAD_Shutdown();
 
@@ -6577,6 +6999,8 @@ int load_disc(u8 *discid)
 
 		// Retrieve application entry point
         void* Entry;
+
+		
 
 			if(dol_data)
 			{
@@ -7187,7 +7611,7 @@ while(1)
 			PX= 0; PY=480-40; color= 0xff000000; 
 			letter_size(12,32);
 			autocenter=1;
-			s_printf("%s", &letrero[idioma][33][0]);
+			s_printf("%s", &letrero[idioma][37][0]);
 			autocenter=0;
 			}
 		

@@ -1,4 +1,4 @@
-uLoader v2.6 BETA - by Hermes (www.elotrolado.net)
+uLoader v2.7 BETA - by Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
 WARNING: run at first cios_installer.dol (2.6 required). Now you can select the IOS used to install
@@ -37,7 +37,7 @@ Features:
 - Option to add or delete PNG icons/covers from the SD to the game directly (PNG is added in the HDD)
   Now you can download Covers from Internet or to adquire covers automatically from the current folder in the SD
 
-- Now you can load games as Red Steel using one alternative .dol (see ALTERNATIVE DOL NOTES in this document)
+- Now you can load games as Red Steel and othrers using one alternative .dol (see ALTERNATIVE DOL NOTES in this document)
 
 - Now you can load ehcmodule.elf externally (put it in sd:/apps/uloader/ehcmodule.elf) to use old versions
   of the module (see "src/uloader/resources")
@@ -73,9 +73,9 @@ CONTROLS
 - 1 or Yellow button: Go to favorites page/back to last page
 
 
-- HOME: Special Menu
+- HOME: Special Menu (Add games, format, parental control, exit..)
 
-- HOME (pointing one game): Complete Special Menu
+- HOME (pointing one game): Complete Special Menu (options for PNG, Rename, alternative dol, delete...)
 
 ************************************************************************************************************************************************************
 
@@ -208,23 +208,27 @@ http://www.elotrolado.net/wiki/Iconos_de_juegos_para_uLoader
 ALTERNATIVE DOL NOTES
 ---------------------
 
-You needs to create a "games" folder in the root of the SD or USB (FAT).
+NOTE: Old alternative dol method is unsupported now
 
-The dol file is loaded in automatic form using the game id as filename 
+- Press HOME (pointing one game)
 
-For example REDP41.dol for Red Steel: sd:/games/REDP41.dol
+- Press PLUS to change the page and enter in "altertanive.dol"
 
-How to extract the dol file for Red Steel.
+- if you can see it you can delete the alternative dol using "Delete Alternative .dol"
 
-- Use wiiscrubber and open the red steel iso and select the partition 1
+- Press "Search .dol" to find alternative dols
 
-- Extract redsteel.dol and rename it as REDP41.dol
+- Select one (if it find one, of course)
 
-- Put the dol file in the "games" folder in the SD
+NOTE: it can list 5 dols only, but i think it is sufficient at the momment (normally it find one or none). When you select one, it is saved 
+in the _CFG_ WBFS file created by uLoader. It support 1024 games
 
-- Of course: install red steel iso in the hdd.
+NOTE2: Of course, when you "delete alternative .dol" it delete the list entry in _CFG_ and not 
+delete the .dol :P
 
-NOTE: don´t remove or modify the original main.dol
+
+NOTE3: You can delete the olds sd:/games or usb:/games directories
+
 
 
 

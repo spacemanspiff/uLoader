@@ -241,7 +241,30 @@ s32 WBFS_Close(void)
 return 0;
 }
 
+int CWIIDisc_getdols(wbfs_disc_t *d);
 
+int WBFS_getdols(u8 *id)
+{
+int ret=0;
+
+wbfs_disc_t *disc = NULL;
+if (!hdd)
+		return -1;
+
+
+
+	/* Try to open game disc */
+	disc = wbfs_open_disc(hdd, id);
+	if (disc) {
+        
+		if(CWIIDisc_getdols(disc)<0) ret=-1;
+		/* Close disc */
+		wbfs_close_disc(disc);
+
+		return ret;
+	}
+return -1;
+}
 s32 WBFS_Format(u32 lba, u32 size)
 {
 	wbfs_t *partition = NULL;
@@ -400,6 +423,61 @@ if (!hdd)
 		{
         wbfs_disc_write(disc,(256>>2), data, size); // from 0x100 to 0x1ff is cfg datas (of the 2MB)
 		wbfs_disc_write(disc,(1024>>2), data2, 32768);
+		wbfs_close_disc(disc);
+		
+		return 1;
+		}
+
+return 0;
+}
+
+
+s32 WBFS_LoadDolInfo(void *data)
+{
+wbfs_disc_t *disc = NULL;
+
+memset(data,0,32768);
+
+if (!hdd)
+		return 0;
+
+	/* Try to open game disc */
+	disc = wbfs_open_disc(hdd, (u8 *) "__CFG_");
+	if (!disc)
+		{
+		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
+	
+		return 1;
+		}
+	else 
+		{
+		wbfs_disc_read(disc,((1024+32768)>>2), data, 32768);
+		wbfs_close_disc(disc);
+		
+		return 1;
+		}
+
+return 0;
+}
+
+s32 WBFS_SaveDolInfo(void *data)
+{
+wbfs_disc_t *disc = NULL;
+if(!hdd) WBFS_Open();
+if (!hdd)
+		return 0;
+	/* Try to open game disc */
+	disc = wbfs_open_disc(hdd, (u8 *) "__CFG_");
+	if (!disc)
+		{
+		wbfs_add_cfg(hdd, NULL, NULL, __WBFS_Spinner, ONLY_GAME_PARTITION);
+	   
+		disc = wbfs_open_disc(hdd, (u8 *) "__CFG_");
+		}
+   
+	if(disc)
+		{
+		wbfs_disc_write(disc,((1024+32768)>>2), data, 32768);
 		wbfs_close_disc(disc);
 		
 		return 1;

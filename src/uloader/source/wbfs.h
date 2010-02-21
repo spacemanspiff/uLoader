@@ -17,8 +17,12 @@ s32 WBFS_DiskSpace(f32 *, f32 *);
 
 s32 WBFS_GetProfileDatas(u8 *discid, u8 *buff);
 s32 WBFS_SetProfileDatas(u8 *discid, u8 *buff);
+
 s32 WBFS_LoadCfg(void *data, s32 size,  void *data2);
 s32 WBFS_SaveCfg(void *data, s32 size,  void *data2);
+
+s32 WBFS_LoadDolInfo(void *data);
+s32 WBFS_SaveDolInfo(void *data);
 
 s32 WBFS_RenameGame(u8 *, char *);
 

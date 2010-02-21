@@ -54,7 +54,12 @@ wbfs_t*wbfs_open_hd(rw_sector_callback_t read_hdsector,
                 return 0;
 				}
         //find wbfs partition
-		if(tmp_buffer[0x1bc]!=0 || tmp_buffer[0x1bd]!=0 || tmp_buffer[0x1fe]!=0x55 || tmp_buffer[0x1ff]!=0xaa) wbfs_memset(part_table,0,16*4);
+		//if(tmp_buffer[0x1bc]!=0 || tmp_buffer[0x1bd]!=0 || tmp_buffer[0x1fe]!=0x55 || tmp_buffer[0x1ff]!=0xaa) wbfs_memset(part_table,0,16*4);
+		if(tmp_buffer[0x1fe]!=0x55 || tmp_buffer[0x1ff]!=0xaa 
+			|| !strncmp((void *) &tmp_buffer[3],"NTFS",4) 
+			|| !strncmp((void *) &tmp_buffer[0x36],"FAT",3)
+			|| !strncmp((void *) &tmp_buffer[0x52],"FAT",3)) wbfs_memset(part_table,0,16*4);
+		
 		else wbfs_memcpy(part_table,tmp_buffer+0x1be,16*4);
         ptr = part_table;
 
@@ -368,6 +373,68 @@ int wbfs_disc_read(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
         return 0;
 }
 
+
+int wbfs_wiiscrub_read_disc(wbfs_disc_t*d, u64 offset, s32 size, char *dst)
+{
+        wbfs_t *p = d->p;
+        u8* copy_buffer = 0;
+
+		u32 sector = offset / p->wbfs_sec_sz;
+		offset = offset % p->wbfs_sec_sz;
+		u32 dst_pos = 0;
+//		u32 count = (size / p->wbfs_sec_sz) + 1;
+
+        int i;
+        int src_wbs_nlb=p->wbfs_sec_sz/p->hd_sec_sz;
+//        int dst_wbs_nlb=p->wbfs_sec_sz/p->wii_sec_sz;
+		copy_buffer = (u8*)wbfs_ioalloc(p->wbfs_sec_sz);
+        if(!copy_buffer) return 0;
+
+        for( i=sector; i< p->n_wbfs_sec_per_disc; i++)
+        {
+                u32 iwlba = wbfs_ntohs(d->header->wlba_table[i]);
+                if (iwlba)
+                {
+                       
+                        //if(spinner) spinner(i,p->n_wbfs_sec_per_disc);
+						p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
+
+						/////////////////////////////
+                        /* uLoader patch */
+
+						if(i==0)
+						{
+						if(copy_buffer[1024]=='H' && copy_buffer[1025]=='D' && copy_buffer[1026]=='R')
+							{
+							memset(&copy_buffer[1024+8], 0, copy_buffer[1027]*1024);
+							memset(&copy_buffer[1024],0,8);
+							}
+						}
+
+						/////////////////////////////
+						if (offset)
+						{
+							memcpy(dst,copy_buffer+offset,size>(p->wbfs_sec_sz-offset)?(p->wbfs_sec_sz-offset):size);
+							size-=(size>(p->wbfs_sec_sz-offset)?(p->wbfs_sec_sz-offset):size);
+							dst_pos+=size>(p->wbfs_sec_sz-offset)?(p->wbfs_sec_sz-offset):size;
+							offset = 0;
+						} else
+						{
+							memcpy(dst+dst_pos,copy_buffer,size<p->wbfs_sec_sz?size:p->wbfs_sec_sz);
+							size-=(size<p->wbfs_sec_sz?size:p->wbfs_sec_sz);
+							dst_pos+=(size<p->wbfs_sec_sz?size:p->wbfs_sec_sz);
+						}
+						if (!size) break;
+                        //write_dst_wii_sector(callback_data, i*dst_wbs_nlb, dst_wbs_nlb, copy_buffer);
+						//j++;
+						//if (j == count) break;
+                } else return 0;
+        }
+        wbfs_iofree(copy_buffer);
+//		memcpy(dst,copy_buffer,size);
+        return 1;
+
+}
 // hermes
 // offset is pointing 32bit words to address the whole dvd, although len is in bytes
 int wbfs_disc_write(wbfs_disc_t*d,u32 offset, u8 *data, u32 len)
