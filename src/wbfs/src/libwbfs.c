@@ -1026,13 +1026,16 @@ u32 wbfs_remove_cfg(wbfs_disc_t*d)
 					{
 					p->read_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
 
-					
-					memset(&copy_buffer[1024+8], 0, copy_buffer[1027]*1024);
-					copy_buffer[1024]=0;copy_buffer[1025]=0;copy_buffer[1026]=0;
-					copy_buffer[1027]=0;
+					if(copy_buffer[1024]=='H' && copy_buffer[1025]=='D' && copy_buffer[1026]=='R')
+						{
+						memset(&copy_buffer[1024+8], 0, copy_buffer[1027]*1024);
+						memset(&copy_buffer[1024],0,8);
 
-					p->write_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
-					printf("game CFG deleted\n");
+						p->write_hdsector(p->callback_data, p->part_lba + iwlba*src_wbs_nlb, src_wbs_nlb, copy_buffer);
+					
+						printf("game CFG deleted\n");
+						}
+
 					break;
 					}
                 

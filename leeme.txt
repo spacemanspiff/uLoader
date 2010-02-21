@@ -1,7 +1,7 @@
-uLoader v1.8 BETA - por Hermes (www.elotrolado.net)
+uLoader v1.8E BETA - por Hermes (www.elotrolado.net)
 ---------------------------------------------------
 
-ATENCION: ejecuta primero cios_installer.dol (1.7)
+ATENCION: ejecuta primero cios_installer.dol (1.6 requerido)
 
 uLoader es un trabajo basado en YAL de Kwiirk y usbloader de Waninkoko que ha tratado de dar soporte a los customs IOS de ambos trabajos (cIOS222 y cIOS249)
 para lanzar backups desde dispositivos de almacenamiento USB y con una interfaz gráfica al estilo de los canales de Wii

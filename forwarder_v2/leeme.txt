@@ -1,0 +1,33 @@
+uLoader forwarder
+-----------------
+
+- Usalo para crear un canal que lance uLoader
+
+- Copia el contenido de loadstructor o Yaulct para crear canales personalizados de juegos
+usando esas utilidades
+
+
+Loadstructor:
+
+http://clusterrr.com/Loadstructor.html
+
+Yaulct:
+
+http://gbatemp.net/index.php?showtopic=151410&st=0
+
+
+Necesitas la aplicacion uLoader en la ruta apps/uloader/boot.dol en la SD
+
+Canales con Loadstructor/Yaulct y uLoader desde WBFS
+----------------------------------------------------
+
+uLoader guarda la configuración del juego y el icono en un espacio relleno de ceros en la partición
+WBFS, corrompiendo con ello el opening.bnr necesario para crear el WAD desde una particion WBFS con loadstructor 
+
+Para solucionarlo, necesitas utilizar el nuevo wiiscrubber_wbfs.exe incluido.
+
+Tambien puedes usar el nuevo wbfs_win.exe (directamente, sin parametros) que incluyo  borrando la 
+configuracion del juego con la opcion 6 (Remove CFG). Esto borrará el icono y la configuración con ceros,
+restableciendo el opening.bnr
+
+Usa entonces loadstructor seleccionando "uLoader forwarder" como opcion para crear el canal
