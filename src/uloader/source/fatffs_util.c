@@ -117,7 +117,7 @@ static int global_error=0;
 
 //char temp_read_buffer[16384] ATTRIBUTE_ALIGN(32);
 
-static int fat_copy_progress, fat_copy_total;
+static int fat_copy_progress=0, fat_copy_total=0;
 
 s32 _FFS_to_FAT_Copy(const char *ffsdirpath, const char *fatdirpath)
 {
@@ -244,6 +244,7 @@ char create_dir[256];
 	ret=ISFS_GetUsage(ffsdirpath, &blocks, &ionodes);
 
 	fat_copy_total=ionodes;
+	fat_copy_progress=0;
 
 	if(ret==0) 
 		{
@@ -269,6 +270,9 @@ char create_dir[256];
 			n++;
 			}
 		global_error=0;
+
+		
+
 		// copy files
 		_FFS_to_FAT_Copy(ffsdirpath, fatdirpath);
 

@@ -62,7 +62,7 @@
 #include "fatffs_util.h"
 
 
-char uloader_version[5]="4.9A"; // yes, you can change here the current version of the application
+char uloader_version[5]="4.9B"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
 

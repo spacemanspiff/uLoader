@@ -1,3 +1,11 @@
+Version 4.9B
+------------
+
+- __CFG_ entry bug in WBFS fixed
+
+- Some problems with unaligned memory/memory allocation fixed in alternative dol function (apparently XD)
+
+- Others minor bugs fixed
 
 Version 4.9A
 ------------

@@ -1,3 +1,12 @@
+Versión 4.9B
+------------
+
+- Arreglado bug al crear la entrada __CFG_ en WBFS
+
+- Arreglados algunos problemas de memoria desalineada /asignación de memoria en la funcion de dol alternativo (al menos de forma aparente XD)
+
+- Arreglados algunos bugs menores
+
 Versión 4.9A
 ------------
 

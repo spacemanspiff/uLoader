@@ -10,6 +10,12 @@
 
 #include "wiiscrubber.h"
 
+#ifndef ATTRIBUTE_ALIGN
+# define ATTRIBUTE_ALIGN(v)	__attribute__((aligned(v)))
+#endif
+#ifndef ATTRIBUTE_PACKED
+# define ATTRIBUTE_PACKED	__attribute__((packed))
+#endif
 
 #define AES_DECRYPT 1
 
@@ -156,10 +162,10 @@ struct partition {
         u64 cert_offset;
         u64 cert_size;
 
-        u8 dec_buffer[0x8000];
+        u8 dec_buffer[0x8000] ATTRIBUTE_ALIGN(32);
 
         u32 cached_block;
-        u8 cache[0x7c00];
+        u8 cache[0x7c00] ATTRIBUTE_ALIGN(32);
 };
 
 struct image_file {
@@ -442,7 +448,7 @@ int CWIIDisc_io_read (unsigned char  *ptr, size_t size, struct image_file *image
 	void *temp_ptr;
 	int size2=(size+31+(offset & 3)) & ~31;
 
-		temp_ptr=memalign(32, size2);
+		temp_ptr=memalign(32, size2+32);
 
 		if(!temp_ptr) return 0;
 
@@ -530,17 +536,26 @@ int CWIIDisc_io_size(struct image_file *image)
 	if (image->d)
 	{
 		int i;
-		u32 size;
+		u32 size=0;
 		u8 *b = (u8*)wbfs_ioalloc(0x100);
 		int count = wbfs_count_discs(image->d->p);
+		if(!b) return 0;
+
 		for (i = 0; i < count; i++)
 		{
+		size=0;
+		
+		memset(b, 0, 0x100);
+
 			if (!wbfs_get_disc_info(image->d->p, i, b, 0x100, &size))
 			{
 				if (strcmp((const char*)b,(const char*)image->d->header->disc_header_copy) == 0) break;
 //				printf( "%c%c%c%c%c%c %40s %.2fG\n", b[0], b[1], b[2], b[3], b[4], b[5], b + 0x20, size * 4ULL / (GB));
 			}
 		}
+
+		free(b);
+
 		return size;
 	}
 	
@@ -713,7 +728,7 @@ struct image_file * CWIIDisc_image_init (wbfs_disc_t *d)
         struct image_file *image;
         struct part_header *header;
 
-        u8 buffer[0x440];
+        static u8 buffer[0x440] ATTRIBUTE_ALIGN(32);
 
 		strcpy(m_csFilename,"");
 
@@ -783,6 +798,7 @@ struct image_file * CWIIDisc_image_init (wbfs_disc_t *d)
 
 			if (0==CWIIDisc_CheckAndLoadKey(1, image))
 			{
+				free (header);
 				free (image);
 				return NULL;
 			}
@@ -804,7 +820,7 @@ void CWIIDisc_tmd_load (struct image_file *image, u32 part)
         enum tmd_sig sig = SIG_UNKNOWN;
 
         u64 off, cert_size, cert_off;
-        u8 buffer[64];
+        static u8 buffer[64] ATTRIBUTE_ALIGN(32);
         u16 i, s;
 
         off = image->parts[part].offset;
@@ -842,7 +858,7 @@ void CWIIDisc_tmd_load (struct image_file *image, u32 part)
         if (sig == SIG_UNKNOWN)
                 return;
 
-        tmd = (struct tmd *) memalign (32, sizeof (struct tmd));
+        tmd = (struct tmd *) memalign (32, sizeof (struct tmd)+1024);
         memset (tmd, 0, sizeof (struct tmd));
 
         tmd->sig_type = sig;
@@ -854,7 +870,7 @@ void CWIIDisc_tmd_load (struct image_file *image, u32 part)
 		image->parts[part].cert_offset = cert_off;
 		image->parts[part].cert_size = cert_size;
 
-        tmd->sig = (unsigned char *) malloc (s);
+        tmd->sig = (unsigned char *) memalign (32, s+1024);
         CWIIDisc_io_read (tmd->sig, s, image, off);
         off += s;
         
@@ -927,7 +943,7 @@ void CWIIDisc_tmd_free (struct tmd *tmd)
 
 u8 CWIIDisc_get_partitions (struct image_file *image)
 {
-        u8 buffer[16];
+        static u8 buffer[16] ATTRIBUTE_ALIGN(32);
         u64 part_tbl_offset;
         u64 chan_tbl_offset;
         u32 i;
@@ -1166,7 +1182,8 @@ u32 CWIIDisc_parse_fst (u8 *fst, const char *names, u32 i, struct image_file *im
 
 int CWIIDisc_image_parse (struct image_file *image)
 {
-        u8 buffer[0x440];
+        static u8 buffer[0x440] ATTRIBUTE_ALIGN(32);
+
         u8 *fst;
         u32 i;
         u8 j, valid, nvp;
