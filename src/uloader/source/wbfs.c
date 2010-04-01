@@ -678,25 +678,32 @@ return 1;
 }
 // from Mark R. (USB Loader mrc v9)
 
+extern char bannerTitle[84];
+
 char* WBFS_BannerTitle(u8 *discid, SoundInfo *snd){
 	void *banner = NULL;
 	int size;
+	int indx=0;
      
 	if (!hdd)
-		return "\0e\0r\0r\0o\0r\0 \0b\0n\0B";
+		return NULL;
 
 	wbfs_disc_t* d =  wbfs_open_disc(hdd, (u8 *) discid);
-	if (!d) return "\0e\0r\0r\0o\0r\0 \0b\0n\0A";
+	if (!d) return NULL;
 	size = wbfs_extract_file(d, "opening.bnr", &banner);
 	wbfs_close_disc(d);
 
-	if (!banner || size <= 0) return "\0e\0r\0r\0o\0r\0 \0b\0n\0B";
+	if (!banner || size <= 0) return NULL;
 
-	char* bannerTitle=malloc(84);
+	if(memcmp(((char *) banner)+0x40+indx, "IMET", 4))
+		{
+		indx+=0x40;
+		if(memcmp(((char *) banner)+0x40+indx, "IMET", 4)) return NULL;
+		}
 	
 	int i;
 	for(i=0;i<84;i++)
-		bannerTitle[i]=((char*)banner)[0xB0+i];
+		bannerTitle[i]=((char*)banner)[0xB0+i+indx];
 
 	parse_banner_snd(banner, snd);
 

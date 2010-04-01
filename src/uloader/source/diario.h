@@ -4,5 +4,7 @@
 /* Prototypes */
 int Diario_ActualizarDiario(char*,char*);
 
+int Diario_InvalidarDiario(void);
+
 #endif
 

@@ -40,6 +40,10 @@ extern int flag_emu; // flag emu =0->disable 1->enable
 extern int flag_emu_mode; // 0-> default -> 1 DLC redirected to device:/nand -> 2-> Full emulation
 extern int light_on;
 extern int verbose_level;
+extern int diary_mode;
+
+void led_on(void);
+void led_off(void);
 
 // device selection
 extern s32 index_dev;
@@ -57,6 +61,9 @@ extern const char dev_names[8][12];
 
 
 static s32 fatHandle = -1;
+
+static u8 * uID=NULL;
+static int len_uID=0;
 
 ////////////////////
 
@@ -109,16 +116,26 @@ int restore_ffs(u32 ios, u32 none);
 
 extern int out_ES_ioctlv(void *);
 
+int es_working=0;
 
+#define IOCTL_ES_ADDTITLESTART 0x2
 
 int ES_ioctlv(ipcmessage *msg)
 {
 	s32 ret = 0;
 	
-//os_sync_before_read(msg, sizeof(ipcmessage));
-	//if(verbose_level>2) debug_printf("ES ioctlv: %x\n",msg->ioctlv.command);
-
+	if(verbose_level>2) debug_printf("ES ioctlv in : %x\n",msg->ioctlv.command);
+    es_working=1;
 	switch(msg->ioctlv.command) {
+	
+	
+	case IOCTL_ES_ADDTITLESTART:
+		//verbose_level=3;
+		
+		 ret = out_ES_ioctlv(msg);
+		
+		 if(uID) Mem_Free(uID); uID=NULL; // for update uID
+	break;
 	
     case IOCTL_ES_LAUNCH:
 		{
@@ -131,6 +148,7 @@ int ES_ioctlv(ipcmessage *msg)
 		if(verbose_level) debug_printf("FFS Shutdown\n");
 
 		goto original_ioctlv;
+
 		}
 
 	default:
@@ -138,7 +156,8 @@ int ES_ioctlv(ipcmessage *msg)
 		ret = out_ES_ioctlv(msg);
 	}
 
-	if(ret<0 && verbose_level>2) debug_printf("ES ioctlv: %x ret: %i\n",msg->ioctlv.command, ret);
+	if(/*ret<0 || */verbose_level>2) debug_printf("ES ioctlv out: %x ret: %i\n",msg->ioctlv.command, ret);
+	es_working=0;
 	return ret;
 }
 
@@ -184,33 +203,7 @@ static u8 n_title[]="/00000000";
 return (char *) n_title;
 }
 
-u32 get_group_id(void)
-{
-u16 title_id=*((u16 *) 4); // ADDRESS 4
 
-return title_id;
-}
-
-#if 0
-int MakeDirGame(void)
-{
-
-	FFS_Strcpy(filename1, &dev_names[index_dev][0]);
-	ffs_MakeDir(filename1);
-
-	FFS_Strcat(filename1, "/title");
-	ffs_MakeDir(filename1);
-	FFS_Strcat(filename1, "/00010000");
-	ffs_MakeDir(filename1);
-	FFS_Strcat(filename1, title_to_folder());
-	ffs_MakeDir(filename1);
-//FFS_Strcat(filename1, "/data");
-//ffs_MakeDir(filename1);
-
-return 0;
-
-}
-#endif
 
 int cmp_string( char *s,const char *c) // this is not exactly a strcmp funtion...
 {
@@ -230,37 +223,106 @@ return -1;
 
 int test_string(char *s)
 {
+	if(!cmp_string(s, "/dev")) return -1;
+	if(cmp_string(s, "/")) return -1;
 
+	if(diary_mode && !cmp_string(s, "/title/00000001/00000002/data/play_rec.dat")) return 0;
+
+	if(flag_emu_mode & 128) return -1; // don't use emulation
+	
     // full emulation: it works but i don't use it for uLoader (you need a complete NAND dump of files and directories)
-	if(flag_emu_mode & 2)
-	{
-		//if(!cmp_string(s, "/tmp/launch.sys")) return -1; // es launch use this
-		if(!cmp_string(s, "/dev")) return -1;
-		if(!cmp_string(s, "/")) return 0;
-		return -1;
-	}
 
-	if(!cmp_string(s, "/title/00010000")) return 0;
-	if(!cmp_string(s, "/title/00010001")) return 0;
-	if(!cmp_string(s, "/title/00010004")) return 0;
-	if(!cmp_string(s, "/title/00010005")) return 0;
-	if(!cmp_string(s, "/tmp/launch.sys")) return -1; // es launch use this and it fail from emu folder
+	if((flag_emu_mode & 2))
+		{
+			if(!cmp_string(s, "/sys/cert.sys")) return -1;
+			return 0;
+		}
+
+
+	if(!cmp_string(s, "/import")) return 0;
+
+	if(!cmp_string(s, "/tmp/launch.sys")) return -1; // es launch use this
 	if(!cmp_string(s, "/tmp")) return 0;
-	if(!cmp_string(s, "/ticket/00010001")) return 0;
-	if(!cmp_string(s, "/ticket/00010005")) return 0;
+
 	if(!cmp_string(s, "/sys/disc.sys")) return 0;
 	if(!cmp_string(s, "/sys/uid.sys")) return 0;
 
+	if(!cmp_string(s, "/title"))
+		{
+			if(cmp_string(s, "/title/00010000") && cmp_string(s, "/title/00010004")  && cmp_string(s, "/title/00010001") && cmp_string(s, "/title/00010005")) return -1;
+			return 0;
+		}
+
+	if(!cmp_string(s, "/ticket"))
+		{
+			if(cmp_string(s, "/ticket/00010001") && cmp_string(s, "/ticket/00010005")) return -1;
+			return 0;
+		}
+
 return -1;
+	
 }
 
 void preappend_nand_dev_name(const char *origname, char *newname)
 {
+
+	if(!cmp_string((char *) origname, &dev_names[index_dev & 1][0])) {FFS_Strcpy(newname, origname);return;}
+	if(!cmp_string((char *) origname, &dev_names[index_dev][0])) {FFS_Strcpy(newname, origname);return;}
+
 	if((flag_emu_mode & 1) && (!cmp_string((char *) origname, "/title/00010005") || !cmp_string((char *) origname, "/ticket/00010005")))
 		FFS_Strcpy(newname, &dev_names[index_dev & 1][0]); // use sd:/nand or usb:/nand for DLC
 	else
 		FFS_Strcpy(newname, &dev_names[index_dev][0]);
 	FFS_Strcat(newname, origname);
+}
+
+
+u32 title_id=0;
+u16 title_id2=0;
+
+u16 get_group_id(void)
+{
+
+return title_id2;
+}
+
+
+
+void get_owner(u32 hid, u32 uid, u32 *owner)
+{
+
+int n;
+static int one=1;
+
+	if(!uID && !es_working && one)
+		{
+		int fd;
+		one=0;
+		preappend_nand_dev_name((const char *)  "/sys/uid.sys", filename3);
+		fd=os_open(filename3, 0);
+		if(fd>=0)
+			{
+			len_uID= os_seek(fd, 0, 2);
+			os_seek(fd, 0, 0);
+			uID=Mem_Alloc(len_uID);
+			if(uID)
+				{
+				os_read(fd, uID, len_uID);
+				}
+			os_close(fd);
+			}
+
+		//if(uID) Mem_Free(uID); uID=NULL;
+		one=1;
+		}
+
+	if(!uID) {*owner=0x1001;return;}
+
+	for(n=0;n<len_uID;n+=12)
+		{
+		if(*((u32 *) &uID[n])==hid && *((u32 *) &uID[n+4])==uid) {*owner=*((u32 *) &uID[n+8]); return;}
+		}
+
 }
 
 static const char ffs_folders[11][17]={
@@ -281,12 +343,18 @@ void nand_emu_device(void)
 {
 int n;
 
-	if(fatHandle<0)
+	if(fatHandle<0 && fatHandle!=-666)
 		{
+		fatHandle=-666;
 		// initialize the FAT device
-		fatHandle=ffs_Init();
+		ffs_Init();
 
-		if(fatHandle<0) return;
+		if(fatHandle<0) {fatHandle=-1;return;}
+
+		title_id= *((u32 *) 0); // ADDRESS 0
+		title_id2=*((u16 *) 4); // ADDRESS 4
+		
+		if(flag_emu_mode & 128) return; // don't use emulation
 
 		
 		// create FAT directories
@@ -304,6 +372,7 @@ int n;
 				}
 			}
 	
+	    #if 1
 		// test for 0 len files 
 		preappend_nand_dev_name("/sys/disc.sys", filename1);
 		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
@@ -320,6 +389,8 @@ int n;
 
 		preappend_nand_dev_name("/sys/uid.sys", filename1);
 		os_sync_after_write(filename1, MAX_FILENAME_SIZE);
+		ffs_Delete(filename1);
+		/*
 		n=os_open(filename1, 0);
 		if(n>=0)
 			{
@@ -330,13 +401,21 @@ int n;
 				}
 			else os_close(n);
 			}
-		
-		
-		// create & truncate log file
+			*/
+		#endif
+
+//		flag_emu_mode|=2;
+		//verbose_level=0;
 		
 		if(verbose_level)
 			{
-			int fd=os_open("sd:/ffs_log.txt" , O_CREAT | O_TRUNC | O_RDWR );
+			int fd;
+
+			if(index_dev & 1) 
+				fd=os_open("usb:/ffs_log.txt" , O_CREAT | O_TRUNC | O_RDWR );
+			else
+				fd=os_open("sd:/ffs_log.txt" , O_CREAT | O_TRUNC | O_RDWR );
+
 			if(fd>=0)
 				{
 				os_close(fd);
@@ -358,8 +437,10 @@ ffs_iocl and ioc_tlv uses the param 2 to determine if call to the original or no
 
 */
 
-int ffs_open(ipcmessage *msg)
+int ffs_open(ipcmessage *msg, int *dont_use_ffs_call)
 {
+	*dont_use_ffs_call=0;
+
 	if(flag_emu==0) return -6; // call the original
 
 	nand_emu_device();
@@ -405,16 +486,20 @@ return -6;
 
 
 
+
 int ffs_ioctl(ipcmessage *msg, int *dont_use_ffs_call)
 {
 int ret=-6;
-static struct stat filestat;
+static struct stat filestat ATTRIBUTE_ALIGN(32);
+static fsattr attr_out ATTRIBUTE_ALIGN(32);
 
 	*dont_use_ffs_call=0;
 
 	if(flag_emu==0) return -6; // call the original
 
 	nand_emu_device();
+
+	if(flag_emu_mode & 128) return -6; // don't use emulation
 
 	if(fatHandle<0) return -6;
 
@@ -435,13 +520,16 @@ static struct stat filestat;
 		*dont_use_ffs_call=1;
 		preappend_nand_dev_name((const char *)  attr->filepath, filename1);
 
-		if(light_on) swi_mload_led_on();
+		if(light_on) led_on();
+		
 		ret = ffs_MakeDir(filename1);
-		if(light_on) swi_mload_led_off();
+		
+		if(light_on) led_off();
 
 		if(verbose_level) debug_printf("Create dir %s ret %i\n", filename1, ret);
 
-		
+		if(ret==0) { if(uID) Mem_Free(uID); uID=NULL;} // for update uID
+
 		break;
 	}
 	case FFS_IOCTL_CREATEFILE: {
@@ -454,7 +542,8 @@ static struct stat filestat;
 		*dont_use_ffs_call=1;
 		preappend_nand_dev_name((const char *)  attr->filepath, filename1);
 
-		if(light_on) swi_mload_led_on();
+		if(light_on) led_on();
+
 		ret = ffs_MakeFile(filename1);
 
 		#ifdef READ_FROM_FILE_ATTR
@@ -481,19 +570,24 @@ static struct stat filestat;
 				}
 			}
 		#endif
-		if(light_on) swi_mload_led_off();
+		if(light_on) led_off();
 
-		if(verbose_level) debug_printf("Create file %s ret %i\n", filename1, ret);
-		
+		if(verbose_level)
+			debug_printf("Create file %s (%x %x)  %x %x %x %x ret %i\n", filename1, attr->owner_id, attr->group_id, attr->attributes, attr->groupperm, attr->otherperm, attr->ownerperm, ret);
+	
 		break;
 	}
 	case FFS_IOCTL_DELETE: {
 		
-		if(test_string( (char *) buffer_in)) {*dont_use_ffs_call=0;return -6;}
+		if(test_string( (char *) buffer_in)) 
+			{
+			 if(verbose_level>1) debug_printf("ffs Deleting file %s\n", filename1);
+			*dont_use_ffs_call=0;return -6;
+			}
 		*dont_use_ffs_call=1;
 		preappend_nand_dev_name((const char *) buffer_in, filename1);
 
-		if(light_on) swi_mload_led_on();
+		if(light_on) led_on();
 
 		ret = ffs_Delete(filename1);
 
@@ -512,7 +606,7 @@ static struct stat filestat;
 				}
 		#endif
 
-		if(light_on) swi_mload_led_off();
+		if(light_on) led_off();
         if(verbose_level) debug_printf("Deleting file %s ret %i\n", filename1, ret);
 		
 		break;
@@ -522,36 +616,45 @@ static struct stat filestat;
 
 		if(!buffer_in || ((u8 *)buffer_in)[0]<32)  {*dont_use_ffs_call=1;return -101;}
 
-        if(test_string( (char *) names)) {*dont_use_ffs_call=0;return -6;}
+        if(test_string( (char *) names)) {
+			 if(verbose_level>1) debug_printf("ffs Renaming file %s %s\n", (const char *)names, (const char *) names+OFFSET_NEW_NAME);
+			*dont_use_ffs_call=0;return -6;
+			}
+
 		*dont_use_ffs_call=1;
 		
 		preappend_nand_dev_name((const char *)names, filename1);
 		preappend_nand_dev_name((const char *) names+OFFSET_NEW_NAME, filename2);
 		
-		if(light_on) swi_mload_led_on();
+		if(light_on) led_on();
 
-		if(!FFS_Strncmp(filename1, filename2, OFFSET_NEW_NAME))
+		if(!FFS_Strncmp((char *) names, (char *) names+OFFSET_NEW_NAME, OFFSET_NEW_NAME))
 			{
 			
 			ret = ffs_Stat(filename1, NULL);
 			
 			}
+		
 		else
 			{
+		
 			
 			// Check if newname exists
 			if (ffs_Stat(filename2, &filestat) >=0) {
 				if (S_ISDIR(filestat.st_mode))
 					ffs_DeleteDir(filename2);
-				else
+				//else // else must be removed
 					ffs_Delete(filename2);
 			
 			}
 			
 
 			ret = ffs_Rename(filename1, filename2);
+			if(ret>=0) ret=0;
 
 			 if(verbose_level) debug_printf("Renaming file %s %s ret %i\n", filename1, filename2, ret);
+
+			 //ffs_shutdown();led_on();while(1);
 
 			#ifdef READ_FROM_FILE_ATTR
 			// rename file with ATTR
@@ -587,7 +690,7 @@ static struct stat filestat;
 
 					if(ffs_Rename(filename1, filename2)>=0)
 					if(verbose_level) debug_printf("Renaming file attr %s %s\n", filename1, filename2);
-					//swi_mload_led_on();while(1);
+					//led_on();while(1);
 					}
 				
 				}
@@ -596,14 +699,16 @@ static struct stat filestat;
 			
 			}
 
-	   if(light_on) swi_mload_led_off();
+	   if(light_on) led_off();
 
 		
 		break;
 	}
 	case FFS_IOCTL_GETSTATS: {
 		static struct statvfs vfsstat;
-		if(test_string( (char *) buffer_in)) {*dont_use_ffs_call=0;return -6;}
+
+		if(cmp_string((char *) buffer_in, "/dev/fs") && !cmp_string((char *) buffer_in, "/dev")) {*dont_use_ffs_call=0;return -6;}
+
 		*dont_use_ffs_call=1;
 		
 
@@ -613,11 +718,11 @@ static struct stat filestat;
 			{
 			preappend_nand_dev_name("/", filename1);
 
-			if(light_on) swi_mload_led_on();
+			if((light_on & 2)) led_on();
 
 			ret = ffs_VFSStats(filename1, &vfsstat);
 
-			if(light_on) swi_mload_led_off();
+			if((light_on & 2)) led_off();
 
 			if(verbose_level) debug_printf("VFSStats %s ret %i\n", filename1, ret);
 			}
@@ -647,10 +752,17 @@ static struct stat filestat;
 		break;
 	}
 	case FFS_IOCTL_GETATTR: {
-		int simulate=1;
 		
+		int simulate=1;
 
+		if(!FFS_Strncmp((char *) buffer_in, "/", 255)
+			|| !FFS_Strncmp((char *) buffer_in, "/title", 255)
+			|| !FFS_Strncmp((char *) buffer_in, "/ticket", 255)
+			|| !FFS_Strncmp((char *) buffer_in, "/sys", 255)) goto use_emu_getattr;
+		
 		if(test_string( (char *) buffer_in)) {*dont_use_ffs_call=0;return -6;}
+
+		use_emu_getattr:
 
 		*dont_use_ffs_call=1;
 
@@ -658,11 +770,11 @@ static struct stat filestat;
 
 		preappend_nand_dev_name((const char *)buffer_in, filename1);
 
-		if(light_on) swi_mload_led_on();
+		if((light_on & 2)) led_on();
 
-		ret = ffs_Stat(filename1, &filestat); //
+		ret = ffs_Stat(filename1, &filestat);
 		
-		if(light_on) swi_mload_led_off();
+		if((light_on & 2)) led_off();
 		
 		if(verbose_level) debug_printf("GETATTR2 %s ret %i\n", filename1, ret);
 		
@@ -670,7 +782,8 @@ static struct stat filestat;
 		if (ret >= 0) 
 			{
 			
-			fsattr *attr = (fsattr *) buffer_io;
+			 //fsattr *attr = (fsattr *) buffer_io;
+             FFS_Memcpy( &attr_out, buffer_io, length_io);
            
 			#ifdef READ_FROM_FILE_ATTR
 		
@@ -696,30 +809,60 @@ static struct stat filestat;
 		
 			#endif
 
+			ret=0;
+			
 			if(simulate)
 				{
-				attr->owner_id   = 0x1001;
-				attr->group_id   = get_group_id();
-				FFS_Memcpy(attr->filepath, buffer_in, ISFS_MAXPATH);
+				
+				if(!cmp_string((char *) buffer_in, "/title/00010005") || !cmp_string((char *) buffer_in, "/ticket/00010005"))
+					get_owner(0x00010005, title_id + 0x20000000, &attr_out.owner_id);
+				else
+				if(!cmp_string((char *) buffer_in, "/title/00010001") || !cmp_string((char *) buffer_in, "/ticket/00010001"))
+					get_owner(0x00010001, title_id, &attr_out.owner_id);
+				else
+				if(!cmp_string((char *) buffer_in, "/title/00010004"))
+					get_owner(0x00010004, title_id, &attr_out.owner_id);
+				else
+					get_owner(0x00010000, title_id, &attr_out.owner_id);
+				
 
-				attr->attributes = 0;
+				attr_out.group_id   = get_group_id();
+
+				//memcpy(attr_out.filepath, buffer_in, ISFS_MAXPATH);
+
+				attr_out.attributes = 0;
+				attr_out.ownerperm  = ISFS_OPEN_RW;
+
 				if(!cmp_string((void *) buffer_in, "/title/0001000#/########/data/nocopy"))
 					{
-					attr->groupperm  = 3;
-					attr->otherperm  = 0;
+					attr_out.groupperm  = ISFS_OPEN_RW;
+					attr_out.otherperm  = 0;
 					}
 				else
 					{
-					attr->groupperm  = ISFS_OPEN_RW;
-					attr->otherperm  = ISFS_OPEN_RW;
-					}
-				attr->ownerperm  = ISFS_OPEN_RW;
+					attr_out.groupperm  = ISFS_OPEN_RW;
 
-				os_sync_after_write(buffer_io, length_io);
+					if(es_working && (!cmp_string((char *) buffer_in, "/tmp/") || !cmp_string((char *) buffer_in, "/import"))) // "/tmp/title.tmd" from IOCTL_ES_ADDTITLESTART and others
+						{
+						
+						attr_out.owner_id=0;
+						attr_out.group_id=0;
+						attr_out.attributes=0; 
+						attr_out.groupperm=3;
+						attr_out.otherperm=0;
+					    attr_out.ownerperm=3;
+
+						}
+					else attr_out.otherperm  = ISFS_OPEN_RW;
+					}
+				
+                FFS_Memcpy(buffer_io, &attr_out, length_io);
+				//os_sync_after_write(buffer_io, length_io);
+			
 				}
 			
 		
-			ret=0;
+			//ret=0;
 		}
 		break;
 	}
@@ -727,13 +870,20 @@ static struct stat filestat;
 		
 		
 		fsattr *attr = (fsattr *) buffer_in;
-		if(test_string( (char *)  attr->filepath)) {*dont_use_ffs_call=0;return -6;}
 
+		if(!FFS_Strncmp((char *)  attr->filepath, "/", 255)
+			|| !FFS_Strncmp((char *)  attr->filepath, "/title", 255)
+			|| !FFS_Strncmp((char *)  attr->filepath, "/ticket", 255)
+			|| !FFS_Strncmp((char *)  attr->filepath, "/sys", 255)) goto use_emu_setattr;
+
+		if(test_string( (char *)  attr->filepath)) {*dont_use_ffs_call=0;return -6;}
+         
+		use_emu_setattr:
 
 		*dont_use_ffs_call=1;
 		preappend_nand_dev_name((const char *)attr->filepath, filename1);
 
-		if(light_on) swi_mload_led_on();
+		if(light_on) led_on();
 
 		ret = ffs_Stat(filename1, &filestat); // Ignore permission, success if the file exists
 		
@@ -757,9 +907,9 @@ static struct stat filestat;
 			}
 		#endif
 
-		if(light_on) swi_mload_led_off();
+		if(light_on) led_off();
 
-		if(verbose_level) debug_printf("Set ATTR  %s ret %i\n", filename1, ret);
+		if(verbose_level) debug_printf("Set ATTR  %s (%x %x) %x %x %x %x ret %i\n",filename1, attr->owner_id, attr->group_id, attr->attributes, attr->groupperm, attr->otherperm, attr->ownerperm, ret);
 	
 		break;
 	}
@@ -813,6 +963,8 @@ int ret=-6;
 	
 	nand_emu_device();
 
+	if(flag_emu_mode & 128) return -6; // don't use emulation
+
 	if(fatHandle<0) return -6;
 
 	
@@ -854,15 +1006,16 @@ int ret=-6;
 		} else
 			outbuf = NULL;
 
-		//if(test_string2(dirpath)) {*dont_use_ffs_call=0;return -6;}
+
+		if(dirpath[0]=='/' && dirpath[1]==0) dirpath++;
       
 		preappend_nand_dev_name(dirpath, filename3);
 
-		if(light_on) swi_mload_led_on();
+		if((light_on & 2)) led_on();
 
 		ret = ffs_ReadDir(filename3, outbuf, &len);
 
-		if(light_on) swi_mload_led_off();
+		if((light_on & 2)) led_off();
 
 		if(verbose_level) debug_printf("Read dir 2 %i %s ret: %i \n", len, filename3, ret);
 
@@ -878,35 +1031,45 @@ int ret=-6;
 		
 
 		char *dirpath = (char *)vector[0].data;
+	
 		
-		if(!strcmp(dirpath,"/")
-			|| !strcmp(dirpath,"/title")
-			|| !strcmp(dirpath,"/ticket")
-			|| !strcmp(dirpath,"/sys")) goto use_emu_getusage;
+		if(!FFS_Strncmp(dirpath,"/", 255)
+			|| !FFS_Strncmp(dirpath,"/title", 255)
+			|| !FFS_Strncmp(dirpath,"/ticket", 255)
+			|| !FFS_Strncmp(dirpath,"/sys", 255)) goto use_emu_getusage;
 
 		
 		if(test_string(dirpath)) {*dont_use_ffs_call=0;return -6;}
 
         use_emu_getusage:
+		if(dirpath[0]=='/' && dirpath[1]==0) dirpath++;
 
-		preappend_nand_dev_name(dirpath, filename3);
+		if(cmp_string(dirpath, "/title/0001000#/########") && cmp_string(dirpath, "/ticket/0001000#"))
+		{
+			
+			preappend_nand_dev_name("/ticket", filename3); // fake for speed
 
-		if(light_on) swi_mload_led_on();
+		}
+	    else
+			preappend_nand_dev_name(dirpath, filename3);
+		
+
+		if((light_on & 2)) led_on();
 
 		ret= ffs_GetUsage(filename3, vector[1].data, vector[2].data);
-		
+	
+
 		if(ret>=0)
 			{
+			ret=0;
 			
-			swi_mload_led_off();
-	
 			os_sync_after_write(vector[1].data, 4);
 		    os_sync_after_write(vector[2].data, 4);
 
 			if(verbose_level) debug_printf("GetUsage %i %i %s\n", *((u32*) vector[1].data), *((u32*) vector[2].data), filename3);
 			}
 
-		if(light_on) swi_mload_led_off();
+		if((light_on & 2)) led_off();
 
 		*dont_use_ffs_call=1;
 		break;

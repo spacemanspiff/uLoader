@@ -5,7 +5,7 @@
 #define STACKSIZE		1024*128
 
 static lwpq_t remote_queue;
-static lwp_t h_remote;
+static lwp_t h_remote=-1;
 static int remote_thread_status=0;
 static int remote_loop=1;
 static int remote_command=0;
@@ -55,7 +55,8 @@ int remote_status()
 
 int remote_init(void)
 {
-	
+
+
 	remote_command=0;
     remote_loop=1;
 
@@ -72,6 +73,8 @@ return 0;
 void remote_end()
 {
 
+	if(h_remote<0)  return;
+
 	while(remote_status());
 
 
@@ -80,6 +83,8 @@ void remote_end()
 
 	LWP_ThreadSignal(remote_queue);
 	LWP_JoinThread(h_remote,NULL);
+
+	h_remote=-1;
 }
 
 int remote_ret()

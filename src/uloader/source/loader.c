@@ -16,6 +16,8 @@ extern u32 nand_mode;
 
 extern u32 load_dol();
 
+extern int dont_use_diary;
+
 #define CERTS_SIZE	0xA00
 
 static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "/sys/cert.sys";
@@ -725,19 +727,24 @@ int ret;
 
     dol_data=title_dol;
 
-	WDVD_Init();
-    WDVD_SetUSBMode(NULL, 0);
-	WDVD_Reset();
-	WDVD_Close();
 
-	//Determine_VideoMode(*Disc_Region);
+/*
+	WDVD_Init();
+	
+    //WDVD_SetUSBMode(NULL, 0);
+	WDVD_SetUSBMode("_NULL", 0);
+	WDVD_Reset();
+	
+	WDVD_Close();
+*/
+
 
 	Determine_VideoMode((((u32) titleid) & 0xff));
 
 	set_language_and_ocarina();
 	
 
-		DCFlushRange((void*)0x80000000, 0x3f00);
+	DCFlushRange((void*)0x80000000, 0x3f00);
 
 	if(title_dol) 
 		{
@@ -763,15 +770,18 @@ int ret;
 		  bit 8-9 -> Emulation mode: 0->default 1-> DLC redirected to device:/nand, 2-> Full Mode  3-> Fullmode with DLC redirected to device:/nand
 		  */
 
-		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | 128 );
+		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | (64*(dont_use_diary!=0)) | 128 );
 
 		// mounting FFS system
 		ISFS_Deinitialize();
 		ISFS_Initialize();
 		usleep(500*1024);
 		ISFS_Deinitialize();
+		ISFS_Initialize();
+		ISFS_Deinitialize();
 		
 		}
+	else return 889;
 	
 	
 	if(FAT_Identify()<0) {cabecera2( "ES_Identify error!!!");sleep(4);return 888;}
@@ -784,22 +794,26 @@ int ret;
 		return 890;
 	}	
 
-	ASND_StopVoice(1);
-	ASND_End();
-	usleep(100*1000);
 
-	
+	sleep(1);
+	ASND_StopVoice(4);
+	sleep(1);
+	ASND_End();
 	remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 	remote_end();
 	flag_snow=0;
+	VIDEO_WaitVSync();
 	Screen_flip();
+	VIDEO_WaitVSync();
 	Screen_flip();
 	WPAD_Shutdown();
+	VIDEO_WaitVSync();
+	
 
 	// Cleanup loader information
     //   WDVD_Close();
-	usleep(500*1000);
-   
+	//usleep(1000*1000);
+
 
 	entryPoint = load_dol();
 	
@@ -830,8 +844,6 @@ int ret;
 	DCFlushRange((void*)0x80003140, 4);
 	DCFlushRange((void*)0x80003188, 4);
 
-   
-
 
       if (entryPoint != 0x3400)
 		{
@@ -860,8 +872,8 @@ int ret;
        // fix for PeppaPig
 	   memcpy((void*)0x800000F4,(char *) temp_data, 4);
 
-	   *Disc_ID=0x10001;
-
+	  
+     
 	   memcpy(Online_Check, Disc_ID, 4);
 
 	   appJump = (entrypoint)entryPoint;
@@ -940,6 +952,7 @@ int load_disc(u8 *discid)
 
         int i;
 		
+		str_trace="load_disc() section 1";
 
         memset(&Header, 0, sizeof(Header));
         memset(&Descriptor, 0, sizeof(Descriptor));
@@ -950,6 +963,7 @@ int load_disc(u8 *discid)
 
 
 		if(discid[6]!=0) is_fat=0;
+
         
 		if(nand_mode & 3)
 			global_mount|= (nand_mode & 3);
@@ -963,14 +977,14 @@ int load_disc(u8 *discid)
 			}
 		else
 			{
-			if(global_mount & 3)
+			if((global_mount & 3) || dont_use_diary)
 				{
 				
 				if(load_fatffs_module(NULL)<0) return 17;
 				}
 			}
 
-		
+		str_trace="load_disc() section 2";
 		WDVD_Init();
        
 
@@ -1011,26 +1025,37 @@ int load_disc(u8 *discid)
         if (*Disc_ID==0x10001 || *Disc_ID==0x10001)
                 return 2;
 		DCFlushRange((void*)0x80000000, 0x20); // very, very important: the Disc_ID is used for group attr in the saves
+
+		str_trace="load_disc() section 3";
 		 
 		 /* enable_ffs:
 		  bit 0   -> 0 SD 1-> USB
 		  bit 1-2 -> 0-> /nand, 1-> /nand2, 2-> /nand3, 3-> /nand4
 		  bit 3   -> led on in save operations
-		  bit 4-  -> verbose level: 0-> disabled, 1-> logs from FAT operations, 2 -> logs FFS operations
+		  bit 4-5 -> verbose level: 0-> disabled, 1-> logs from FAT operations, 2 -> logs FFS operations
+		  bit 6   -> 0: diary to NAND 1: diary to device (used to block the diary for now)
 		  bit 7   -> FFS emulation enabled/disabled
 
-		  bit 8-9 -> Emulation mode: 0->default 1-> DLC redirected to device:/nand, 2-> Full Mode  3-> Fullmode with DLC redirected to device:/nand
+		  bit 8-9 -> Emulation mode: 0->default 1-> DLC redirected to device:/nand, 2-> Full Mode  3-> Full Mode with DLC redirected to device:/nand
 		  */
 
+		/*
+		 NOTE: dont_use_diary can be wrok without mount one device for emulation. In this case, the diary is redirected to the thash (or the limb)
+		 The rest of paths works in the NAND
+		*/
         
-		if(nand_mode & 3) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | 128 | (256* ((nand_mode & 16)!=0)));
+		if((nand_mode & 3) || dont_use_diary) enable_ffs( ((nand_mode-1) & 1) | ((nand_mode>>1) & 6) | 8 | (64*(dont_use_diary!=0)) | 128 | (256* ((nand_mode & 16)!=0)));
 		
 		// mounting FFS system
 		ISFS_Deinitialize();
 		ISFS_Initialize();
 		usleep(500*1024);
 		ISFS_Deinitialize();
-		 
+		ISFS_Initialize();
+		ISFS_Deinitialize();
+
+		str_trace="load_disc() section 4";
+
         Determine_VideoMode(*Disc_Region);
 	   
 		WDVD_UnencryptedRead(&Header, sizeof(Header), 0);
@@ -1069,6 +1094,8 @@ int load_disc(u8 *discid)
 		
 		//else  memcpy((char *) discid, (char *) &Header, 6);
 
+		str_trace="load_disc() section 5";
+
 		cabecera2( "Loading...");
 
         u64 Offset = 0x00040000; // Offset into disc to partition descriptor
@@ -1084,6 +1111,7 @@ int load_disc(u8 *discid)
         // Length must be multiple of 0x20
         BufferLen += 0x20 - (BufferLen % 0x20);
         u8 *PartBuffer = (u8*)memalign(0x20, BufferLen);
+		if(!PartBuffer) return 3;
 
         memset(PartBuffer, 0, BufferLen);
         WDVD_UnencryptedRead(PartBuffer, BufferLen, Offset);
@@ -1106,7 +1134,7 @@ int load_disc(u8 *discid)
         if (!Offset)
                 return 3;
 
-		
+		str_trace="load_disc() section 6";
 
         WDVD_Seek(Offset);
 
@@ -1150,8 +1178,27 @@ int load_disc(u8 *discid)
        
 		if (WDVD_OpenPartition((u64) Partition_Info.Offset, 0,0,0, Tmd_Buffer) != 0)
                 return 4;
+
+		
         Tmd = (signed_blob*)(Tmd_Buffer);
         MD_Length = SIGNED_TMD_SIZE(Tmd);
+
+		
+		#if 1
+        // Identify as the game
+        if (IS_VALID_SIGNATURE(Certs) 	&& IS_VALID_SIGNATURE(Tmd) 	&& IS_VALID_SIGNATURE(Ticket) 
+            &&  C_Length > 0 				&& MD_Length > 0 			&& T_Length > 0)
+        {
+                int ret = ES_Identify(Certs, C_Length, Tmd, MD_Length, Ticket, T_Length, NULL);
+                if (ret < 0)
+                        return ret;
+        }
+
+
+		#endif
+
+		str_trace="load_disc() section 7";
+
         static struct AppLoaderHeader Loader ATTRIBUTE_ALIGN(32);
 
         WDVD_Read(&Loader, sizeof(Loader), 0x00002440);// Offset into the partition to apploader header
@@ -1195,6 +1242,7 @@ int load_disc(u8 *discid)
 
 		}
 		
+		str_trace="load_disc() section 8";
 
 		if(!strncmp((void *) AlternativeDol_infodat.id, (void *) discid, 6))
 			{
@@ -1207,37 +1255,27 @@ int load_disc(u8 *discid)
 
 			}
 
-		ASND_StopVoice(1);
-	    ASND_End();
-		usleep(100*1000);
+		str_trace="load_disc() section 9";
 
+		ASND_StopVoice(4);
+	    
+		sleep(1);
 
+		
 		WPAD_Shutdown();
 
 		// Cleanup loader information
         WDVD_Close();
 
-		
-		
-		#if 1
-        // Identify as the game
-        if (IS_VALID_SIGNATURE(Certs) 	&& IS_VALID_SIGNATURE(Tmd) 	&& IS_VALID_SIGNATURE(Ticket) 
-            &&  C_Length > 0 				&& MD_Length > 0 			&& T_Length > 0)
-        {
-                int ret = ES_Identify(Certs, C_Length, Tmd, MD_Length, Ticket, T_Length, NULL);
-                if (ret < 0)
-                        return ret;
-        }
+		ASND_End();
 
-		
-
-		#endif
   
    
 		// Retrieve application entry point
 		
+		str_trace="load_disc() section 10";
 
-			if(dol_data)
+		if(dol_data)
 			{
 			
 			
@@ -1252,11 +1290,21 @@ int load_disc(u8 *discid)
 
 		if(!Entry) return -999;
 
+		str_trace="load_disc() section 11a";
+
 		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+
+		str_trace="load_disc() section 11b";
+
 		remote_end();
+		str_trace="load_disc() section 11c";
 		flag_snow=0;
+		VIDEO_WaitVSync();
 		Screen_flip();
+		VIDEO_WaitVSync();
 		Screen_flip();
+		VIDEO_WaitVSync();
+		str_trace="load_disc() section 11d";
 
         // Enable online mode in games
         memcpy(Online_Check, Disc_ID, 4);
@@ -1268,7 +1316,7 @@ int load_disc(u8 *discid)
 
 		DCFlushRange((void*)0x80000000, 0x17fffff);
 			
-		
+		str_trace="load_disc() section 12";
         // Set Video Mode based on Configuration
 		if (vmode)
 			Set_VideoMode();
@@ -1297,6 +1345,7 @@ int load_disc(u8 *discid)
 	   // Flush application memory range
        DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded value
 	
+	   str_trace="load_disc() launch!";
 
         __asm__ __volatile__
                 (

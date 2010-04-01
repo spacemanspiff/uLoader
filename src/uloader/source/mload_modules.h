@@ -23,6 +23,8 @@ void test_and_patch_for_port1();
 
 int enable_ffs(int mode);
 
+void free_usb_ports();
+
 #endif
 
 

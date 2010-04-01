@@ -118,6 +118,7 @@ static int global_error=0;
 //char temp_read_buffer[16384] ATTRIBUTE_ALIGN(32);
 
 static int fat_copy_progress, fat_copy_total;
+
 s32 _FFS_to_FAT_Copy(const char *ffsdirpath, const char *fatdirpath)
 {
 int n;
@@ -438,14 +439,18 @@ void * FAT_get_dol(const char *dirpath)
     void *buffer= NULL;
 	int len;
 	FILE *fp;
-    
+    char *save_trace=str_trace;
 	u8 *output=NULL;
 	u32 output_size;
 
 	u8 dol[6] = {0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
     u8 check[2048];
 
+
+
 	s32 ret;
+
+	str_trace="FAT_get_dol() open";
 
 		fp=fopen(dirpath, "r");
 
@@ -453,7 +458,7 @@ void * FAT_get_dol(const char *dirpath)
 			{
 			int lz77=0;
 			
-            
+            str_trace="FAT_get_dol() read";
 			ret=fread((void *) check, 1, 32, fp);
 
 			if(ret<32)
@@ -463,8 +468,8 @@ void * FAT_get_dol(const char *dirpath)
 			
 			if(check[0]==0x10 || check[0]==0x11) 
 				{
-				
-				ret = decompressLZ77content(check, 32, &output, &output_size);
+				str_trace="FAT_get_dol() decompressLZ77";
+				ret = decompressLZ77content(check, 32, &output, &output_size, 0);
 				if(ret<0) memset(check, 0 , 8);
 				else
 					{
@@ -476,24 +481,37 @@ void * FAT_get_dol(const char *dirpath)
 
 			if(memcmp((void *) check, (void *) dol, 6)) {fclose(fp); goto error;}
 
+			str_trace="FAT_get_dol() fseek";
+
 			fseek(fp, 0, SEEK_END);
 
 			len=ftell(fp);
 
 			fseek(fp, 0, SEEK_SET);
 
-			buffer=  (u8 *) SYS_AllocArena2MemLo(len+32768,32); //memalign(32,len+32);
+			str_trace="FAT_get_dol() alloc";
+
+			sprintf((void *) check,"FAT_get_dol() alloc %i", len);
+
+			str_trace=(void *) check;
+            if(lz77) buffer= memalign(32,len+32);
+			else
+				buffer=  (u8 *) SYS_AllocArena2MemLo(len+32768,32);
+
+			
 
 			if(!buffer) {fclose(fp); goto error;}
-
+			
+			str_trace="FAT_get_dol() read_buffer";
 			ret=fread(buffer, 1, len, fp);
 
 			fclose(fp);
 
 			if(lz77)
 				{
-				ret = decompressLZ77content(buffer, len, &output, &output_size);
-				//free(buffer);
+				str_trace="FAT_get_dol() decompressLZ77 2";
+				ret = decompressLZ77content(buffer, len, &output, &output_size, 1);
+				free(buffer);
 				if(ret<0) {buffer=NULL;goto error;}
 				buffer=output;
 				}
@@ -501,7 +519,7 @@ void * FAT_get_dol(const char *dirpath)
 
     
 error:
-
+	str_trace= save_trace;
 	return buffer;
 }
 
@@ -641,9 +659,8 @@ static void *title_tik=NULL;
 
 static u64 title_id;
 
-extern char * bannerTitle;
-
 static int banner_len=0;
+void * title_banner=NULL;
 
 const char dev_names[2][12]=
 {
@@ -673,6 +690,7 @@ int n;
 	{
 		if(!memcmp(db[n].hash, hash, 20)) return &db[n];
 	}
+
 return NULL;
 }
 
@@ -1102,7 +1120,7 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 {
 	char dir_path[256],dir_path2[256];
 
-	tmd *Tmd;
+	tmd *Tmd=NULL;
 	tmd_content *Content;
 
 	FILE *fp=NULL;
@@ -1119,6 +1137,7 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 
 	*dol=NULL;
 
+	str_trace="FAT_get_title() section 1";
 	//nand_mode=1;
 
 	// to be sure shared folder exist
@@ -1130,6 +1149,8 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 	mkdir(dir_path2, S_IRWXO | S_IRWXG | S_IRWXU);
 
 	// reading title.tmd
+
+	str_trace="FAT_get_title() section 2";
 
 	sprintf(dir_path, "%s/title/%08x/%08x/content/title.tmd", &dev_names[(nand_mode & 1)==0][0], (u32) (id>>32), (u32) id);
 	
@@ -1150,11 +1171,15 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 		else fclose(fp);
 		}
 
+	str_trace="FAT_get_title() section 3";
+
 	Tmd=(tmd*)SIGNATURE_PAYLOAD((signed_blob *)title_tmd);
 
     u16 boot_index = Tmd->boot_index;
 	Content = Tmd->contents;
 	group_id= Tmd->group_id;
+
+	title_ios=(u32) (Tmd->sys_version & 0xff);
 
 	// obtain the complete game ID
 	
@@ -1173,7 +1198,8 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 		}
 
 	// test and patch for not shared content
-	title_ios =(u32)(((u8 *)title_tmd)[0x18b]);
+	
+	str_trace="FAT_get_title() section 4";
 
 	for(n=0;n<Tmd->num_contents;n++)
 		{
@@ -1246,7 +1272,7 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 				if(fp) fclose(fp);
 				}// 2
 			
-			////
+
 			} // 1
 
 		else // is not shared
@@ -1296,6 +1322,8 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 			}
 		}
 
+	str_trace="FAT_get_title() section 5";
+
 	if(patch_tmd)
 		{
 		sprintf(dir_path, "%s/title/%08x/%08x/content/title.tmd", &dev_names[(nand_mode & 1)==0][0], (u32) (id>>32), (u32) id);
@@ -1306,28 +1334,35 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 	// update shared db and games
 	if(update_db) 
 		{
+		str_trace="FAT_get_title() scan shared";
 		scan_for_shared((nand_mode & 1)==1);
 		}
 
-
+	str_trace="FAT_get_title() section 6";
 	// create data folder if not exist
 	sprintf(dir_path, "%s/title/%08x/%08x/data", &dev_names[(nand_mode & 1)==0][0], (u32) (id>>32), (u32) id);
 	mkdir(dir_path, S_IRWXO | S_IRWXG | S_IRWXU);
 
-    bannerTitle=NULL;
+    banner_title=NULL;
 
+	str_trace="FAT_get_title() section 7";
 	for(n=0;n<Tmd->num_contents;n++)
 		{
 		if(Content[n].index==0) 
 			{
+			
 			sprintf(dir_path, "%s/title/%08x/%08x/content/%08x.app", &dev_names[(nand_mode & 1)==0][0], (u32) (id>>32), (u32) id, Content[n].cid);
-			if(FAT_read_file(dir_path, (void *) &bannerTitle, &banner_len)<0) bannerTitle=NULL;
+			if(FAT_read_file(dir_path, (void *) &title_banner, &banner_len)<0) title_banner=NULL;
+		
 			break;
 			}
 		}
 
+	str_trace="FAT_get_title() section 8";
+
 	if(dont_use_boot )
 	{
+	
 	// scan for dols
 	for(n=0;n<Tmd->num_contents;n++)
 		{
@@ -1341,6 +1376,8 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 	
 		}
 	}
+
+	str_trace="FAT_get_title() section 9";
 
 	if(!dont_use_boot || !*dol) 
 		{
@@ -1361,7 +1398,7 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 	#endif
 
 	
-
+	str_trace="FAT_get_title() section 10";
 /******************************************************************************************************************************************************/
 	// snapshot copy swap 
 	{
@@ -1438,32 +1475,43 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 	}
 	
 	if(shared_db) free(shared_db);
-	
+
+	str_trace="";
 	return 0;
 
 error:
 
 	//if(*dol) {free(*dol);*dol=NULL;} // dol is in MEM2
-
-	if(shared_db) free(shared_db);
-
-	if(title_tmd) free(title_tmd);
+	str_trace="FAT_get_title() free shared_db";
+	if(shared_db) free(shared_db); shared_db=NULL;
+	
+	str_trace="FAT_get_title() free title_tmd";
+	if(title_tmd) free(title_tmd); title_tmd=NULL;
 
 	//if(title_tik) free(title_tik);
 
-	if(cert) free(cert);
+	str_trace="FAT_get_title() free cert";
+	if(cert) free(cert); cert=NULL;
+   
+	*dol=NULL;
 
+	str_trace="";
 
 return ret;
 }
 
-static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "/sys/cert.sys";
-static char tik_fs[] ATTRIBUTE_ALIGN(32) = "/ticket/00000001/00000024.tik";
+static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "#/sys/cert.sys";
+static char tik_fs[] ATTRIBUTE_ALIGN(32) = "#/ticket/00000001/00000024.tik"; // i can use '#' because it works under emulation 
 
 int FAT_Identify(void)
 {
 int fd;
 u32 current_ios;
+tmd *Tmd;
+tik *ticket;
+	
+	DCInvalidateRange((void *) 0x80003140, 4);
+	current_ios= ((*((u32 *)0x80003140))>>16) & 255;
 
 	ISFS_Initialize();
 
@@ -1486,14 +1534,13 @@ u32 current_ios;
 
 	if(!title_tik)
 	{
-    u8 *tik;
     
 	// use ticket from the current IOS
-
-	current_ios= ((*((u32 *)0x80003140))>>16) & 255;
     
-	tik_fs[23]=(current_ios>>4)>=10 ? 87 + (current_ios>>4) : 48 + (current_ios>>4);
-	tik_fs[24]=(current_ios & 0xf)>=10 ? 87 + (current_ios & 0xf) : 48 + (current_ios & 0xf);
+	tik_fs[24]=(current_ios>>4)>=10 ? 87 + (current_ios>>4) : 48 + (current_ios>>4);
+	tik_fs[25]=(current_ios & 0xf)>=10 ? 87 + (current_ios & 0xf) : 48 + (current_ios & 0xf);
+
+	DCFlushRange(tik_fs, sizeof(tik_fs));
 
 	fd=ISFS_Open(tik_fs, ISFS_OPEN_READ);
 	
@@ -1511,25 +1558,46 @@ u32 current_ios;
 	
 	ISFS_Close(fd);
 
-    tik=(u8 *) title_tik;
+   
+	ticket = (tik*)SIGNATURE_PAYLOAD((signed_blob *) title_tik);
     
 	// modify ticket with the titleid
+	
+	memcpy(&ticket->titleid, &title_id, 8);
+	memset(&ticket->reserved[0], 0, 2);//group_id;
+/*
+		{
+		u8 * tik=(u8 *) title_tik;
+//		*((u32 *) &tik[0x1DC])=(u32) (title_id>>32);
+//		*((u32 *) &tik[0x1E0])=(u32) title_id;
+//		*((u16 *) &tik[0x1E6])=(u16) 0;//group_id;
+		tik[0x221]=0;
+		tik[0x263]=0;
 
-	*((u32 *) &tik[0x1DC])=(u32) (title_id>>32);
-	*((u32 *) &tik[0x1E0])=(u32) title_id;
-	*((u16 *) &tik[0x1E6])=(u16) group_id;
-	tik[0x221]=0;
-
+		}
+*/
+	
 	}
 
 	fd=-1;
 
-	ISFS_Deinitialize();
+	//ISFS_Deinitialize();
+
+	if(!title_tmd) return -1;
+
+	Tmd=(tmd*)SIGNATURE_PAYLOAD((signed_blob *)title_tmd);
+	
+
+   ((u32 *) ((void *) &Tmd->sys_version))[1]=(u32 ) current_ios; // fake tmd IOS;
+
+   DCFlushRange(cert, cert_len);
+   DCFlushRange(title_tmd, title_tmd_len);
+   DCFlushRange(title_tik, title_tik_len);
 
 	return ES_Identify((void *)cert, cert_len, (void *) title_tmd, title_tmd_len, (void *) title_tik, title_tik_len, NULL);
 
 error:
-	ISFS_Deinitialize();
+	//ISFS_Deinitialize();
 	return -1;
 }
 
@@ -1644,7 +1712,6 @@ extern void _decrypt_title_key(u8 *tik, u8 *title_key);
 static u8 title_iv[16];
 
 
-
 int Install_from_wad(char *filename, int is_sd)
 {
 FILE *fp=NULL, *fp2=NULL;
@@ -1737,49 +1804,7 @@ char dir_path[256];
 	mkdir(dir_path, S_IRWXO | S_IRWXG | S_IRWXU);
 	sprintf(dir_path, "%s/ticket/%08x", &dev_names[is_sd==0][0], title_id[0]);
 	mkdir(dir_path, S_IRWXO | S_IRWXG | S_IRWXU);
-#if 0
-	if(0)
-		{
-	  //  u8 *tik;
-		free(tik);
-		int title_tik_len;
-		u8 current_ios;
-		int fd;
-		
-		// use ticket from the current IOS
 
-		current_ios= ((*((u32 *)0x80003140))>>16) & 255;
-		
-		tik_fs[23]=(current_ios>>4)>=10 ? 87 + (current_ios>>4) : 48 + (current_ios>>4);
-		tik_fs[24]=(current_ios & 0xf)>=10 ? 87 + (current_ios & 0xf) : 48 + (current_ios & 0xf);
-
-		fd=ISFS_Open(tik_fs, ISFS_OPEN_READ);
-		
-		if(fd<0)  goto error;
-
-		title_tik_len= ISFS_Seek(fd, 0, 2);
-		
-		ISFS_Seek(fd, 0, 0);
-
-		tik=memalign(32,title_tik_len+32);
-		
-		//if(!title_tik) goto error;
-
-		if(ISFS_Read(fd, tik, header->tik_len) <0)  goto error;
-		
-		ISFS_Close(fd);
-
-		//tik=(u8 *) title_tik;
-		
-		// modify ticket with the titleid
-
-		*((u32 *) &tik[0x1DC])=(u32) (title_id[0]);
-		*((u32 *) &tik[0x1E0])=(u32) title_id[1];
-		*((u16 *) &tik[0x1E6])=(u16) 0/*group_id*/;
-		tik[0x221]=0;
-
-	}
-	#endif
 	sprintf(dir_path, "%s/ticket/%08x/%08x.tik", &dev_names[is_sd==0][0], title_id[0], title_id[1]);
 	if(FAT_write_file(dir_path, tik, header->tik_len)<0) {free(tik);tik=NULL;error=-9;goto error;}
 	}
@@ -1802,6 +1827,7 @@ char dir_path[256];
 	if(!mem) {error=-2;goto error;}
    
     time_sleep=15*60;
+
 	for(n=0;n<Tmd->num_contents;n++)
 		{
 		int len = Content[n].size; //round_up(Content[n].size, 64);
@@ -1879,6 +1905,8 @@ char dir_path[256];
 				{
 				sprintf(mess,"Warning: Shared content %08x don't exist",  Content[n].cid);
 				down_mess=mess;
+				sprintf(dir_path, "%s/title/%08x/%08x/content/%08x.app", &dev_names[is_sd==0][0], title_id[0], title_id[1], Content[n].cid);
+				remove(dir_path);
 				sleep(1);
 				}
 			}
@@ -1909,7 +1937,6 @@ error:
 	if(fp2) fclose(fp2);
 	
     time_sleep=5*60;
-	
 	
 	  if(error)
 		{ 
@@ -1974,5 +2001,5 @@ error:
 	return error;
 }
 
-
+// end of this shit xD
 

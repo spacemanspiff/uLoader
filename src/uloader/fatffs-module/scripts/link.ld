@@ -10,14 +10,14 @@ MEMORY {
 	ram(rwx)	: ORIGIN = 0x13738000, LENGTH = 0x28000
 	*/
 	/* tiny */
-	exe(rwx)	: ORIGIN = 0x13730000, LENGTH = 0xa000
-	ram(rwx)	: ORIGIN = 0x1373a000, LENGTH = 0x30000 /* 0x20000*/
+	exe(rwx)	: ORIGIN = 0x13730000, LENGTH = 0xa800
+	ram(rwx)	: ORIGIN = 0x1373a800, LENGTH = 0x40000 /* 0x20000*/
 }
 
 __exe_start_virt__		= 0x13730000;
 __exe_start_phys__		= 0x13730000;
-__ram_start_virt__		= 0x1373a000;
-__ram_start_phys__		= 0x1373a000;
+__ram_start_virt__		= 0x1373a800;
+__ram_start_phys__		= 0x1373a800;
 __ios_info_table_start		= 0x0;
 
  

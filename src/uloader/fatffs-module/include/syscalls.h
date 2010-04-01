@@ -17,7 +17,7 @@ s32   os_thread_stop(s32 id);
 s32   os_message_queue_create(void *ptr, u32 id);
 s32   os_message_queue_receive(s32 queue, u32 *message, u32 flags);
 s32   os_message_queue_send(s32 queue, u32 message, s32 flags);
-s32   os_message_queue_now(s32 queue, u32 message, s32 flags);
+s32   os_message_queue_send_now(s32 queue, u32 message, s32 flags);
 s32   os_heap_create(void *ptr, s32 size);
 s32   os_heap_destroy(s32 heap);
 void *os_heap_alloc(s32 heap, u32 size);

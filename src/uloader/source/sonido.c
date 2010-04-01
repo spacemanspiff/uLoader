@@ -212,7 +212,7 @@ u8* decompress_lz77(u8 *data, size_t data_size, size_t* decompressed_size)
 	data_end = data + data_size;
 	// Assume this for now and grow when needed
 	unpacked_size = data_size;
-	decompressed_data = malloc(unpacked_size);
+	decompressed_data = malloc(unpacked_size+2048);
 	out_end = decompressed_data + unpacked_size;
 	out_ptr = decompressed_data;
 
@@ -241,7 +241,7 @@ u8* decompress_lz77(u8 *data, size_t data_size, size_t* decompressed_size)
 					out_ptr++;
 					if (out_ptr >= out_end) {
 						// Need to grow buffer
-						decompressed_data = realloc(decompressed_data, unpacked_size*2);
+						decompressed_data = realloc(decompressed_data, unpacked_size*2+ 2048);
 						out_ptr = decompressed_data + unpacked_size;
 						unpacked_size *= 2;
 						out_end = decompressed_data + unpacked_size;
@@ -253,7 +253,7 @@ u8* decompress_lz77(u8 *data, size_t data_size, size_t* decompressed_size)
 				out_ptr++;
 				if (out_ptr >= out_end) {
 					// Need to grow buffer
-					decompressed_data = realloc(decompressed_data, unpacked_size*2);
+					decompressed_data = realloc(decompressed_data, unpacked_size*2+2048);
 					out_ptr = decompressed_data + unpacked_size;
 					unpacked_size *= 2;
 					out_end = decompressed_data + unpacked_size;
@@ -450,7 +450,7 @@ void parse_riff(void *data, SoundInfo *snd)
 	short *ss = (void*)(riff_data + 1);
 	short *dsp_data;
 	int i;
-	dsp_data = memalign(32, Size);
+	dsp_data = memalign(32, Size+2048);
 	if (!dsp_data) return;
 	// byte order
 	for (i=0; i<Size/2; i++) {
@@ -626,18 +626,16 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 	char *name_start, *name;
 	u8 u8_tag[4] = {0x55, 0xAA, 0x38, 0x2D}; // "U.8-"
 	
-	//dbg_hex_dump(banner, 128);
+	if(memcmp(((char *) banner)+0x40, "IMET", 4))
+		{
+		if(memcmp(((char *) banner)+0x80, "IMET", 4)) return;
+		data_hdr+=0x40;
+		}
+
 	u8_hdr = data_hdr;
-	//printf("imet: %.4s\n", ((IMET*)banner)->imet);
-	//printf("U8: %.4s 0x%x\n", u8_hdr->tag, u8_hdr->rootnode_offset);
-	//dbg_pause();
-	if (memcmp(u8_hdr->tag, u8_tag, 4))
-	{
-		banner+=0x40;
-		data_hdr = banner + sizeof(IMET);
-		u8_hdr = data_hdr;
-		if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
-	}
+	
+	if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
+	
 
 	node = data_hdr + u8_hdr->rootnode_offset;
 	num = node->size;
@@ -711,20 +709,17 @@ void parse_banner_tpl(void *banner, void **tpl_1)
 	u32 t;
 	u8 u8_tag[4] = {0x55, 0xAA, 0x38, 0x2D}; // "U.8-"
 	
-	//dbg_hex_dump(banner, 128);
-	u8_hdr = data_hdr;
-
 	*tpl_1=NULL;
 
+	if(memcmp(((char *) banner)+0x40, "IMET", 4))
+		{
+		if(memcmp(((char *) banner)+0x80, "IMET", 4)) return;
+		data_hdr+=0x40;
+		}
 
-	if (memcmp(u8_hdr->tag, u8_tag, 4))
-	{
-		banner+=0x40;
-		data_hdr = banner + sizeof(IMET);
-		u8_hdr = data_hdr;
-		if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
-	}
-
+	u8_hdr = data_hdr;
+	
+	if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
 	node = data_hdr + u8_hdr->rootnode_offset;
 	num = node->size;
 	name_start = (char*)&node[num];

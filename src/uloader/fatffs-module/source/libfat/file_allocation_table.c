@@ -32,10 +32,12 @@
 #include "partition.h"
 #include <string.h>
 
+
+extern int cache_entry_mode;
 /*
 Gets the cluster linked from input cluster
 */
-uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
+uint32_t _FAT_fat_nextCluster2(PARTITION* partition, uint32_t cluster)
 {
 	uint32_t nextCluster = CLUSTER_FREE;
 	sec_t sector;
@@ -114,6 +116,16 @@ uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
 	return nextCluster;
 }
 
+uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
+{
+uint32_t ret;
+	
+	cache_entry_mode=1;
+	ret=_FAT_fat_nextCluster2(partition, cluster);
+	cache_entry_mode=0;
+
+return ret;
+}
 /*
 writes value into the correct offset within a partition's FAT, based 
 on the cluster number.
@@ -128,6 +140,8 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 		return false;
 	}
 	
+	cache_entry_mode=1;
+
 	switch (partition->filesysType) 
 	{
 		case FS_UNKNOWN:
@@ -190,10 +204,13 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 			break;
 			
 		default:
+			cache_entry_mode=0;
 			return false;
 			break;
 	}
-			
+		
+	cache_entry_mode=0;	
+
 	return true;
 }
 
@@ -214,6 +231,7 @@ uint32_t _FAT_fat_linkFreeCluster(PARTITION* partition, uint32_t cluster) {
 	if (cluster > lastCluster) {
 		return CLUSTER_ERROR;
 	}
+
 
 	// Check if the cluster already has a link, and return it if so
 	curLink = _FAT_fat_nextCluster(partition, cluster);
@@ -268,13 +286,16 @@ uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster
 	uint32_t i;
 	static uint8_t emptySector[BYTES_PER_READ] __attribute__((aligned(32)));
 	
+	cache_entry_mode=1;
 	// Link the cluster
 	newCluster = _FAT_fat_linkFreeCluster(partition, cluster);
 
 	if (newCluster == CLUSTER_FREE || newCluster == CLUSTER_ERROR) {
+		cache_entry_mode=0;
 		return CLUSTER_ERROR;
 	}
 
+	cache_entry_mode=1;
 	// Clear all the sectors within the cluster
 	memset (emptySector, 0, BYTES_PER_READ);
 	for (i = 0; i < partition->sectorsPerCluster; i++) {
@@ -282,7 +303,7 @@ uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster
 			_FAT_fat_clusterToSector (partition, newCluster) + i,
 			1, (void *) emptySector);
 	}
-	
+	cache_entry_mode=0;
 	return newCluster;
 }
 	
@@ -301,6 +322,7 @@ bool _FAT_fat_clearLinks (PARTITION* partition, uint32_t cluster) {
 	if (cluster < partition->fat.firstFree) {
 		partition->fat.firstFree = cluster;
 	}
+
 
 	while ((cluster != CLUSTER_EOF) && (cluster != CLUSTER_FREE) && (cluster != CLUSTER_ERROR)) {
 		// Store next cluster before erasing the link

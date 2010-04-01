@@ -323,6 +323,8 @@ if(is_fat)
 			fp=fopen("ud:/uloader.cfg","rb"); // lee el fichero de configuracion
 			}
 
+			
+
 			if(fp!=0)
 				{
 				memset((void *) alt_dol_disc_tab,0,32768);
@@ -352,7 +354,9 @@ if(is_fat)
 					n=fread(&alt_dol_disc_tab,1, 32768 ,fp);
 					if(n==32768)
 						n=fread(&cheat_file,1, 32768 ,fp);
+					
 					}
+				
 				fclose(fp);
 
 				use_icon2=config_file.icon & 7;
@@ -423,7 +427,7 @@ int n=0;
 int m=0;
 FILE *fp;
 u8 *p;
-int flag;
+int flag=0;
 int is_sd=0;
 int first=1;
 int i;
@@ -451,10 +455,11 @@ char filename[256];
 
 	fd = diropen(device);
 
+	n=num_fat_games;
 
 	if(fd != NULL)
 	{
-	n=num_fat_games;
+	
 
 	while(n<256)
 		{
@@ -538,11 +543,27 @@ char filename[256];
 
 	if(fd != NULL)
 	{
-	n=num_fat_games;
+	//n=num_fat_games;
 
 	while(n<256)
 		{
 		if(dirnext(fd, namefile, &filestat)!=0) break; /*dirreset(fd);*/ 
+
+		if(first)
+			{
+			PARTITION *part;
+			if(is_sd) 
+				{
+				part=_FAT_partition_getPartitionFromPath("sd:");
+				if(part) sd_clusters=part->sectorsPerCluster;
+				}
+			else 
+				{
+				part=_FAT_partition_getPartitionFromPath("ud:");
+				if(part) usb_clusters=part->sectorsPerCluster;
+				}
+			first=0;
+			}
 		
 		if((filestat.st_mode & S_IFDIR)) 
 			{
@@ -1001,16 +1022,21 @@ if(!sd_ok) return 0;
 
 int Get_AlternativeDol(u8 *id)
 {
-dol_infodat *dol_infop=(dol_infodat *) temp_data;
+dol_infodat *dol_infop=(dol_infodat *) (temp_data+128*1024);
 int indx=0;
 
 	dol_len= 0;dol_data=0;
-	memset(temp_data,0,32768);
+	memset(temp_data+128*1024,0,32768);
 
 if(!load_alt_game_disc)
-	global_LoadDolInfo(temp_data);
+	{
+	is_fat=0;
+	global_LoadDolInfo(temp_data+128*1024);
+	
+	}
 else
 	{
+	
 	dol_infop=(dol_infodat *) alt_dol_disc_tab;
 	}
 
@@ -1022,8 +1048,10 @@ else
 			{
 			AlternativeDol_infodat=dol_infop[indx];
 			dol_len=AlternativeDol_infodat.size;
+			str_trace="Get_AlternativeDol alloc";
 			dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len+32768,32);
-            if(!dol_data) AlternativeDol_infodat.id[0]=0; // cancel
+            if(!dol_data) {AlternativeDol_infodat.id[0]=0;} // cancel
+			str_trace="";
 			return 1;
 			}
 		}

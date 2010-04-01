@@ -283,16 +283,16 @@ void CWIIDisc_create()
 
 	CWIIDisc_first_file = NULL;
 	// create and blank the wii blank table
-	pFreeTable = (unsigned char *) malloc(CONST_TABLE);
+	pFreeTable = (unsigned char *) memalign(32, CONST_TABLE);
 	//set them all to clear first
 	memset(pFreeTable, 0, CONST_TABLE);
 	// then set the header size to used
 	MarkAsUsed(0, 0x40000);
 
-	pBlankSector = (unsigned char *) malloc(0x8000);
+	pBlankSector = (unsigned char *) memalign(32, 0x8000);
 	memset(pBlankSector, 0xFF, 0x8000);
 
-	pBlankSector0 = (unsigned char *) malloc(0x8000);
+	pBlankSector0 = (unsigned char *) memalign(32, 0x8000);
 	memset (pBlankSector0, 0, 0x8000);
 
 
@@ -428,7 +428,7 @@ int CWIIDisc_io_read (unsigned char  *ptr, size_t size, struct image_file *image
 			return ret;
 		
 			}
-		exit(0);
+		//exit(0);
 		}
 	// from WBFS
 	if (image->d)
@@ -653,7 +653,8 @@ void CWIIDisc_add_iso_file(const char *name, const char *path, u32 part, u64 off
 	iso_files *mem;
 	// only accept dol files
 	if(!strstr(name,".dol")) { return;}
-	mem= malloc(sizeof(iso_files));
+	mem= memalign(32, sizeof(iso_files));
+	memset(mem, 0, sizeof(iso_files));
 	strcpy(mem->name,name);
 	strcpy(mem->path,path);
 	mem->part   = part;
@@ -667,8 +668,11 @@ void CWIIDisc_add_iso_file(const char *name, const char *path, u32 part, u64 off
 		CWIIDisc_first_file = mem;
 //		last_file = mem;
 	} else CWIIDisc_last_file->next = mem;
+	
 	CWIIDisc_last_file = mem;
+	
 	CWIIDisc_last_file->next = NULL;
+	
 }
 
 u8 CWIIDisc_image_parse_header (struct part_header *header, u8 *buffer) 
@@ -746,7 +750,7 @@ struct image_file * CWIIDisc_image_init (wbfs_disc_t *d)
                 return NULL;
         }
        
-        header = (struct part_header *) (malloc (sizeof (struct part_header)));
+        header = (struct part_header *) (memalign(32, sizeof (struct part_header)));
 
         if (!header) {
 
@@ -838,7 +842,7 @@ void CWIIDisc_tmd_load (struct image_file *image, u32 part)
         if (sig == SIG_UNKNOWN)
                 return;
 
-        tmd = (struct tmd *) malloc (sizeof (struct tmd));
+        tmd = (struct tmd *) memalign (32, sizeof (struct tmd));
         memset (tmd, 0, sizeof (struct tmd));
 
         tmd->sig_type = sig;

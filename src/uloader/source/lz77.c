@@ -30,7 +30,7 @@ u32 packBytes(int a, int b, int c, int d)
     return (d << 24) | (c << 16) | (b << 8) | (a);
 }
  
-s32 __decompressLZ77_11(u8 *in, u32 inputLen, u8 **output, u32 *outputLen)
+s32 __decompressLZ77_11(u8 *in, u32 inputLen, u8 **output, u32 *outputLen, int memtype)
 {
     int x, y;
  
@@ -49,8 +49,9 @@ s32 __decompressLZ77_11(u8 *in, u32 inputLen, u8 **output, u32 *outputLen)
     }
  
     // Print("Decompressed size : %i\n", decompressedSize);
- 
-    out = malloc(decompressedSize);
+	if(memtype) out=(u8 *) SYS_AllocArena2MemLo(decompressedSize+2048, 32);
+	else	out = malloc(decompressedSize+2048);
+
 	if (out == NULL)
 	{
 		// Print("Out of memory\n");
@@ -121,7 +122,7 @@ s32 __decompressLZ77_11(u8 *in, u32 inputLen, u8 **output, u32 *outputLen)
 	return 0;
 }
  
-s32 __decompressLZ77_10(u8 *in, u32 inputLen, u8 **output, u32 *outputLen)
+s32 __decompressLZ77_10(u8 *in, u32 inputLen, u8 **output, u32 *outputLen, int memtype)
 {
 	int x, y;
 	 
@@ -137,7 +138,9 @@ s32 __decompressLZ77_10(u8 *in, u32 inputLen, u8 **output, u32 *outputLen)
 	 
 	// Print("Decompressed size : %i\n", decompressedSize);
 	 
-	out = malloc(decompressedSize);
+	if(memtype) out=(u8 *) SYS_AllocArena2MemLo(decompressedSize+2048, 32);
+	else	out = malloc(decompressedSize+2048);
+
 	if (out == NULL)
 	{
 		// Print("Out of memory\n");
@@ -197,18 +200,18 @@ int isLZ77compressed(u8 *buffer)
 	return 0;
 }
  
-int decompressLZ77content(u8 *buffer, u32 length, u8 **output, u32 *outputLen)
+int decompressLZ77content(u8 *buffer, u32 length, u8 **output, u32 *outputLen,  int memtype)
 {
     int ret;
 	switch (buffer[0])
     {
         case LZ77_0x10_FLAG:
             // Print("LZ77 variant 0x10 compressed content...unpacking may take a while...\n");
-            ret = __decompressLZ77_10(buffer, length, output, outputLen);
+            ret = __decompressLZ77_10(buffer, length, output, outputLen, memtype);
 			break;
         case LZ77_0x11_FLAG:
             // Print("LZ77 variant 0x11 compressed content...unpacking may take a while...\n");
-            ret = __decompressLZ77_11(buffer, length, output, outputLen);
+            ret = __decompressLZ77_11(buffer, length, output, outputLen, memtype);
 			break;
         default:
             // Print("Not compressed ...\n");

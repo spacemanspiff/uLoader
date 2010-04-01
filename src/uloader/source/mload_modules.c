@@ -442,5 +442,25 @@ u8 * ehc_data=search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
 		if((dat & 0x2000)==0x2000) mload_setw((void *) (addr+0x48), 0x1001);
 	}
 }
+
+void free_usb_ports()
+{
+
+	u32 dat=0;
+	u32 addr;
+
+	// get EHCI base registers
+	mload_getw((void *) 0x0D040000, &addr);
+
+	addr&=0xff;
+	addr+=0x0D040000;
+	
+	mload_getw((void *) (addr+0x44), &dat);
+	if((dat & 0x2001)==1) mload_setw((void *) (addr+0x44), 0x2000);
+	mload_getw((void *) (addr+0x48), &dat);
+	if((dat & 0x2001)==1) mload_setw((void *) (addr+0x48), 0x2000);
+	
+}
+
 //////////////////////////////////
 

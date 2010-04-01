@@ -57,7 +57,7 @@
 
 // Platform specific options
 #if   defined (__wii__)
-   #define DEFAULT_CACHE_PAGES 8
+   #define DEFAULT_CACHE_PAGES 16
    #define DEFAULT_SECTORS_PAGE 32
    #define USE_LWP_LOCK
    #define USE_RTC_TIME

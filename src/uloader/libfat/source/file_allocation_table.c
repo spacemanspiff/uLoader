@@ -32,10 +32,12 @@
 #include "partition.h"
 #include <string.h>
 
+extern int cache_entry_mode;
+
 /*
 Gets the cluster linked from input cluster
 */
-uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
+uint32_t _FAT_fat_nextCluster2(PARTITION* partition, uint32_t cluster)
 {
 	uint32_t nextCluster = CLUSTER_FREE;
 	sec_t sector;
@@ -114,6 +116,17 @@ uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
 	return nextCluster;
 }
 
+uint32_t _FAT_fat_nextCluster(PARTITION* partition, uint32_t cluster)
+{
+uint32_t ret;
+	
+	cache_entry_mode=1;
+	ret=_FAT_fat_nextCluster2(partition, cluster);
+	cache_entry_mode=0;
+
+return ret;
+}
+
 /*
 writes value into the correct offset within a partition's FAT, based
 on the cluster number.
@@ -122,6 +135,8 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 	sec_t sector;
 	int offset;
 	uint32_t oldValue;
+
+	cache_entry_mode=1;
 
 	if ((cluster < CLUSTER_FIRST) || (cluster > partition->fat.lastCluster /* This will catch CLUSTER_ERROR */))
 	{
@@ -190,9 +205,12 @@ static bool _FAT_fat_writeFatEntry (PARTITION* partition, uint32_t cluster, uint
 			break;
 
 		default:
+			cache_entry_mode=0;
 			return false;
 			break;
 	}
+
+	cache_entry_mode=0;
 
 	return true;
 }
@@ -268,12 +286,17 @@ uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster
 	uint32_t i;
 	static uint8_t emptySector[BYTES_PER_READ] __attribute__((aligned(32)));
 
+	cache_entry_mode=1;
+
 	// Link the cluster
 	newCluster = _FAT_fat_linkFreeCluster(partition, cluster);
 
 	if (newCluster == CLUSTER_FREE || newCluster == CLUSTER_ERROR) {
+		cache_entry_mode=0;
 		return CLUSTER_ERROR;
 	}
+
+	cache_entry_mode=1;
 
 	// Clear all the sectors within the cluster
 	memset (emptySector, 0, BYTES_PER_READ);
@@ -283,6 +306,7 @@ uint32_t _FAT_fat_linkFreeClusterCleared (PARTITION* partition, uint32_t cluster
 			1, emptySector);
 	}
 
+	cache_entry_mode=0;
 	return newCluster;
 }
 

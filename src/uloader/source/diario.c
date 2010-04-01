@@ -110,3 +110,54 @@ error_2:
 	ISFS_Deinitialize();
 	return -1;
 }
+
+int Diario_InvalidarDiario(void){
+	s32 ret,playrec_fd;
+
+    ISFS_Deinitialize();
+	ISFS_Initialize();
+
+	
+	//Open play_rec.dat
+	playrec_fd = IOS_Open(PLAYRECPATH, IPC_OPEN_RW);
+	if(playrec_fd < 0) {
+		//printf("* ERROR: abriendo play_rec.dat (%d)\n",playrec_fd);
+		goto error_1;
+		
+	}
+
+	//Read play_rec.dat
+	ret = IOS_Read(playrec_fd, &playrec_buf, sizeof(playrec_buf));
+	if(ret != sizeof(playrec_buf)){
+		//printf("* ERROR: leyendo play_rec.dat (%d)\n",ret);
+		goto error_2;
+	}
+
+	if(IOS_Seek(playrec_fd, 0, 0)<0) goto error_2;
+    
+	// invalidate checksum
+
+	playrec_buf.checksum=0;
+
+	ret = IOS_Write(playrec_fd, &playrec_buf, sizeof(playrec_buf));
+	if(ret!=sizeof(playrec_buf)){
+		//printf("* ERROR: guardando play_rec.dat (%d)\n",ret);
+		goto error_2;
+	}
+
+
+	IOS_Close(playrec_fd);
+
+	ISFS_Deinitialize();
+
+	return 0;
+
+error_1:
+
+	IOS_Close(playrec_fd);
+
+error_2:
+
+	ISFS_Deinitialize();
+	return -1;
+}

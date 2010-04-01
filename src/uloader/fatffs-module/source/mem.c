@@ -27,7 +27,7 @@ int swi_mload(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
 
 
 /* Heapspace */
-static u32 heapspace[0x9000] ATTRIBUTE_ALIGN(32);
+static u32 heapspace[0xc000] ATTRIBUTE_ALIGN(32);
 
 /* Variables */
 static s32 hid = -1;

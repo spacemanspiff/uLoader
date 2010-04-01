@@ -30,6 +30,7 @@
 #define DONT_USE_IOS249
 #define TIME_SLEEP_SCR 5*60
 
+extern char *str_trace;
 extern int is_fat;
 extern int sd_ok;
 extern int ud_ok;
@@ -44,7 +45,7 @@ extern u32 gameCnt;
 extern u8 *disc_conf;
 extern u8 *temp_data;
 
-extern char* bannerTitle;
+extern char* banner_title;
 
 void make_rumble_off();
 

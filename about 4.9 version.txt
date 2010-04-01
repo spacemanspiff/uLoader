@@ -1,4 +1,22 @@
-Versión 4.8
+
+Version 4.9A
+------------
+
+- Resolution of the bugs found until now.
+
+- Internet Support for Wiiware's and song download from the Guitar Hero World Tour and Guitar Hero 5 Stores (it does not work with Rock Band 2)
+
+- Added option to detect the Homebrew channel correctly
+
+- New Button "Use Diary" to avoid (or not) the registry of the games in the Wii diary
+
+- POWER button control desactived and derived to the stm/eventhook function to avoid the problem of Wiimote On when you press POWER button
+  (some games don't use stm/eventhook, so remember you to use RESET button or exit to Home Menu to unmount the FAT device and preserve the disc
+  integrity without losing datas)
+
+- Improvements in FAT support, FFS emulator, blah, blah XD ;) 
+
+Version 4.8
 -----------
 
 Thanks to "elpresi" and "kwanbis" to translate the spanish text ;)

@@ -41,9 +41,10 @@
 #endif
 
 int flag_emu=0;
-int flag_emu_mode=0; // 0-> default -> 1 DLC redirected to device:/nand -> 2-> Full emulation
+int flag_emu_mode=0; // 0-> default -> 1 DLC redirected to device:/nand -> 2-> Full emulation 128-> redirect diary to the trash
 int light_on=1;
 int verbose_level=0;
+int diary_mode=0;
 
 int usb_mounted=-1;
 int sd_mounted=-1;
@@ -134,6 +135,7 @@ int n;
 	syscall_open_mode=mode;
 
 	if(!flag_emu) return name;
+
 
 	if(name[0]=='#') // for example #/title/xxxx : can be used to skip this function to open files
 		{
@@ -637,9 +639,14 @@ s32 __FAT_Ioctlv(ipcmessage *message)
 		index_dev=(*mode) & 7;
 		flag_emu=(*mode & 128)!=0; // on/off
 		flag_emu_mode=(*mode>>8) & 3;
-		light_on=(*mode & 8)!=0;
 
-        verbose_level=(*mode & 48)>>4; //1-> for log 2-> All logs
+		light_on=(*mode & 8)!=0;
+		
+        verbose_level=(*mode & 48)>>4; //1-> for log 3-> All logs
+
+		diary_mode=(*mode & 64)!=0; // 0-> diary from the NAND 1-> diary from device (used to block the diary for now)
+
+		if(diary_mode && usb_mounted<0 && sd_mounted<0) flag_emu_mode|=128; // only capture the diary
 		
         ret=0;
 		break;
@@ -813,17 +820,17 @@ int stm_event=-1;
 static u32 __stm_out[0x08] ATTRIBUTE_ALIGN(32) = {0,0,0,0,0,0,0,0};
 
 
-
 void release_event_handler(void)
 {
 	
 	if(stm_fd<0) stm_fd=os_open("/dev/stm/immediate", 0);
-	if(stm_event<0) stm_event=os_open("/dev/stm/eventhook", 0);
+	if(stm_event<0 && stm_fd>=0) stm_event=os_open("/dev/stm/eventhook", 0);
    
 	if(stm_fd>=0 && stm_event>=0)		
 	{
 	os_ioctl(stm_fd, 0x3002, NULL , 0, __stm_out,0x20);
-	os_close(stm_event);
+	memset(__stm_out, 0, 32);
+	os_close(stm_event);stm_event=-1;
 	}
 	
 }
@@ -870,12 +877,98 @@ int n;
 	swi_mload_led_off();
 }
 
+
+
+#define THREAD_STACK 1024
+
+static u8 thread_stack[THREAD_STACK] __attribute__ ((aligned (32)));
+
+
+
+static int blink_handle=-1;
+static int timer_id;
+static volatile int blinker_off=1;
+
+void led_on(void)
+{
+	blinker_off&=~7;
+
+}
+
+void led_off(void)
+{
+	blinker_off|=2;
+
+}
+
+int thread_blink(void)
+{
+
+u32 message;
+
+
+u32 queue_mem[8];
+blink_handle = os_message_queue_create( queue_mem, 8);
+
+timer_id=os_create_timer(1000*5, 1000*1000*10, blink_handle, 0);
+
+
+os_thread_set_priority(os_get_thread_id(), 0x79);
+
+blinker_off=4;
+
+while(1)
+	{
+   	
+ 
+	int ret=os_message_queue_receive(blink_handle, (void*)&message, 0);
+	if(ret) continue;
+	os_stop_timer(timer_id);
+
+    if((blinker_off & 7)==3) {blinker_off|=4;swi_mload_led_off();}
+    if((blinker_off & 4)==4) {os_restart_timer(timer_id, 1000*1000);continue;}
+
+	blinker_off^=128;
+   
+	if(blinker_off & 128) {swi_mload_led_on(); os_restart_timer(timer_id, 1000*5);blinker_off|=1;}
+	else  {swi_mload_led_off();os_restart_timer(timer_id, 1000*1000);}
+	
+	}
+
+
+return 0;
+}
+
+static char path_name[256];
+
+void my_memcpy(char *d, const char *s, int size)
+{
+int n;
+for(n=0;n<size;n++)
+	  {
+	  *d++=*s++;
+	  }
+}
+
 int main(void)
 {
 	u32 queuehandle;
 	s32 ret;
+	
 
 	verbose_level=0;
+
+/********************************************************************************************************************************************************/
+
+// led blink thread
+
+	int blink_thread_id=os_thread_create( (void *) thread_blink, NULL, &thread_stack[1024], 1024, 0x79, 0);
+
+	if(blink_thread_id>=0) os_thread_continue(blink_thread_id);
+
+	os_thread_set_priority(os_get_thread_id(), 0x62);
+	
+
 
 /********************************************************************************************************************************************************/
     
@@ -889,7 +982,8 @@ int main(void)
 
 
 /********************************************************************************************************************************************************/
-    release_event_handler();
+	
+	release_event_handler();
 
 	/* Initialize module */
 	ret = __FAT_Initialize(&queuehandle);
@@ -901,14 +995,14 @@ int main(void)
 
 	os_software_IRQ(0xb);
 	os_software_IRQ(0x11);
-
-	
-    os_unregister_event_handler(0xb);
+    
+	//os_unregister_event_handler(0xb);
 	os_unregister_event_handler(0x11);
 
-    os_register_event_handler(0xb, queuehandle, 0x6661234); // register power off
+   // os_register_event_handler(0xb, queuehandle, 0x6661234); // register power off
     os_register_event_handler(0x11, queuehandle, 0x6661235);   // register reset
 
+	
 
 	/* Main loop */
 	while (1) {
@@ -920,14 +1014,16 @@ int main(void)
 		res=os_message_queue_receive(queuehandle, (void *)&message, 0);
 		if(res) continue;
 		
+
 		ret=-101;
 
 
 		if(((u32) message)==0x6661234) // power off
 			{
-			
+		
 			ffs_shutdown();
-			os_ioctl(stm_fd, 0x2003, NULL , 0, __stm_out,0x20);
+		
+			os_ioctl(stm_fd, 0x2003,  __stm_out,0x20, __stm_out,0x20);
 			Timer_Sleep(10000*1000);
 			continue;
 			}
@@ -940,17 +1036,25 @@ int main(void)
 			continue;
 			}
 
+		if(((u32) message)==0) continue;
 
 		switch (message->command) {
 		case IOS_OPEN: {
 			char *devpath = message->open.device;
 			u32   mode    = message->open.mode;
-	
+
+			
+			memcpy(path_name, (char *) message->open.device, strlen((char *) message->open.device)+1);
+			devpath=path_name;
+		
 			/* FAT device */
 			if (!strcmp(devpath, DEVICE_FAT)) {
 				ret = 0;
 				break;
 			}
+
+			
+			
             // redirected SD
 			if(!strcmp(devpath, DEVICE_FAT"/dev/sdio"))  {ret= IPC_EACCESS	;break;} // SD in game without interferences
 			
@@ -979,8 +1083,20 @@ int main(void)
 
 			/* Open file */
 			
-			if((!strncmp(devpath,"sd:/nand",8) || !strncmp(devpath, "usb:/nand", 9))) 
+			if(!strncmp(devpath,"sd:/nand",8)) 
 			{
+
+				if(sd_mounted<0) {ret=-102;break;}
+				use_light=1; // for lighting when it read or write
+				
+				//mode=2; // force flag for read/write only 
+
+			}
+
+			if(!strncmp(devpath, "usb:/nand", 9))
+			{
+
+				if(usb_mounted<0) {ret=-102;break;}
 				use_light=1; // for lighting when it read or write
 				
 				//mode=2; // force flag for read/write only 
@@ -1041,11 +1157,14 @@ int main(void)
 
 			n=get_fat_fd(message->fd);
 			
-			if(n>=0 && light_on) swi_mload_led_on();
+			//if(n>=0 && light_on ) swi_mload_led_on();
+
+			if(n>=0 && (light_on & 2)) led_on();
 
 			ret = FAT_Read(message->fd, buffer, len);
 
-			if(n>=0 && light_on) swi_mload_led_off();
+			if(n>=0 && (light_on & 2)) led_off();
+
 
 			if(ret<0)
 			{
@@ -1077,12 +1196,13 @@ int main(void)
 			
 			n=get_fat_fd(message->fd);
 			
-			if(n>=0 && light_on) swi_mload_led_on();
+			if(n>=0 && light_on  ) led_on(); //swi_mload_led_on();
 
 			/* Write file */
 			ret = FAT_Write(message->fd, buffer, len);
 
-			if(n>=0 && light_on) swi_mload_led_off();
+			if(n>=0 && light_on) led_off();//swi_mload_led_off();
+
 
 			break;
 		}
@@ -1122,7 +1242,7 @@ int main(void)
 				{
 				ret=-101;
 				internal_debug_printf=1;
-				if(verbose_level) debug_printf("eh! you cannot call ioctlv 0x from here!\n", message->ioctlv.command);
+				if(verbose_level) debug_printf("eh! you cannot call ioctlv %x from here!\n", message->ioctlv.command);
 				internal_debug_printf=0;
 			    while(1) {swi_mload_led_on();Timer_Sleep(5000*1000);swi_mload_led_off();Timer_Sleep(1000*1000);}
 				}
@@ -1144,29 +1264,38 @@ int main(void)
 				if(cmd==0x2001 || cmd==0x2002 || cmd==0x2003 || cmd==0x2004) // reset
 					{
 					ffs_shutdown();
-					os_ioctl(stm_fd, 0x2001+2*(cmd==2003), NULL , 0, __stm_out,0x20);
-					Timer_Sleep(10000*1000);
+					//os_ioctl(stm_fd, 0x2001+2*(cmd==2003 ), NULL , 0, __stm_out,0x20);
+					//Timer_Sleep(10000*1000);
 					}
-			    ret=0;
+			   
 				
 				ret=os_ioctl(stm_fd, cmd, message->ioctl.buffer_in,  message->ioctl.length_in,  message->ioctl.buffer_io,  message->ioctl.length_io);
+				
 				break;
 			}
 			
 			if(cmd==FFS_IOCTL_GETFILESTATS)
 				{
-				fstats my_stats;
+				static fstats my_stats ATTRIBUTE_ALIGN(32);
 				fstats *stats = (fstats *) message->ioctl.buffer_io;
 				u32     fd    = message->fd;
-
-				/* Get file stats */
-				ret = FAT_GetFileStats(fd, &my_stats);
-				memcpy((void *) stats, (void *) &my_stats, sizeof(fstats));
-				os_sync_after_write(stats, sizeof(fstats));
-				internal_debug_printf=1;
-				if(verbose_level) debug_printf("FAT GetFileStats ret %i %u %u \n",ret, stats->file_length, stats->file_pos );
-				internal_debug_printf=0;
 				
+				if(get_fat_fd(message->fd)>=0) 
+					{
+					/* Get file stats */
+					ret = FAT_GetFileStats(fd, &my_stats);
+					if(stats && ret==0)
+						{
+						memcpy((void *) stats, (void *) &my_stats, message->ioctl.length_io/*sizeof(fstats)*/);
+						os_sync_after_write(stats, message->ioctl.length_io);
+						}
+
+					internal_debug_printf=1;
+					if(verbose_level) debug_printf("FAT GetFileStats ret %i %u %u \n",ret, my_stats.file_length, my_stats.file_pos );
+					internal_debug_printf=0;
+					}
+				else ret=-106;
+			
 			    }
 			 else
 				{

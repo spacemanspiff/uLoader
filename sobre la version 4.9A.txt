@@ -1,3 +1,20 @@
+Versión 4.9A
+------------
+
+Lo nuevo:
+
+- Resolución de los bugs encontrados hasta ahora.
+
+- Soporte Internet en los Wiiware y descargas desde las tiendas de Guitar Hero World Tour y Guitar Hero 5 al menos (no va con Rock Band 2)
+
+- Añadida opción para detectar HBC y evitar pantalla negra con ciertos forwarders
+
+- Nuevo botón "Use Diary" para evitar o no, el registro de los juegos en el diario
+
+- Desactivado el control del botón POWER y derivado a stm/eventhook para evitar que el mando quede encendido al pulsar dicho botón
+
+- Mejoras en soporte FAT, emulación FFS, etc
+
 Versión 4.8
 -----------
 

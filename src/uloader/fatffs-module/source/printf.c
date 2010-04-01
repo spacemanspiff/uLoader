@@ -123,6 +123,8 @@ int n,m;
 
 }
 
+extern s32 index_dev;
+
 //int is_printf=0;
 int internal_debug_printf=0;
 
@@ -161,6 +163,7 @@ int message;
 static int one=1;
 static u32 buffer[8];
 static u32 queuehandle2=-1;
+
 if(one)
 	{
 	queuehandle2 = os_message_queue_create(buffer, 8);
@@ -171,10 +174,23 @@ else
 internal=internal_debug_printf;
  
  if(internal & 2) goto salir;
- if(internal)
-    fd = FAT_Open("sd:/ffs_log.txt" ,O_WRONLY | O_APPEND);
- else
-	fd=os_open("sd:/ffs_log.txt" ,O_WRONLY | O_APPEND);
+
+ if(index_dev & 1)
+	{
+	
+	if(internal)
+		fd = FAT_Open("usb:/ffs_log.txt" ,O_WRONLY | O_APPEND);
+	else
+		fd=os_open("usb:/ffs_log.txt" ,O_WRONLY | O_APPEND);
+	}
+else
+	{
+	
+	if(internal)
+		fd = FAT_Open("sd:/ffs_log.txt" ,O_WRONLY | O_APPEND);
+	else
+		fd=os_open("sd:/ffs_log.txt" ,O_WRONLY | O_APPEND);
+	}
 
 	
 

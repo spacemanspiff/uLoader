@@ -99,8 +99,8 @@ u32 current_addr=0;
 
 	dol_header = (dolheader *) dol_data;
 
-if(dol_header->bss_start)
-	memset ((void *) dol_header->bss_start, 0, dol_header->bss_size);
+	if(dol_header->bss_start)
+		memset ((void *) dol_header->bss_start, 0, dol_header->bss_size);
 
 	for (i = 0; i < 18; i++) 
 		{

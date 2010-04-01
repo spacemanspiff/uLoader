@@ -962,7 +962,7 @@ while(1)
 	SetTexture(NULL);
 	DrawRoundBox(20, ylev, 148*4, 352, 0, 4, 0xff303030);
 
-	PX= 0; PY=ylev-32; color= INK0; 
+	PX= 0; PY=ylev-32; color= INK1; 
 				
 	bkcolor=0;
 	letter_size(16,32);
@@ -972,7 +972,7 @@ while(1)
 	s_printf("%s", &letrero[idioma][ind][0]);
 	bkcolor=0;
 	
-	PX=0;PY=ylev+352/2-32;
+	PX=0;PY=ylev+352/2-32;color= INK0;
 	autocenter=1;letter_size(12,32);
 	s_printf("%s", &letrero[idioma][36][0]);
 
@@ -1389,7 +1389,7 @@ while(1)
 
 	draw_background();
 
-	PX= 0; PY=8; color= INK0; 
+	PX= 0; PY=8; color= INK1; 
 	letter_size(16,32);
 	
 	bkcolor=0;//0xc0f08000;
@@ -1407,7 +1407,7 @@ while(1)
 		else if(len_str<=45) {letter_size(12,32);sx=12;}
 		else letter_size(8,32);		
 
-		color= INK0; 
+		color= INK1; 
 				
 		bkcolor=0x20000000;
 		

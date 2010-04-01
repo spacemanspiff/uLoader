@@ -41,8 +41,12 @@ addr_ffs_unk:
 addr_ffs_open:
 	add	r0, r4, #0
 	push	{r1-r7}
+	push    {r0}
+	mov	r1, sp
 	bl	ffs_open
-	
+	pop     {r3}
+	cmp     r3, #0
+	bne	addr_ffs_exit	
 	cmp     r0, #0
 	bge	addr_ffs_exit
 
@@ -52,6 +56,7 @@ addr_ffs_open:
 	ldr	r0, [r3, #4]
 	pop	{r1-r7}
 	mov	pc, r0
+
 
 /*************************************************************************************/	
 
@@ -157,8 +162,7 @@ addr_ffs_ioctl:
 	bl	ffs_ioctl
 	pop     {r3}
       
-	//ldr     r4, = disable_ffs_nand_flag1
-	//ldr	r3, [r4]
+	
 	cmp     r3, #0
 	bne	addr_ffs_exit	
 	cmp     r0, #0
@@ -184,9 +188,7 @@ addr_ffs_ioctlv:
 	mov	r1, sp
 	bl	ffs_ioctlv
 	pop	{r3}
-	//ldr     r4, = disable_ffs_nand_flag2
-	//ldr	r3, [r4]
-	
+
 	cmp     r3, #0
 	bne	addr_ffs_exit	
 	cmp     r0, #0
@@ -214,6 +216,7 @@ addr_ffs_ioctlv:
 in_syscall_open:
 	//push	{r4-r7,lr}
 	stmfd	sp!, {r4-r7,lr}
+	stmfd	sp!, {r8-r11}
 	stmfd	sp!, {r2-r3}
 	nop
 	ldr	r4, =in_syscall_open_thumb+1
@@ -228,11 +231,6 @@ in_syscall_open_thumb:
         ldr     r2, = syscall_open_mode
 	ldr     r1, [r2]
 	pop	{r2-r3}
-	mov	r7, r11
-	mov	r6, r10
-	mov	r5, r9
-	mov	r4, r8
-	push	{r4-r7}
 	ldr	r4,= out_syscall_open_thumb
 	ldr	r4,[r4]
 	nop

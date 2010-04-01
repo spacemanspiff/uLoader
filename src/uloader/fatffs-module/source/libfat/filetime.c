@@ -93,6 +93,7 @@ uint16_t _FAT_filetime_getDateFromRTC (void) {
 time_t _FAT_filetime_to_time_t (uint16_t t, uint16_t d) {
 	struct tm timeParts;
 
+
 	timeParts.tm_hour = t >> 11;
 	timeParts.tm_min = (t >> 5) & 0x3F;
 	timeParts.tm_sec = (t & 0x1F) << 1;
