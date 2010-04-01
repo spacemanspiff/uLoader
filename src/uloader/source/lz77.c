@@ -22,6 +22,7 @@
  
 #include "lz77.h"
 
+extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
 
 u32 getLowestMem2Address() { return (u32) SYS_GetArena2Lo(); }
 

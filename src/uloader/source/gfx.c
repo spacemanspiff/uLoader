@@ -555,6 +555,9 @@ unsigned color=0xffcfcfcf;
 if(selected) color= 0xff3fcf3f;
 if(selected==128) color= 0xff3f3fcf;
 
+if(selected==129) color= 0xff3fcfcf;
+if(selected==130) color= 0xffcf8fcf;
+
 if(selected<0) color=0x80cfcfcf;
 
 	SetTexture(&text_button[(step_button>>4) & 3]);

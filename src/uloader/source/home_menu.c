@@ -26,6 +26,30 @@ void set_parental_control();
 int uloader_update();
 int uloader_hacks(void);
 
+int call_home_menu(struct discHdr *header, int function)
+{
+
+	// add png
+	if(function==0) {snd_fx_yes();draw_snow();Screen_flip(); in_black|=2;select_file(0,header); in_black^=2;return 3;}
+
+	// delete png
+	if(function==1) {snd_fx_yes();draw_snow();Screen_flip(); 
+						   if(delete_test(25, header->title))
+							   {
+							   memset(disc_conf,0,256*1024);global_GetProfileDatas(header->id, disc_conf);
+							   disc_conf[0]='H'; disc_conf[1]='D'; disc_conf[2]='R';disc_conf[3]=0;disc_conf[9]=0; // break PNG signature
+							   global_SetProfileDatas(header->id, disc_conf);
+							   } 
+						   return 3;
+						   }
+	// rename
+	if(function==2) {snd_fx_yes();draw_snow();Screen_flip(); if(rename_game(header->title))  {global_RenameGame(header->id, header->title);WBFS_Close();return 2;} else return 0;}
+	// delete game
+	if(function==3) {snd_fx_yes();draw_snow();Screen_flip(); if(delete_test(29, header->title)){ WBFS_RemoveGame(header->id);WBFS_Close();return 2;} else return 0;}
+
+return -1;
+}
+
 /*********************************************************************************************************************************************************/
 // home_menu
 /*********************************************************************************************************************************************************/

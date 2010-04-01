@@ -1,7 +1,7 @@
 /* uLoader- Project based in YAL and usbloader by Hermes */
 
 /*   
-	Copyright (C) 2009 Hermes
+	Copyright (C) 2009-2010 Hermes
     Copyright (C) 2009 Kwiirk (YAL)
 	Copyright (C) 2009 Waninkoko (usbloader)
 	
@@ -62,7 +62,7 @@
 #include "fatffs_util.h"
 
 
-char uloader_version[5]="4.9B"; // yes, you can change here the current version of the application
+char uloader_version[5]="4.9C"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
 
@@ -113,7 +113,9 @@ uhack_settings0
 
 bit 0 -> 'back in black'
 bit 1 -> force IOS 224 instead 222
+
 */
+
 extern u8 uhack_settings0; 
 
 extern u8 launch_short;
@@ -185,6 +187,8 @@ int dont_use_diary=0;
 #include "mload_modules.h"
 
 extern int home_menu(struct discHdr *header);
+
+extern int call_home_menu(struct discHdr *header, int function);
 
 extern unsigned hiscore;
 extern int pintor();
@@ -3259,8 +3263,11 @@ get_games:
 			else
 				SetTexture(&default_game_texture);
 
+        if(edit_cfg)
+			DrawFillBox(320-127, ylev+8, 254, 338, 0, 0xff6f6f6f);
+		else DrawFillBox(320-127, ylev+8, 254, 338, 0, 0xffffffff);
 
-		DrawFillBox(320-127, ylev+8, 254, 338, 0, 0xffffffff);
+		
 
 		if(is_fat && header && header->version)
 			{
@@ -3725,117 +3732,223 @@ get_games:
 
             if(edit_cfg==1)
 				{
+				int disable_btn=0;
 				
+				if(is_fat && header && header->version & 2) disable_btn=1;
+
 				warning_time=0;
 				edit2_mode=0;
 
 				bca_saved=0; // flag to 0
 				save_exist=0;
 
-				letter_size(12,24);
-				autocenter=1;
-				bkcolor=0xb0f0f0f0;
-				s_printf(" Select Language ");
-				bkcolor=0;
-				autocenter=0;
+				m=36+32;
+				g=ylev+36;
+				n=300;
 
+				if(Draw_button2(m, g, "Select Language", 0)) select_game_bar=n; n++;g+=56;
+				if(Draw_button2(m, g, "   Video Mode  ", 0)) select_game_bar=n; n++;g+=56;
+				if(Draw_button2(m, g, "   cIOS/BOOT   ", 0)) select_game_bar=n; n++;g+=56;
+				if(Draw_button2(m, g, " Parental Ctrl ", 0)) select_game_bar=n; n++;g+=56;
+				if(Draw_button2(m, g, "    BCA Code   ", disable_btn ? -1 : 0)) select_game_bar=n; n++;g+=56;
 
+				m=36+32+21*8-4;
+				g=ylev+36;
+				n=305;
+
+				if(Draw_button2(m, g, "Cheat Hooktype", 0)) select_game_bar=n; n++;g+=56;
+				if(Draw_button2(m, g, "     Diary    ", 0)) select_game_bar=n; n++;g+=56;
 				
-				for(g=0;g<11;g++)
+				g+=56*2;
+				if(disable_btn)
 					{
-					if((g & 3)==0) m=36+32; else m=x_temp+16;
-
-					if(Draw_button2(m, ylev+36+56*(g/4), &languages[g][0],langsel==g)) select_game_bar=100+g;
-					}
-				m=x_temp+16;
-				if(Draw_button2(m, ylev+36+56*(11/4), &languages[0][0],langsel==0)) select_game_bar=100;
-
-				PY=m=ylev+36+56*(g/4)+56;
-				PX=36+192-36;
-				letter_size(12,24);
-				autocenter=0;
-				bkcolor=0xb0f0f0f0;
-				s_printf(" Video Mode "); PX+=12*9-4; s_printf(" Parental Ctrl");
-				//PX=460-12;s_printf(" Select cIOS ");
-				PX=32;PY=m+56+40;s_printf(" cIOS ");
-				bkcolor=0;
-				m+=28;
-				
-				if(Draw_button2(36, m, " Auto ",(forcevideo==0))) select_game_bar=200;
-				/*if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
-				if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;*/
-				if(Draw_button2(x_temp+12, m, " PAL50 ",(forcevideo==3))) select_game_bar=203;
-				if(Draw_button2(x_temp+12, m, " PAL60 ",(forcevideo==1))) select_game_bar=201;
-				if(Draw_button2(x_temp+12, m, " NTSC ",(forcevideo==2))) select_game_bar=202;
-
-				if(game_locked_cfg)
-					{
-					if(Draw_button2(x_temp+28, m, " Game Locked ",game_locked_cfg)) select_game_bar=210;
+					if(Draw_button2(m, g, "Wiiware Option", 1300)) select_game_bar=n;
 					}
 				else
 					{
-					if(Draw_button2(x_temp+28, m, " Game Unlock ",game_locked_cfg)) select_game_bar=210;
-					
+					if(Draw_button2(m, g, "  Saves & DLC ", 130)) select_game_bar=n;
 					}
+					n++;g+=56;
 
-				//if(Draw_button2(472, m, " cIOS 222 ", force_ios249 ? -1 : cios==222)) select_game_bar=300;
-				//if(Draw_button2(472, m+56, " cIOS 249 ",cios==249)) select_game_bar=301;
+				m=36+32+20*8*2;
+				g=ylev+36;
+				n=310;
 				
-				#ifdef DONT_USE_IOS249	
-				if(cios==249) cios=cios_list[0];
-				#endif
-
-				if((mode_disc & 2) && cios==249) cios=cios_list[0]; // force cIOS 222 for USB DVD
+				char pollaenvinagre[32];
 				
-				sprintf(name_button," cIOS %i ", cios_list[0]);
-				if(Draw_button2(36+6*12, m+56, name_button, force_ios249 ? -1 : cios==cios_list[0])) select_game_bar=300;
+				memset(pollaenvinagre, 32, 18);
+				memcpy(pollaenvinagre+9-strlen(&letrero[idioma][24][0])/2, &letrero[idioma][24][0], strlen(&letrero[idioma][24][0]));
+				pollaenvinagre[18]=0;
 
-				sprintf(name_button," cIOS %i ", cios_list[1]);
-				if(Draw_button2(x_temp+12, m+56, name_button, force_ios249 ? -1 : cios==cios_list[1])) select_game_bar=301;
-				#ifndef DONT_USE_IOS249	
-				if(Draw_button2(x_temp+12, m+56, " cIOS 249 ",(mode_disc & 2)? -1: cios==249)) select_game_bar=302;
-				#else
-				
-				sprintf(name_button," cIOS %i ", cios_list[2]);
-				if(Draw_button2(x_temp+12, m+56, name_button, (mode_disc & 2)? -1: cios==cios_list[2])) select_game_bar=302;
-				#endif
+				if(Draw_button2(m, g, pollaenvinagre/*"  Añadir PNG   "*/, (mode_disc & 3) ? -1 : 129)) select_game_bar=n; n++;g+=56;
 
-                if(is_fat && header && header->version & 2)
-					{if(Draw_button2(x_temp+20, m+56, " Skip BOOT ", force_ios249 ? -1 : force_ingame_ios!=0)) select_game_bar=303;}
-				else
-					{if(Draw_button2(x_temp+20, m+56, " Skip IOS ", /*force_ios249 ? -1 : force_ingame_ios!=0*/-1)) select_game_bar=303;}
+				memset(pollaenvinagre, 32, 18);
+				memcpy(pollaenvinagre+9-strlen(&letrero[idioma][25][0])/2, &letrero[idioma][25][0], strlen(&letrero[idioma][25][0]));
+				pollaenvinagre[18]=0;
+
+				if(Draw_button2(m, g, pollaenvinagre/*"  Borrar PNG   "*/, (mode_disc & 3) ? -1 : 129)) select_game_bar=n; n++;g+=56;
+
+				memset(pollaenvinagre, 32, 18);
+				memcpy(pollaenvinagre+9-strlen(&letrero[idioma][28][0])/2, &letrero[idioma][28][0], strlen(&letrero[idioma][28][0]));
+				pollaenvinagre[18]=0;
+
+				if(Draw_button2(m, g, pollaenvinagre/*"Renombrar Juego"*/, (disable_btn || (mode_disc & 3)) ? -1 : 129)) select_game_bar=n; n++;g+=56;
+
+				memset(pollaenvinagre, 32, 18);
+				memcpy(pollaenvinagre+9-strlen(&letrero[idioma][29][0])/2, &letrero[idioma][29][0], strlen(&letrero[idioma][29][0]));
+				pollaenvinagre[18]=0;
+
+				if(Draw_button2(m, g, pollaenvinagre/*" Borrar Juego  "*/, (disable_btn || is_fat || (mode_disc & 3)) ? -1 : 129)) select_game_bar=n; n++;g+=56;
+
 				}
-			else // edit 2
+			else
+			if(edit_cfg>=300 && edit_cfg!=307)
 				{
 				int disable_btn=0;
 				
 				if(is_fat && header && header->version & 2) disable_btn=1;
 
-				color= INK0;
-				if(edit2_mode==0)
+				letter_size(12,24);
+				autocenter=1;
+				bkcolor=0xb0f0f0f0;
+				PY+=32;
+				switch(edit_cfg-300)
 					{
+					case 0:
+						s_printf(" Select Language ");
+						break;
+					case 1:
+						s_printf(" Video Mode ");
+						break;
+					case 2:
+						s_printf(" Select cIOS/BOOT ");
+						break;
+					case 3:
+						s_printf(" Parental Ctrl ");
+						break;
+					case 4:
+						s_printf(" BCA Code ");
+						break;
+					case 5:
+						s_printf(" Cheat Hooktype ");
+						break;
+					case 6:
+						s_printf(" Diary ");
+						break;
+					case 7:
+						if(disable_btn)
+							s_printf(" Wiiware Options ");
+						else
+							s_printf(" Saves & DLC ");
+						break;
+					}
+				bkcolor=0;
+				autocenter=0;
+
+				// select language
+				if(edit_cfg==300)
+					{
+					for(g=0;g<11;g++)
+						{
+						if((g & 3)==0) m=36+32; else m=x_temp+16;
+
+						if(Draw_button2(m, ylev+36+64+56*(g/4), &languages[g][0],langsel==g)) select_game_bar=100+g;
+						}
+					m=x_temp+16;
+					if(Draw_button2(m, ylev+36+64+56*(11/4), &languages[0][0],langsel==0)) select_game_bar=100;
+					}
+				
+				// Video Mode
+				if(edit_cfg==301)
+					{
+					m=ylev+36+64+56;
+					if(Draw_button2(36+100, m, " Auto ",(forcevideo==0))) select_game_bar=200;
+					/*if(Draw_button2(x_temp+12, m, " Force PAL ",(forcevideo==1))) select_game_bar=201;
+					if(Draw_button2(x_temp+12, m, " Force NTSC ",(forcevideo==2))) select_game_bar=202;*/
+					if(Draw_button2(x_temp+12, m, " PAL50 ",(forcevideo==3))) select_game_bar=203;
+					if(Draw_button2(x_temp+12, m, " PAL60 ",(forcevideo==1))) select_game_bar=201;
+					if(Draw_button2(x_temp+12, m, " NTSC ",(forcevideo==2))) select_game_bar=202;
+					}
+
+				//cIOS
+				if(edit_cfg==302)
+					{
+
+					m=ylev+36+64;
+
+					#ifdef DONT_USE_IOS249	
+					if(cios==249) cios=cios_list[0];
+					#endif
+
+					if((mode_disc & 2) && cios==249) cios=cios_list[0]; // force cIOS 222 for USB DVD
+					
+					sprintf(name_button," cIOS %i ", cios_list[0]);
+					if(Draw_button2(36+40, m+56, name_button, force_ios249 ? -1 : cios==cios_list[0])) select_game_bar=400;
+
+					sprintf(name_button," cIOS %i ", cios_list[1]);
+					if(Draw_button2(x_temp+12, m+56, name_button, force_ios249 ? -1 : cios==cios_list[1])) select_game_bar=401;
+					#ifndef DONT_USE_IOS249	
+					if(Draw_button2(x_temp+12, m+56, " cIOS 249 ",(mode_disc & 2)? -1: cios==249)) select_game_bar=402;
+					#else
+					
+					sprintf(name_button," cIOS %i ", cios_list[2]);
+					if(Draw_button2(x_temp+12, m+56, name_button, (mode_disc & 2)? -1: cios==cios_list[2])) select_game_bar=402;
+					#endif
+
+					if(is_fat && header && header->version & 2)
+						{if(Draw_button2(x_temp+20, m+56, " Skip BOOT ", force_ios249 ? -1 : force_ingame_ios!=0)) select_game_bar=403;}
+					else
+						{if(Draw_button2(x_temp+20, m+56, " Skip IOS ", /*force_ios249 ? -1 : force_ingame_ios!=0*/-1)) select_game_bar=403;}
+					
+					}
+
+				//Parental Ctrl
+				if(edit_cfg==303)
+					{
+
+					m=ylev+36+64+56;
+					x_temp=320-60-36;
+
+					if(game_locked_cfg)
+						{
+						if(Draw_button2(x_temp+28, m, " Game Locked ",game_locked_cfg)) select_game_bar=210;
+						}
+					else
+						{
+						if(Draw_button2(x_temp+28, m, " Game Unlock ",game_locked_cfg)) select_game_bar=210;
+						
+						}
+					}
+
+				//	BCA Code
+				if(edit_cfg==304)
+					{
+					color= INK0;
 					if(!disable_btn)
 						{
-						letter_size(12,24);
-						autocenter=0;
-						bkcolor=0xb0f0f0f0;
-						PY+=8;
-						s_printf("BCA Code:");
-						bkcolor=0;
-						
 
-						if(Draw_button2(PX+8, ylev+8, "From Disc",  (bca_mode & 1)==0)) select_game_bar=20;
-						if(Draw_button2(x_temp+16, ylev+8, "From Database",   bca_mode)) select_game_bar=21;
-						if(Draw_button2(x_temp+16, ylev+8, "Grab From Database",  (mode_disc) ? -1 : bca_saved)) select_game_bar=22;
+						m=ylev+36+64+56;
+
+						if(Draw_button2(36+60, m, "From Disc",  (bca_mode & 1)==0)) select_game_bar=20;
+						if(Draw_button2(x_temp+16, m, "From Database",   bca_mode)) select_game_bar=21;
+						if(Draw_button2(x_temp+16, m, "Grab From Database",  (mode_disc) ? -1 : bca_saved)) select_game_bar=22;
 						PY+=56;
 						}
-					else PY+=8;
+
+
+					}
+
+				//	Cheat Hooktype
+				if(edit_cfg==305)
+					{
+					color= INK0;
+
+					PY=ylev+36+64+56;
+
+					PX=32+180-20;
 
 					letter_size(12,24);
-					bkcolor=0xb0f0f0f0;
 					
-					PX=32;
-					s_printf("Cheat Hooktype: ");
 					bkcolor=0;
 
 					if(Draw_button2(PX+8, PY-8, "<<", 0)) select_game_bar=25;
@@ -3847,10 +3960,53 @@ get_games:
 					bkcolor=0;
 
 					if(Draw_button2(PX+8, PY-8, ">>", 0)) select_game_bar=26;
+					}
 
-					if(Draw_button2(x_temp+20, PY-8, "Use Diary", !dont_use_diary)) select_game_bar=80;
+				//	Diary
+				if(edit_cfg==306)
+					{
+					if(Draw_button2(320-56, ylev+36+64+56-8, "Use Diary", !dont_use_diary)) select_game_bar=80;
+					}
 
 
+				letter_size(12,24);
+				autocenter=1;
+				color= INK0;bkcolor=0xb0f0f0f0;
+				PY=ylev+300;
+				s_printf(" Press 'B' or 'RED' Button to return ");
+				bkcolor=0;
+				autocenter=0;
+
+
+
+				}
+			else // edit 2 (307) Wiiware, Save & DLC
+				{
+				int disable_btn=0;
+				
+				if(is_fat && header && header->version & 2) disable_btn=1;
+
+				letter_size(12,24);
+				autocenter=1;
+				bkcolor=0xb0f0f0f0;
+				PY+=24;
+		
+				if(disable_btn)
+					s_printf(" Wiiware Options ");
+				else
+					s_printf(" Saves & DLC ");
+		
+				bkcolor=0;
+				autocenter=0;
+
+				color= INK0;
+
+				PY+=32;
+
+				if(edit2_mode==0)
+					{
+
+					DrawLine(40, PY+16, 600, PY+16, 0, 2, 0xc0404040);
 
 					// saves
 					if(!disable_btn)
@@ -3859,9 +4015,6 @@ get_games:
 						letter_size(12,24);
 						bkcolor=0xb0f0f0f0;
 						PY+=56;
-
-						DrawLine(40, PY-16, 600, PY-16, 0, 2, 0xc0404040);
-
 
 						PX=32;
 						s_printf("Saves: ");
@@ -3973,10 +4126,11 @@ get_games:
 				else
 					{
 
-					if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=10;
+					if(Draw_button(36, ylev+108*4-64, &letrero[idioma][8][0])) select_game_bar=(edit_cfg!=1) ? 9 : 10;
 					
 					//if(!(is_fat && header && header->version & 2))
-					if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][54+(edit_cfg==1)][0])) select_game_bar=9;
+					//if(edit_cfg!=1)
+					//	if(Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][22/*54+(edit_cfg==1)*/][0])) select_game_bar=9;
 
 					if(Draw_button(600-32-strlen(&letrero[idioma][9][0])*8, ylev+108*4-64, &letrero[idioma][9][0])) select_game_bar=11;
 					}
@@ -5169,6 +5323,54 @@ get_games:
 												   edit_cfg=1;
 												   }
 
+							if(select_game_bar>=300 && select_game_bar<320) 
+												   {
+
+												   if(select_game_bar>=310)
+													    {
+														struct discHdr *header;
+													    int n;  // return
+														int f_j=0;
+														
+														//snd_fx_yes();
+
+														edit_cfg=0;
+
+														if(!mode_disc)
+															header= &gameList[game_datas[game_mode-1].ind];
+														else header= disc_header;
+
+														if(mode_disc && game_mode && !edit_cfg) 
+															{
+															remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+															mode_disc&=~1;f_j=1;parental_control_on=1;parental_mode=0;
+															if(dvd_only) is_fat=it_have_fat;
+															}
+
+														if(!(mode_disc & 1) && game_mode && !edit_cfg) parental_mode=0;
+
+														game_mode=0;edit_cfg=0;
+														for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
+													   
+														load_png=1;
+														direct_launch=0;
+														rumble=0;
+														last_select=select_game_bar;
+														make_rumble_off();
+
+														n=call_home_menu(header, select_game_bar-310);
+
+														select_game_bar=0;
+														if(f_j || n==2) goto get_games;
+														load_png=1;
+														continue;
+													    }
+													else
+													    {
+													    edit_cfg= select_game_bar; snd_fx_yes();
+													    }
+												   }
+
 							if(select_game_bar==3) {int n;// add favorite
 													struct discHdr *header;
 													direct_launch=0;
@@ -5363,7 +5565,7 @@ get_games:
 							                         exit_by_reset=return_reset; // fixed by hermes //SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 													}
 
-							if(select_game_bar==9)  {if(edit_cfg==1) edit_cfg=2; else edit_cfg=1;snd_fx_yes();}
+							if(select_game_bar==9)  {/*if(edit_cfg==1) edit_cfg=2; else */edit_cfg=1;snd_fx_yes();}
 							
 							// BCA from disc (offset 0x100)
 							if(select_game_bar==20)  {bca_mode&=128;snd_fx_yes();}
@@ -5980,9 +6182,9 @@ get_games:
 												   game_locked_cfg=(game_locked_cfg==0);
 												   snd_fx_yes();usleep(250);
 												   }
-							if(select_game_bar>=300 && select_game_bar<=302)
+							if(select_game_bar>=400 && select_game_bar<=402)
 												   {
-												   switch(select_game_bar-300)
+												   switch(select_game_bar-400)
 													   {
 													   case 0:
 														   cios=cios_list[0];break;
@@ -5998,7 +6200,7 @@ get_games:
 												   //cios= (select_game_bar-300) ? 249 : 222;
 												   snd_fx_yes();
 												   }
-							if(select_game_bar==303)
+							if(select_game_bar==403)
 												   {
 												   force_ingame_ios=(force_ingame_ios==0);
 												   snd_fx_yes();
@@ -6034,9 +6236,12 @@ get_games:
 
 							if(edit_cfg>1) 
 								{
+								if(edit_cfg>=300) snd_fx_yes();
+								else snd_fx_no();
+
 								if(edit2_mode) edit2_mode=0;
 								else edit_cfg=1;
-								snd_fx_no();
+								
 								}
 							else
 								{

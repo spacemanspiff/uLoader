@@ -1,3 +1,8 @@
+Version 4.9C
+------------
+
+- Cambios en el menu de configurar juego
+
 Versión 4.9B
 ------------
 
