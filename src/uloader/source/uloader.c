@@ -689,6 +689,7 @@ struct _game_datas
 	GXTexObj texture;
 	u32 config;
 	int is_png;
+	int pad[3];
 } game_datas[32];
 
 
@@ -707,6 +708,7 @@ void create_game_png_texture(int n)
 	s32 ret;
 
 	game_datas[n].is_png=0;
+	game_datas[n].png_bmp=NULL;
 
 	if(!(disc_conf[0]=='H' && disc_conf[1]=='D' && disc_conf[2]=='R'))
 		{game_datas[n].png_bmp=NULL;game_datas[n].config=0;
@@ -734,12 +736,12 @@ void create_game_png_texture(int n)
          
 		memcpy(texture_buff, (void *)&disc_conf[16], temp_w * temp_h * 2);
 		game_datas[n].png_bmp=texture_buff;
+		game_datas[n].is_png=0;
 
 		CreateTexture(&game_datas[n].texture, TILE_RGB5A1, game_datas[n].png_bmp, temp_w, temp_h, 0);
 		return;
 
 		}
-
 
 	if(!(disc_conf[9]=='P' && disc_conf[10]=='N' && disc_conf[11]=='G'))
 		{game_datas[n].png_bmp=NULL;
@@ -754,22 +756,23 @@ void create_game_png_texture(int n)
 	/* Select PNG data */
 	ctx = PNGU_SelectImageFromBuffer(disc_conf+8);
 	if (!ctx)
-		{game_datas[n].png_bmp=NULL;return;}
+		{game_datas[n].is_png=0;game_datas[n].png_bmp=NULL;return;}
 
 	/* Get image properties */
 	ret = PNGU_GetImageProperties(ctx, &imgProp);
 	if (ret != PNGU_OK)
-		{game_datas[n].png_bmp=NULL;return;}
+		{game_datas[n].is_png=0;game_datas[n].png_bmp=NULL;return;}
 
     texture_buff=memalign(32, imgProp.imgWidth * imgProp.imgHeight *4+2048);
-	if(!texture_buff) {game_datas[n].png_bmp=NULL;return;}
+	if(!texture_buff) {game_datas[n].png_bmp=NULL;game_datas[n].is_png=0;return;}
 
-	game_datas[n].is_png=1;
+	
 
 	PNGU_DecodeTo4x4RGBA8 (ctx, imgProp.imgWidth, imgProp.imgHeight, texture_buff, 255);
 	PNGU_ReleaseImageContext(ctx);
 
 	game_datas[n].png_bmp=texture_buff;
+	game_datas[n].is_png=1;
 	
     DCFlushRange( texture_buff, imgProp.imgWidth * imgProp.imgHeight *4);
 
@@ -4896,8 +4899,9 @@ get_games:
 		autocenter=0;
 
 		}
-
+	
 	load_png=0;
+
 	frames2++;
 	
 	
@@ -6670,6 +6674,7 @@ get_games:
 			                  /*game_datas[n].png_bmp=NULL;*/
 							  game_datas[n+16].ind=-1;
 							  game_datas[n].png_bmp=game_datas[n+16].png_bmp;
+							  game_datas[n].is_png=game_datas[n+16].is_png;
 							  game_datas[n].texture=game_datas[n+16].texture;
 							  game_datas[n].config=game_datas[n+16].config;
 							  game_datas[n+16].png_bmp=NULL;
