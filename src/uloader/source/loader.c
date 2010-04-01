@@ -18,6 +18,8 @@ extern u32 load_dol();
 
 extern int dont_use_diary;
 
+u32 dolparameter=1;
+
 #define CERTS_SIZE	0xA00
 
 static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "/sys/cert.sys";
@@ -528,7 +530,7 @@ const u8 newcode[] = "4E800020";
 
 
 
-
+int is_channel_hook=0;
 
 void patch_dol(void *Address, int Section_Size, int mode)
 {
@@ -547,7 +549,11 @@ void patch_dol(void *Address, int Section_Size, int mode)
 	
 	
 	/*HOOKS STUFF - FISHEARS*/
-	dogamehooks(Address, Section_Size);
+
+	if(!is_channel_hook)
+		dogamehooks(Address, Section_Size);
+	else
+		dochannelhooks(Address, Section_Size);
 
 	/*LANGUAGE PATCH - FISHEARS*/
 	langpatcher(Address, Section_Size);
@@ -556,11 +562,12 @@ void patch_dol(void *Address, int Section_Size, int mode)
 		Search_and_patch_Video_Modes(Address, Section_Size);
 
 	vidolpatcher(Address, Section_Size);
-
+	
 
 	/*HOOKS STUFF - FISHEARS*/
 
 	DCFlushRange(Address, Section_Size);
+	
 }
 
 void set_language_and_ocarina(void)
@@ -615,14 +622,15 @@ void set_language_and_ocarina(void)
 	
 		hooktype = 0;
 		
-		
 		if((len_cheats && buff_cheats))
 			{ 
-			void *codelist=(void*)0x800022A8;
+			void *codelist=(void*) (0x800022A8/*+0x100*/);
+			static const u8 *codelistend = (u8 *) 0x80003000;
 
 			// OLD METHOD
 			if(hook_selected==8)
 				{
+				codelist=(void*) (0x800022A8);
 			
 				/*HOOKS STUFF - FISHEARS*/
 				memset((void*)0x80001800,0,kenobiwii_size);
@@ -632,12 +640,14 @@ void set_language_and_ocarina(void)
 				memcpy((void*)0x800027E8, buff_cheats, len_cheats);
 				*(vu8*)0x80001807 = 0x01;
 				hooktype =1;
+				
 				}
             else
 				{
 				// new from Neogamma
 			
 				#include"codehandleronly.h"
+				#include "multidol.h"
 
            
 				memset((void*)0x80001800,0,codehandleronly_size);
@@ -645,8 +655,15 @@ void set_language_and_ocarina(void)
 				memcpy((void*)0x80001906, &codelist, 2);
 				memcpy((void*)0x8000190A, ((u8*) &codelist) + 2, 2);
 				memcpy((void*)0x80001800, (char*)0x80000000, 6);	// For WiiRD
-				*(vu8*)0x80001807 = 0x01;
+
+				//*(vu8*)0x80001807 = 1;
 				DCFlushRange((void*)0x80001800,codehandleronly_size);
+
+				// Load multidol handler
+				memset((void*)0x80001000,0,multidol_size);
+				memcpy((void*)0x80001000,multidol,multidol_size); 
+				DCFlushRange((void*)0x80001000,multidol_size);
+
 				hooktype = hook_selected;
 
 				switch(hooktype)
@@ -683,7 +700,7 @@ void set_language_and_ocarina(void)
 				}
 				DCFlushRange((void*)0x80001198,16);
 			  
-			
+			    memset(codelist, 0, (u32)codelistend - (u32)codelist);
 				memcpy((void*) codelist, buff_cheats, len_cheats);
 
 				DCFlushRange(codelist, len_cheats);
@@ -740,6 +757,8 @@ int ret;
 
 
 	Determine_VideoMode((((u32) titleid) & 0xff));
+
+	is_channel_hook= hook_selected!=0 && hook_selected!=8;
 
 	set_language_and_ocarina();
 	
@@ -819,7 +838,8 @@ int ret;
 	
 	if(!entryPoint) return -999;
 
-
+ //*((volatile u32 *)0xcd8000c0)|=32; // led on
+//	 while(1);
 
 	if (vmode)
 			Set_VideoMode();
@@ -835,7 +855,7 @@ int ret;
 	// Set the clock
 	settime(secs_to_ticks(time(NULL) - 946684800));
 
-	
+	*(vu32*)0xCD00643C = 0x00000000;	// 32Mhz on Bus
 
 	// Remove 002 error
 	
@@ -877,6 +897,8 @@ int ret;
 	   memcpy(Online_Check, Disc_ID, 4);
 
 	   appJump = (entrypoint)entryPoint;
+	
+	   *(u32*)0xCC003024 = dolparameter; /* Originally from tueidj */
 
 	   // Flush application memory range
        DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded value
@@ -884,6 +906,8 @@ int ret;
 
 	if (entryPoint != 0x3400)
 	{
+
+	
 	if (hooktype)
 		{
 			__asm__(
@@ -903,8 +927,10 @@ int ret;
 		}
 	} else
 	{
+		
 		if (hooktype)
 		{
+		
 			__asm__(
 						"lis %r3, returnpoint@h\n"
 						"ori %r3, %r3, returnpoint@l\n"
@@ -1159,6 +1185,8 @@ int load_disc(u8 *discid)
         *Bus_Speed	= 0x0E7BE2C0;
         *CPU_Speed	= 0x2B73A840;
 
+		*(vu32*)0xCD00643C = 0x00000000;	// 32Mhz on Bus
+
 		/* Setup low memory */
 		*(vu32 *)0x80000060 = 0x38A00040;
 		*(vu32 *)0x800000E4 = 0x80431A80;
@@ -1344,8 +1372,26 @@ int load_disc(u8 *discid)
 
 	   // Flush application memory range
        DCFlushRange((void*)0x80000000, 0x17fffff);	// TODO: Remove these hardcoded value
+
+	   *(u32*)0xCC003024 = dolparameter; /* Originally from tueidj */
 	
 	   str_trace="load_disc() launch!";
+
+	   if (hooktype)
+		{
+		   entryPoint=(u32) Entry;
+			__asm__(
+						"lis %r3, entryPoint@h\n"
+						"ori %r3, %r3, entryPoint@l\n"
+						"lwz %r3, 0(%r3)\n"
+						"mtlr %r3\n"
+						"lis %r3, 0x8000\n"
+						"ori %r3, %r3, 0x18A8\n"
+						"mtctr %r3\n"
+						"bctr\n"
+						);
+						
+		}
 
         __asm__ __volatile__
                 (

@@ -1,3 +1,13 @@
+
+Version 5.0
+------------
+
+- Mejoras en el soporte de cheats, permitiendo ficheros con 4 chars de ID para los Wiiware
+
+- Soporte de ficheros WDM (meter en carpeta sd:/codes o usb:/codes). Se pueden utilizar 3, 4 o 6 chars en el ID
+
+- Añadido autoselección para id de 4 chars en las carátulas PNG de Wiiware y eliminada la visualización del título cuando se añade un PNG
+
 Version 4.9C
 ------------
 

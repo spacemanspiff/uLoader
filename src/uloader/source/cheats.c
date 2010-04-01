@@ -1,6 +1,8 @@
 
 #include "cheats.h"
 
+int cheats_for_wiiware=0;
+
 #define MAX_LIST_CHEATS 25
 
 int txt_cheats=0;
@@ -63,7 +65,7 @@ int free=-1;
 		{
 		if(cheat_file.cheats[n].magic!=0xae && free<0) free=n;
 
-		if(cheat_file.cheats[n].magic==0xae && !strncmp((char *) cheat_file.cheats[n].id, (char *) id, 6))
+		if(cheat_file.cheats[n].magic==0xae && !strncmp((char *) cheat_file.cheats[n].id, (char *) id, cheats_for_wiiware ? 4 : 6))
 			{
 			for(m=0;m<25;m++) cheat_file.cheats[n].sel[m]=(data_cheats[m].apply!=0);
 			return;
@@ -89,7 +91,7 @@ int n, m;
 
 	for(n=0;n<1024;n++)
 		{
-		if(cheat_file.cheats[n].magic==0xae && !strncmp((char *) cheat_file.cheats[n].id, (char *) id, 6))
+		if(cheat_file.cheats[n].magic==0xae && !strncmp((char *) cheat_file.cheats[n].id, (char *) id,  cheats_for_wiiware ? 4 : 6))
 			{
 			for(m=0;m<25;m++) data_cheats[m].apply= (cheat_file.cheats[n].sel[m]==1);
 			return;
@@ -110,7 +112,8 @@ static u8 data_end[8] = {
 	0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-u8* temp_buff_cheats;
+u8* temp_buff_cheats=NULL;
+
 if(!txt_cheats) return;
 	len_cheats=0;
 if(!buff_cheats) return;
@@ -130,7 +133,8 @@ if(!buff_cheats) return;
 		{
 		if(data_cheats[n].title && data_cheats[n].apply)
 			{
-			if(f==0) m+=8;f=1;
+			if(f==0) m+=8;
+			f=1;
 			memcpy(temp_buff_cheats+m,data_cheats[n].values,data_cheats[n].len_values);
 			m+=data_cheats[n].len_values;
 			}
@@ -148,7 +152,7 @@ if(!buff_cheats) return;
 
 int load_cheats(u8 *discid)
 {
-char file_cheats[]="sd:/codes/000000.txt";
+char file_cheats[64]="sd:/codes/000000.txt";
 
 u8 data_readed[8] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -178,24 +182,51 @@ memset(data_cheats,0,sizeof(struct _data_cheats)*MAX_LIST_CHEATS);
 fp=NULL;
 if(sd_ok)
 	{
+	sprintf(file_cheats,"sd:/codes/%c%c%c%c%c%c.txt", discid[0], discid[1], discid[2], discid[3], discid[4], discid[5]);
 	fp = fopen(file_cheats, "rb");
+
+	if(!fp)
+		{
+		sprintf(file_cheats,"sd:/codes/%c%c%c%c.txt", discid[0], discid[1], discid[2], discid[3]);
+		fp = fopen(file_cheats, "rb");
+		}
 	if (!fp) 
 		{
 		txt_cheats=0;
-		file_cheats[17]='g';file_cheats[18]='c';file_cheats[19]='t';
+		sprintf(file_cheats,"sd:/codes/%c%c%c%c%c%c.gct", discid[0], discid[1], discid[2], discid[3], discid[4], discid[5]);
 		fp = fopen(file_cheats, "rb");
+
+		if(!fp)
+			{
+			sprintf(file_cheats,"sd:/codes/%c%c%c%c.gct", discid[0], discid[1], discid[2], discid[3]);
+			fp = fopen(file_cheats, "rb");
+			}
 		}
 	}
 if(!fp && ud_ok)
 	{
 	txt_cheats=1;
-	file_cheats[0]='u';file_cheats[17]='t';file_cheats[18]='x';file_cheats[19]='t';
+
+	sprintf(file_cheats,"ud:/codes/%c%c%c%c%c%c.txt", discid[0], discid[1], discid[2], discid[3], discid[4], discid[5]);
 	fp = fopen(file_cheats, "rb");
+
+	if(!fp)
+		{
+		sprintf(file_cheats,"ud:/codes/%c%c%c%c.txt", discid[0], discid[1], discid[2], discid[3]);
+		fp = fopen(file_cheats, "rb");
+		}
+
 	if (!fp) 
 		{
 		txt_cheats=0;
-		file_cheats[17]='g';file_cheats[18]='c';file_cheats[19]='t';
+		sprintf(file_cheats,"ud:/codes/%c%c%c%c%c%c.gct", discid[0], discid[1], discid[2], discid[3], discid[4], discid[5]);
 		fp = fopen(file_cheats, "rb");
+
+		if(!fp)
+			{
+			sprintf(file_cheats,"ud:/codes/%c%c%c%c.gct", discid[0], discid[1], discid[2], discid[3]);
+			fp = fopen(file_cheats, "rb");
+			}
 		}
 	}
 
@@ -244,7 +275,7 @@ if(!fp && ud_ok)
 					case 0: // get ID
 						if(ret==1)
 							{
-							if(strncmp((char *) discid, (char *) buff_rcheat,6)!=0) force_exit=1; // error! código no coincide
+							if(strncmp((char *) discid, (char *) buff_rcheat, cheats_for_wiiware ? 4 : 6)!=0) force_exit=1; // error! código no coincide
 							mode++;
 							}
 						break;

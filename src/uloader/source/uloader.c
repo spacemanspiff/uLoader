@@ -61,10 +61,19 @@
 #include "sonido.h"
 #include "fatffs_util.h"
 
+#include "dolmenu.h"
 
-char uloader_version[5]="4.9C"; // yes, you can change here the current version of the application
+
+
+
+char uloader_version[5]="5.0"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
+
+test_t *dolmenubuffer=NULL;
+extern u32 dolparameter;
+
+int skip_alternative_dol=0;
 
 u32 INK0= 0xf0000000;
 u32 INK1= 0xfff0f0f0;
@@ -294,6 +303,8 @@ int force_ios249=0;
 
 unsigned char *buff_cheats=NULL;
 int len_cheats=0;
+
+extern int cheats_for_wiiware;
 
 int load_cheats(u8 *discid);
 
@@ -677,10 +688,12 @@ struct _game_datas
 	void * png_bmp;
 	GXTexObj texture;
 	u32 config;
+	int is_png;
 } game_datas[32];
 
 
 struct discHdr png_header;
+
 
 void create_game_png_texture(int n)
 {
@@ -692,6 +705,8 @@ void create_game_png_texture(int n)
 	
 	
 	s32 ret;
+
+	game_datas[n].is_png=0;
 
 	if(!(disc_conf[0]=='H' && disc_conf[1]=='D' && disc_conf[2]=='R'))
 		{game_datas[n].png_bmp=NULL;game_datas[n].config=0;
@@ -749,7 +764,8 @@ void create_game_png_texture(int n)
     texture_buff=memalign(32, imgProp.imgWidth * imgProp.imgHeight *4+2048);
 	if(!texture_buff) {game_datas[n].png_bmp=NULL;return;}
 
-	
+	game_datas[n].is_png=1;
+
 	PNGU_DecodeTo4x4RGBA8 (ctx, imgProp.imgWidth, imgProp.imgHeight, texture_buff, 255);
 	PNGU_ReleaseImageContext(ctx);
 
@@ -2178,6 +2194,8 @@ exit_ok:
 
 	sleep(1);
     
+	if(exit_by_reset<2 &&  !(*((u32*)0x80001800) && strncmp("STUBHAXX", (char *)0x80001804, 8) == 0)) exit_by_reset=2;
+	
 	if(exit_by_reset==2)
 		SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 	if(exit_by_reset==3)
@@ -2223,8 +2241,9 @@ error:
 		__io_usbstorage2.shutdown();ud_ok=0;
 		}
 	
+	if(exit_by_reset<2 &&  !(*((u32*)0x80001800) && strncmp("STUBHAXX", (char *)0x80001804, 8) == 0)) exit_by_reset=2;
 
-	if(return_reset==2)
+	if(exit_by_reset==2)
 		SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 	if(exit_by_reset==3)
 		SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
@@ -2590,7 +2609,9 @@ thread_in_second_plane=0;
 
 	if(!((bca_mode & 1) && get_bca(discid, BCA_Data))) bca_mode=0;
 	
-	Get_AlternativeDol(discid);
+	// alternative dol when it don't use WDM files
+	if(!skip_alternative_dol)
+		Get_AlternativeDol(discid);
 	
 	if(sd_ok)
 		{
@@ -3353,10 +3374,14 @@ get_games:
 			if(remote_DVD_disc_status==0) s_printf("%s",&letrero[idioma][38][0]);
 			else if(remote_DVD_disc_status<0) s_printf("DVD Error %i",remote_DVD_disc_status);
 				else s_printf("%s",&letrero[idioma][41][0]);
+			
 			//s_printf("Scanning DVD...");
+			if(dolmenubuffer) free(dolmenubuffer);dolmenubuffer=NULL;
 			}
 		else
+			{
 			s_printf("%s",header->title);
+			}
 
 		color= INK0;
 		
@@ -3374,7 +3399,7 @@ get_games:
 		if(txt_cheats)
 			{
 			int f=0;
-			PX= 26; PY=ylev+16; color= INK1;
+			PX= 26; PY=ylev+16; color= INK0;
 			letter_size(16,32);
 			autocenter=1;
 			bkcolor=0xb0f0f0f0;
@@ -3572,26 +3597,85 @@ get_games:
 					}
 
 		    //idioma=0;
-
+			
+			int ly=166;
+				
 			if(!parental_mode && header && (mode_disc & 3)!=0 && multi_ciso[0].len)
 					{
-					
+					ly+=-60*(dolmenubuffer!=0)-60*(dolmenubuffer!=0 && dolmenubuffer[0].count>=9);
+
 					for(n=0;n<8;n++)
 						{
 					
-						if(Draw_button2(26+(n & 3)*132+24, ylev+146+64*(n>3), "            ", 
+						if(Draw_button2(26+(n & 3)*132+24, ylev+ly+60*(n>3), "            ", 
 							multi_ciso[n].len ? ciso_sel==n : -1)) select_game_bar=30+n;
 			
 						letter_size(8,24);
 
-						PX= 26+(n & 3) *132+12+24; PY= 12+ylev+146+64*(n>3); color= INK0; 
+						PX= 26+(n & 3) *132+12+24; PY= 12+ylev+ly+60*(n>3); color= INK0; 
 					
 						bkcolor=0xc0f0f000;
 						if(multi_ciso[n].len) draw_text((void *) multi_ciso[n].name);
 						bkcolor=0;
 
 						}
+					ly+=120;
 					}
+
+
+
+			if(header && dolmenubuffer==NULL && (mode_disc & 3))
+				{
+				/******************************************/
+				// dol menu
+
+				
+
+				if(load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
+					{
+
+					load_alt_game_disc=(mode_disc & 3)!=0;
+
+					if(mode_disc & 3) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+
+					if(!mode_disc)
+						header= &gameList[game_datas[game_mode-1].ind];
+					else header= disc_header;
+
+
+					wdm_alternativedol(header->id);
+					
+					if(mode_disc & 3) {remote_call(remote_DVD_disc);usleep(1000*50);}
+					}
+
+				/******************************************/
+				}
+
+
+			/******************************************/
+			// dol menu
+
+			if(dolmenubuffer)
+				{
+				for(n=0;n<((dolmenubuffer[0].count +3) & ~3) && n<12;n++)
+					{
+					if(n>=dolmenubuffer[0].count)
+						Draw_button2(26+(n & 3)*132+24, ylev+ly+60*(n/4), "            ", -1);
+					else
+						if(Draw_button2(26+(n & 3)*132+24, ylev+ly+60*(n/4), "            ",   130)) select_game_bar=450+n;
+			
+					letter_size(8,24);
+
+					PX= 26+(n & 3) *132+12+24; PY= 12+ylev+ly+60*(n/4); color= INK0; 
+				
+					bkcolor=0xc0f0f000;
+					
+					if(n<dolmenubuffer[0].count) draw_text((void *) dolmenubuffer[n+1].name);
+
+					bkcolor=0;
+					}
+				}
+			/******************************************/
 
 			x_temp=16;
 
@@ -3762,7 +3846,7 @@ get_games:
 				g+=56*2;
 				if(disable_btn)
 					{
-					if(Draw_button2(m, g, "Wiiware Option", 1300)) select_game_bar=n;
+					if(Draw_button2(m, g, "Wiiware Option", 130)) select_game_bar=n;
 					}
 				else
 					{
@@ -4371,7 +4455,7 @@ get_games:
 					bkcolor=0xc0f0f000;
 
 					s_printf_z=4;
-					if(!game_datas[(m*5)+n].png_bmp || (is_fat && (header->version & 2))) 
+					if(!game_datas[(m*5)+n].png_bmp || (is_fat && (header->version & 2) && !game_datas[(m*5)+n].is_png)) 
 									draw_text(header->title);
 					s_printf_z=0;
 					bkcolor=0;
@@ -4560,7 +4644,7 @@ get_games:
 					
 						bkcolor=0xc0f0f000;
 					
-						if(!game_datas[16+(m*5)+n].png_bmp || (is_fat && (header->version & 2))) 
+						if(!game_datas[16+(m*5)+n].png_bmp || (is_fat && (header->version & 2) && !game_datas[16+(m*5)+n].is_png)) 
 									draw_text(header->title);
 						bkcolor=0;
 						}
@@ -4594,7 +4678,7 @@ get_games:
 					
 						bkcolor=0xc0f0f000;
 					
-						if(!game_datas[16+(m*5)+n].png_bmp || (is_fat && (header->version & 2))) 
+						if(!game_datas[16+(m*5)+n].png_bmp || (is_fat && (header->version & 2) && !game_datas[16+(m*5)+n].is_png)) 
 									draw_text(header->title);
 						bkcolor=0;
 						}
@@ -5202,6 +5286,30 @@ get_games:
 									game_mode=temp_sel+1;
 
 									header = &gameList[game_datas[game_mode-1].ind];
+
+									/******************************************/
+									// dol menu
+
+									if(dolmenubuffer) free(dolmenubuffer);dolmenubuffer=NULL;
+
+									if(load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
+										{
+
+										load_alt_game_disc=(mode_disc & 3)!=0;
+
+										if(mode_disc & 3) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+
+										if(!mode_disc)
+											header= &gameList[game_datas[game_mode-1].ind];
+										else header= disc_header;
+
+
+										wdm_alternativedol(header->id);
+										
+										if(mode_disc & 3) {remote_call(remote_DVD_disc);usleep(1000*50);}
+										}
+
+									/******************************************/
 									
 									if(is_fat)
 										{
@@ -5463,6 +5571,31 @@ get_games:
 													remote_DVD_disc_status=3;
 													
 													}
+							// WDM menu
+							if(select_game_bar>=450 && select_game_bar<462 && dolmenubuffer)
+								{
+								skip_alternative_dol=1;
+                                AlternativeDol_infodat.id[0]=0;dol_data= NULL;
+
+								dolparameter=dolmenubuffer[select_game_bar-449].parameter;
+
+								if(dolmenubuffer[select_game_bar-449].offset)
+									{
+									memcpy(AlternativeDol_infodat.id, dolmenubuffer[0].name, 6);
+									dol_len=AlternativeDol_infodat.size=dolmenubuffer[select_game_bar-449].size;
+									AlternativeDol_infodat.offset=dolmenubuffer[select_game_bar-449].offset;
+									str_trace="WDM Get_AlternativeDol alloc";
+									dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len+32768,32);
+									if(!dol_data) {AlternativeDol_infodat.id[0]=0;} // cancel
+									str_trace="";
+									}
+
+
+								select_game_bar=5; // run game
+								
+								}
+
+							// run game, cheats...
 
 							if(select_game_bar==5 || select_game_bar==1000 || select_game_bar==1001) 
 													{
@@ -5499,6 +5632,8 @@ get_games:
 
 													snd_fx_yes();
 
+													if(is_fat && (header->version & 2)) cheats_for_wiiware=1; else cheats_for_wiiware=0;
+
 													memcpy(discid,header->id,6); discid[6]=0;
 													
 													if(select_game_bar==5)
@@ -5509,7 +5644,6 @@ get_games:
 													set_cheats_list(discid);
 													if(select_game_bar==1000) create_cheats();
 
-													
 													
 													if(select_game_bar==1001) len_cheats=0; // don't apply cheats
 						
@@ -6205,7 +6339,9 @@ get_games:
 												   force_ingame_ios=(force_ingame_ios==0);
 												   snd_fx_yes();
 												   }
-												   
+
+												  
+							
 
 							}
 							} // q
@@ -6406,14 +6542,14 @@ get_games:
 
 			snd_fx_yes();
 
+			if(is_fat && (header->version & 2)) cheats_for_wiiware=1; else cheats_for_wiiware=0;
+
 			memcpy(discid,header->id,6); discid[6]=0;
 														
 			if(load_cheats(discid)) cheat_mode=1;
 
 			set_cheats_list(discid);
 			create_cheats();
-
-
 			
 			Screen_flip();											
 			//ret=load_game_routine(discid, game_mode);

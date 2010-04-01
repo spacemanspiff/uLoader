@@ -39,7 +39,7 @@ extern void patchhook(u32 address, u32 len);
 extern void patchhook2(u32 address, u32 len);
 extern void patchhook3(u32 address, u32 len);
 
-extern void multidolpatchone(u32 address, u32 len);
+/*extern void multidolpatchone(u32 address, u32 len);
 extern void multidolpatchtwo(u32 address, u32 len);
 
 extern void regionfreejap(u32 address, u32 len);
@@ -57,7 +57,7 @@ extern void copyflagcheck5(u32 address, u32 len);
 extern void patchupdatecheck(u32 address, u32 len);
 
 extern void movedvdhooks(u32 address, u32 len);
-
+*/
 extern void multidolhook(u32 address);
 extern void langvipatch(u32 address, u32 len, u8 langbyte);
 extern void vipatch(u32 address, u32 len);
@@ -332,11 +332,14 @@ bool dogamehooks(void *addr, u32 len)
 				}*/
 			break;
 		}
+
+		
+		
 		addr_start += 4;
 	}
 	return hookpatched;
 }
-
+#if 0
 //---------------------------------------------------------------------------------
 void patchmenu(void *addr, u32 len, int patchnum)
 //---------------------------------------------------------------------------------
@@ -440,7 +443,7 @@ void patchmenu(void *addr, u32 len, int patchnum)
 		addr_start += 4;
 	}
 }
-
+#endif
 void langpatcher(void *addr, u32 len)
 {
 	
@@ -475,9 +478,9 @@ void vidolpatcher(void *addr, u32 len)
 		addr_start += 4;
 	}
 }
-/*
+
 //---------------------------------------------------------------------------------
-void dochannelhooks(void *addr, u32 len)
+void dochannelhooks2(void *addr, u32 len)
 //---------------------------------------------------------------------------------
 {
 	void *addr_start = addr;
@@ -485,7 +488,7 @@ void dochannelhooks(void *addr, u32 len)
 	
 	while(addr_start < addr_end)
 	{
-		switch(config_bytes[2])
+		switch(hooktype)
 		{
 				
 			case 0x00:	
@@ -581,20 +584,126 @@ void dochannelhooks(void *addr, u32 len)
 				
 			case 0x08:
 				
-				if(memcmp(addr_start, customhook, customhooksize)==0){
-					patchhook((u32)addr_start, len);
-				}
-				if(memcmp(addr_start, multidolchanhooks, sizeof(multidolchanhooks))==0){
-					*(((u32*)addr_start)+1) = 0x7FE802A6;
-					DCFlushRange(((u32*)addr_start)+1, 4);
-					multidolhook((u32)addr_start+sizeof(multidolchanhooks)-4);
-				}
+			
 				break;
 		}
 		addr_start += 4;
 	}
 }
-*/
+
+void dochannelhooks(void *addr, u32 len)
+//---------------------------------------------------------------------------------
+{
+	void *addr_start = addr;
+	void *addr_end = addr+len;
+	bool patched = false;
+	bool multidolpatched = false;
+	
+	while(addr_start < addr_end)
+	{
+		switch(hooktype)
+		{
+				
+			case 0x00:	
+				
+				break;
+				
+			case 0x01:	
+				if(memcmp(addr_start, viwiihooks, sizeof(viwiihooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					
+					patched = true;
+				}
+				break;
+				
+			case 0x02:
+				
+				if(memcmp(addr_start, kpadhooks, sizeof(kpadhooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				
+				if(memcmp(addr_start, kpadoldhooks, sizeof(kpadoldhooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				break;
+				
+			case 0x03:
+				
+				if(memcmp(addr_start, joypadhooks, sizeof(joypadhooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				break;
+				
+			case 0x04:
+				
+				if(memcmp(addr_start, gxdrawhooks, sizeof(gxdrawhooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				break;
+				
+			case 0x05:
+				
+				if(memcmp(addr_start, gxflushhooks, sizeof(gxflushhooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				break;
+				
+			case 0x06:
+				
+				if(memcmp(addr_start, ossleepthreadhooks, sizeof(ossleepthreadhooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				break;
+				
+			case 0x07:
+				
+				if(memcmp(addr_start, axnextframehooks, sizeof(axnextframehooks))==0)
+				{
+					patchhook((u32)addr_start, len);
+					patched = true;
+				}
+				break;
+				
+			case 0x08:
+				
+				//if(memcmp(addr_start, customhook, customhooksize)==0){
+				//	patchhook((u32)addr_start, len);
+				//patched = true;
+				//}
+				break;
+		}
+		if (hooktype != 0)
+		{
+			if(memcmp(addr_start, multidolchanhooks, sizeof(multidolchanhooks))==0)
+			{
+				
+				*(((u32*)addr_start)+1) = 0x7FE802A6;
+				DCFlushRange(((u32*)addr_start)+1, 4);
+				multidolhook((u32)addr_start+sizeof(multidolchanhooks)-4);
+				multidolpatched = true;
+				
+			}
+		}
+		
+		addr_start += 4;
+	}
+	
+
+}
+
 //---------------------------------------------------------------------------------
 void patchdebug(void *addr, u32 len)
 //---------------------------------------------------------------------------------

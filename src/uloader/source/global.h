@@ -53,6 +53,7 @@ void make_rumble_off();
 
 int load_disc(u8 *discid);
 void menu_alternativedol(u8 *id);
+void wdm_alternativedol(u8 *id);
 int menu_format();
 
 struct _multi_ciso

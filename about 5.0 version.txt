@@ -1,3 +1,12 @@
+Version 5.0
+------------
+
+- Improved cheats support allowing files with 4 chars ID for WiiWare and other things
+
+- WDM file support (put it in folder sd:/ codes or usb:/ codes). You can use 3, 4 or 6 chars for the ID
+
+- Added self-selection using 4 chars on the covers id for Wiiware and removed WiiWare title display when adding a PNG file as icon
+
 Version 4.9C
 ------------
 

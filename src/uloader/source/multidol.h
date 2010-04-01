@@ -4,11 +4,11 @@ Visit http://www.devkitpro.org
 */
 
 //---------------------------------------------------------------------------------
-#ifndef _codehandleronly_h_
-#define _codehandleronly_h_
+#ifndef _multidol_h_
+#define _multidol_h_
 //---------------------------------------------------------------------------------
-extern const unsigned char codehandleronly[];
-extern const int codehandleronly_size;
+extern const unsigned char multidol[];
+extern const int multidol_size;
 //---------------------------------------------------------------------------------
-#endif //_codehandleronly_h_
+#endif //_multidol_h_
 //---------------------------------------------------------------------------------

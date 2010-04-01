@@ -2147,6 +2147,123 @@ else
 if(mode==129) sleep(2);
 }
 
+/*************************************************************************************************************/
+// alternative dol for WDM
+
+#include "dolmenu.h"
+#include <ctype.h>
+
+u32 stringcompare(char *s1, char *s2)
+{
+	u32 index = 0;
+	while (true)
+	{
+		if (s1[index] == 0 || s2[index] == 0)
+		{
+			return 0;
+		}
+
+		if (s1[index] == 0) return -1;
+
+		if (s1[index] != '?' && s2[index] != '?' && toupper((u8)s1[index]) != toupper((u8)s2[index]))
+		{
+			return index;
+		}
+		index++;	
+	}
+}
+
+void wdm_alternativedol(u8 *id)
+{
+
+
+int n;
+
+if(!dolmenubuffer || dolmenubuffer[0].offset!=0ULL) return;
+
+
+//memset(temp_data,0,32768);
+
+	make_rumble_off();
+
+	iso_files *file;
+
+	make_rumble_off();
+
+	altdol_frames2=0;
+	
+	remote_call(draw_altdolscr);
+
+	if(!load_alt_game_disc)
+		{
+		if(is_fat && !(mode_disc & 3))
+			{
+			FILE *fp;
+			char *name;
+
+			name=get_fat_name(id);
+			if(name)
+				{
+				fp=fopen(name,"rb"); // lee el fichero de texto
+				if(fp)
+					{
+					extern int CWIIDisc_getdols(wbfs_disc_t *d);
+					CWIIDisc_getdols((void *) fp);
+					}
+				fclose(fp);
+				}
+			}
+		else
+			{
+			WBFS_getdols(id);
+			
+			}
+		}
+	else
+		{
+		int temp=is_fat;
+		is_fat=0;
+		disc_getdols(id);
+		is_fat=temp;
+		}
+
+remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+
+	file =CWIIDisc_first_file;
+
+if(!file) return;
+
+dolmenubuffer[0].offset=1ULL;
+
+
+while(file)
+	{
+	void *file2=file->next;
+
+	for(n=0;n<dolmenubuffer[0].count;n++)
+		{
+		dolmenubuffer[n+1].offset=0ULL;
+		dolmenubuffer[n+1].size=0;
+
+		if(!strncmp(dolmenubuffer[n+1].dolname, "main", 4)) continue;
+		if(stringcompare((char *) file->name, dolmenubuffer[n+1].dolname)==0)
+			{
+			dolmenubuffer[n+1].offset= file->offset;
+			dolmenubuffer[n+1].size= file->size;
+			
+			}
+		}
+
+	free(file); file=file2;
+	}
+
+
+CWIIDisc_first_file=CWIIDisc_last_file=NULL;
+	
+}
+
+/*************************************************************************************************************/
+
 int current_partition=0;
 
 int partition_cnt[4]={-1,-1,-1,-1};
@@ -3359,11 +3476,19 @@ while(1)
 		// get automatic .png
 		if(flag_auto)
 			{
-			for(n=0;n<nfiles;n++)
-			{
-			if(!files[n].is_directory)
-				if(!strncmp((char *) header->id,get_name_from_UTF8(&files[n].name[0]), 6)) {signal=1;posfile=n;flag_auto=0;break;}
-			}
+				for(n=0;n<nfiles;n++)
+				{
+				if(!files[n].is_directory)
+					if(!strncmp((char *) header->id,get_name_from_UTF8(&files[n].name[0]), 6)) {signal=1;posfile=n;flag_auto=0;break;}
+				}
+			if(flag_auto)
+				{
+				for(n=0;n<nfiles;n++)
+					{
+					if(!files[n].is_directory)
+						if(!strncmp((char *) header->id,get_name_from_UTF8(&files[n].name[0]), 4)) {signal=1;posfile=n;flag_auto=0;break;}
+					}
+				}
 			}
 		
 		}

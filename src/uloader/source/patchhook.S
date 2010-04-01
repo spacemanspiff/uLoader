@@ -32,7 +32,9 @@ writebranch:
 	or      r4, r4, r5
 	stw     r4, 0(r3)	# result in r3
 	dcbf    r0, r3		# data cache block flush
+	sync
 	icbi    r0, r3
+	isync
 exit:
 	blr                     # return
 	
