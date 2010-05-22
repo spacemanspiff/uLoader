@@ -243,6 +243,20 @@ return 0;
 
 #define IOCTL_FFS_MODE		0x80
 
+void disable_ffs_patch(void)
+{
+	
+u8 * ffs_data=search_for_ehcmodule_cfg((void *) fatffs_module, size_fatffs_module);
+	
+	if(ffs_data)
+		{
+		ffs_data+=12;
+		ffs_data[0]=1;
+		DCFlushRange((void *) (((u32)ffs_data[0]) & ~31), 32);
+		}
+	
+}
+
 int load_fatffs_module(u8 *discid)
 {
 static char fs[] ATTRIBUTE_ALIGN(32) = "fat";
@@ -418,11 +432,11 @@ u8 * ehc_data=search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
 	if(ehc_data)
 		{
 		ehc_data+=12;
-		use_port1=ehc_data[0];
+		use_port1=ehc_data[0]=0; // fixed to 0
+		DCFlushRange((void *) (((u32)ehc_data[0]) & ~31), 32);
 		
 		}
 	
-
 	if(use_port1)
 	// release port 0 and use port 1
 	{
@@ -442,6 +456,9 @@ u8 * ehc_data=search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
 		if((dat & 0x2000)==0x2000) mload_setw((void *) (addr+0x48), 0x1001);
 	}
 }
+
+
+
 
 void free_usb_ports()
 {

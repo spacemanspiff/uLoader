@@ -1243,4 +1243,19 @@ int n;
 return NULL;
 }
 
+u8 *search_for_fatffs_module_cfg(u8 *p, int size)
+{
+int n;
+
+	for(n=0;n<size;n++)
+	{
+		if(!memcmp((void *) &p[n],"FFS_CFG",8) && p[n+8]==0x12 && p[n+9]==0x34 && p[n+10]==0x00 && p[n+11]==0x01)
+		{
+		return &p[n];
+		}
+	}
+
+return NULL;
+}
+
 /* ------------------------------------------------------------------------------- */

@@ -22,6 +22,7 @@ void Set_DIP_BCA_Datas(u8 *bca_data);
 void test_and_patch_for_port1();
 
 int enable_ffs(int mode);
+void disable_ffs_patch(void);
 
 void free_usb_ports();
 

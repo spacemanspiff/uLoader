@@ -66,7 +66,7 @@
 
 
 
-char uloader_version[5]="5.0"; // yes, you can change here the current version of the application
+char uloader_version[5]="5.0C"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
 
@@ -79,6 +79,7 @@ u32 INK0= 0xf0000000;
 u32 INK1= 0xfff0f0f0;
 int in_black=0;
 
+int shadow_mload=0;
 
 // WBFS game configuration datas 
 // field1: In Use (32 bits), field2: Unused (32 bits)
@@ -99,7 +100,7 @@ u32 hook_selected   :3; // hooktype option for cheats
 // byte 1
 
 u32 pad2            :8;
-
+//u32 shadow_mload    :1;
 // byte 2
 
 u32 dont_use_diary  :1; // if one don't register the game in the diary
@@ -152,6 +153,8 @@ int is_fat=0; // working in FAT .ciso Mode
 int dvd_only=0; // no WBFS HDD (FAT .ciso, DVD USB, DVD)
 
 int dont_use_diary=0;
+
+u32 load_wip_code(u8 *gameid);
 
 #define CIOS 222
 
@@ -2595,6 +2598,7 @@ thread_in_second_plane=0;
     #endif
 
 	dont_use_diary= game_cfg_field1->dont_use_diary;
+	//shadow_mload= game_cfg_field1->shadow_mload;
 
 	forcevideo= game_cfg_field1->modevideo;//if(forcevideo==3) forcevideo=0;
 
@@ -2615,6 +2619,8 @@ thread_in_second_plane=0;
 	// alternative dol when it don't use WDM files
 	if(!skip_alternative_dol)
 		Get_AlternativeDol(discid);
+
+	load_wip_code(discid);
 	
 	if(sd_ok)
 		{
@@ -2671,6 +2677,8 @@ thread_in_second_plane=0;
 		sleep(1);
 		
 		cabecera2( "Loading...");
+
+		test_and_patch_for_port1();
 		
 		load_ehc_module();
 	
@@ -3550,6 +3558,7 @@ get_games:
 			else {if(game_cfg_field1->ios_selected & 2)  s_printf("cIOS %i", cios_list[1]); else s_printf("cIOS %i", cios_list[0]);}
 
 			dont_use_diary= game_cfg_field1->dont_use_diary;
+			//shadow_mload= game_cfg_field1->shadow_mload;
 			
 			forcevideo= game_cfg_field1->modevideo;//if(forcevideo==3) forcevideo=0;
 
@@ -3845,6 +3854,7 @@ get_games:
 
 				if(Draw_button2(m, g, "Cheat Hooktype", 0)) select_game_bar=n; n++;g+=56;
 				if(Draw_button2(m, g, "     Diary    ", 0)) select_game_bar=n; n++;g+=56;
+				//if(Draw_button2(m, g, "  Mload Mode  ", 0)) select_game_bar=n; n++;g+=56;
 				
 				g+=56*2;
 				if(disable_btn)
@@ -3922,6 +3932,9 @@ get_games:
 					case 6:
 						s_printf(" Diary ");
 						break;
+					/*case 7:
+						s_printf(" Mload Mode ");
+						break;*/
 					case 7:
 						if(disable_btn)
 							s_printf(" Wiiware Options ");
@@ -4055,6 +4068,15 @@ get_games:
 					if(Draw_button2(320-56, ylev+36+64+56-8, "Use Diary", !dont_use_diary)) select_game_bar=80;
 					}
 
+				#if 0
+				//	mload mode
+
+				if(edit_cfg==307)
+					{
+					if(Draw_button2(320-56, ylev+36+64+56-8, "Shadow mload", shadow_mload)) select_game_bar=81;
+					}
+				#endif
+
 
 				letter_size(12,24);
 				autocenter=1;
@@ -4067,7 +4089,7 @@ get_games:
 
 
 				}
-			else // edit 2 (307) Wiiware, Save & DLC
+			else // edit 2 (308) Wiiware, Save & DLC
 				{
 				int disable_btn=0;
 				
@@ -5419,6 +5441,8 @@ get_games:
 													
 												   dont_use_diary= game_cfg_field1->dont_use_diary;
 
+												   //shadow_mload= game_cfg_field1->shadow_mload;
+
 												   forcevideo= game_cfg_field1->modevideo;
 
 												   langsel= game_cfg_field1->language;if(langsel>10) langsel=0;
@@ -6245,6 +6269,13 @@ get_games:
 													 snd_fx_yes();
 													 }
 
+							/*// shadow mload
+							if(select_game_bar==81)  {	 
+													 shadow_mload^=1;
+													 snd_fx_yes();
+													 }
+													 */
+
 
 							if(select_game_bar==10 || select_game_bar==11) { // return from config (saving or not)
 												   
@@ -6285,6 +6316,8 @@ get_games:
 														game_cfg_field1->bca_mode |= (bca_mode & 1);
 														game_cfg_field1->hook_selected |= (hook_selected-1) & 7;
 														game_cfg_field1->dont_use_diary |= (dont_use_diary!=0);
+
+														//game_cfg_field1->shadow_mload |= (shadow_mload!=0);
 														
 														disc_conf[4]= config & 255;
 														disc_conf[5]= (config>>8) & 255;

@@ -40,6 +40,8 @@
 #error "Cannot use TINY_FAT Here"
 #endif
 
+extern char disable_ffs;
+
 int flag_emu=0;
 int flag_emu_mode=0; // 0-> default -> 1 DLC redirected to device:/nand -> 2-> Full emulation 128-> redirect diary to the trash
 int light_on=1;
@@ -122,11 +124,17 @@ extern int test_string(char *s);
 
 static char sys_name[256] ATTRIBUTE_ALIGN(32)="sd:/nand/" ;
 
+static char dev_kk[256] ATTRIBUTE_ALIGN(32)="kaka";
+
 int syscall_open_mode=0;
 
 int force_to_nand=0;
 
+int flag_no_mload=0;
+
 // syscall open redirected here
+
+
 
 char * syscall_open_func( char *name, int mode)
 {
@@ -134,8 +142,25 @@ int n;
 
 	syscall_open_mode=mode;
 
-	if(!flag_emu) return name;
+    
+	if(!cmp_string(name,"no_mload")) {flag_no_mload=1;return name;}
+	
+	if(flag_no_mload && !cmp_string(name,"/dev/mload"))
+	{
+		return dev_kk;
+	}
 
+	if(disable_ffs)
+		{
+		if(flag_no_mload && !cmp_string(name,"fat"))
+			{
+			return dev_kk;
+			}
+		}
+
+
+	if(!flag_emu || disable_ffs) 
+		return name;
 
 	if(name[0]=='#') // for example #/title/xxxx : can be used to skip this function to open files
 		{
@@ -236,6 +261,8 @@ u32 perm;
 		*((u32 *) 0xFFFF2D44)=vector[1];
 		*((u32 *) 0xFFFF2D48)=vector[2];
 		direct_os_sync_after_write((void *) 0xFFFF2D40, 12);
+
+		if(!disable_ffs) {
 	
         // FFS patch
 		
@@ -245,6 +272,7 @@ u32 perm;
 		//enable emulation vector
 		* ((u32 *) 0x200021D0)= (u32) ffs_tab_jump;
 		direct_os_sync_after_write((void *) 0x200021D0, 4);
+		}
 
 		}
     else
@@ -263,6 +291,8 @@ u32 perm;
 		*((u32 *) 0xFFFF2E54)=vector[1];
 		*((u32 *) 0xFFFF2E58)=vector[2];
 		direct_os_sync_after_write((void *) 0xFFFF2E50, 12);
+
+		if(!disable_ffs) {
 	
         // FFS patch
 		//direct_os_sync_before_read((void *) 0x20005F38, 4);
@@ -271,6 +301,8 @@ u32 perm;
 
 		* ((u32 *) 0x20005F38)= (u32) ffs_tab_jump;
 		direct_os_sync_after_write((void *) 0x20005F38, 4);
+		}
+
 		}
     else
 	if(ios==57 || ios==60)
@@ -287,6 +319,8 @@ u32 perm;
 		*((u32 *) 0xFFFF3024)=vector[1];
 		*((u32 *) 0xFFFF3028)=vector[2];
 		direct_os_sync_after_write((void *) 0xFFFF3020, 12);
+
+		if(!disable_ffs) {
 	
         // FFS patch
 		old_ffs_reentry=0x2000618A;
@@ -294,6 +328,8 @@ u32 perm;
 
 		* ((u32 *) 0x200061B8)= (u32) ffs_tab_jump;
 		direct_os_sync_after_write((void *) 0x200061B8, 4);
+		}
+
 		}
 
 	// dev/es ioctlv
@@ -332,12 +368,14 @@ flag_emu=0;
 		*((u32 *) 0xFFFF2D48)=ffs_data_restore_sysopen[2];
 		
 		direct_os_sync_after_write((void *) 0xFFFF2D40, 12);
-	
+
+		if(!disable_ffs) {
 	
         // FFS patch
 		
 		* ((u32 *) 0x200021D0)= (u32) old_ffs_tab_jump;
 		direct_os_sync_after_write((void *) 0x200021D0, 4);
+		}
 		
 		}
 	else
@@ -351,11 +389,15 @@ flag_emu=0;
 		*((u32 *) 0xFFFF2E58)=ffs_data_restore_sysopen[2];
 		
 		direct_os_sync_after_write((void *) 0xFFFF2E50, 12);
+
+		if(!disable_ffs) {
 	
         // FFS patch
 		
 		* ((u32 *) 0x20005F38)= (u32) old_ffs_tab_jump;
 		direct_os_sync_after_write((void *) 0x20005F38, 4);
+		}
+
 		}
 	else
 	if(ios==57 || ios==60)
@@ -368,11 +410,14 @@ flag_emu=0;
 		*((u32 *) 0xFFFF3028)=ffs_data_restore_sysopen[2];
         
 		direct_os_sync_after_write((void *) 0xFFFF3020, 12);
+
+		if(!disable_ffs) {
 	
         // FFS patch
 		
 		* ((u32 *) 0x200061B8)= (u32) old_ffs_tab_jump;
 		direct_os_sync_after_write((void *) 0x200061B8, 4);
+		}
 
 		}
 
@@ -779,8 +824,11 @@ s32 __FAT_Initialize(u32 *queuehandle)
 
 	/* Register devices */
 	os_device_register(DEVICE_FAT,  ret);
+	
+	if(!disable_ffs) {
 	os_device_register(DEVICE_SDIO, ret);
 	os_device_register(DEVICE_USB,  ret);
+	}
 	
 
 
@@ -842,6 +890,8 @@ int n;
 
 	flag_emu=0;
 
+	if(!disable_ffs) {
+
 	for(n=0;n<32;n++) {if(ffs_fat_fd[n]>=0) FAT_Close(ffs_fat_fd[n]); ffs_fat_fd[n]=-1;}
 
 	if(sd_mounted>0)
@@ -869,6 +919,8 @@ int n;
 		__io_usbstorage.shutdown();
 		usb_mounted=-1;
 		}
+
+	}
 
 	for(n=0;n<2;n++) {swi_mload_led_on();Timer_Sleep(300*1000);swi_mload_led_off();Timer_Sleep(300*1000);}
 
@@ -983,14 +1035,16 @@ int main(void)
 
 /********************************************************************************************************************************************************/
 	
+	if(!disable_ffs) {
 	release_event_handler();
+	}
 
 	/* Initialize module */
 	ret = __FAT_Initialize(&queuehandle);
 	if (ret < 0)
 		return ret;
 
-	
+	if(!disable_ffs) {
  // NOTE: some games don´t use dev/stm/eventhook and i use interrupt event to umount devices and flush datas
 
 	os_software_IRQ(0xb);
@@ -1001,6 +1055,7 @@ int main(void)
 
    // os_register_event_handler(0xb, queuehandle, 0x6661234); // register power off
     os_register_event_handler(0x11, queuehandle, 0x6661235);   // register reset
+	}
 
 	
 
@@ -1016,6 +1071,8 @@ int main(void)
 		
 
 		ret=-101;
+
+		if(disable_ffs) verbose_level=0;
 
 
 		if(((u32) message)==0x6661234) // power off

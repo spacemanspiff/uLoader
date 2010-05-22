@@ -50,7 +50,7 @@ distribution.
 #define USB_MAX_SECTORS			64
 
 /* Variables */
-static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb2";
+static char fs[] ATTRIBUTE_ALIGN(32) = "/dev/usb123";
 static s32  fd = -1;
 
 static u32  sectorSz = 0;

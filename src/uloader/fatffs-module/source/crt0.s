@@ -99,6 +99,16 @@ read_access_perm:
 write_access_perm:
 	mcr     p15, 0, r0,c3,c0
 	bx	lr
+
+	.align 4
+	.global ffs_cfg;
+ffs_cfg:
+	.string "FFS_CFG"
+	.long 0x12340001
+
+	.global disable_ffs
+disable_ffs:
+	.byte 0x0
         
 	.align
 	.pool

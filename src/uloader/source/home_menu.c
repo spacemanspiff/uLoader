@@ -2763,7 +2763,7 @@ if(uload_data)
 			memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 
 			if(Draw_button2(30+48, ylev+32+64*n, buff,
-				temp_hacks[m]))
+				(n+index)==0 ? -1 : temp_hacks[m]))
 					 select_game_bar=100+m;
 		//
 			}

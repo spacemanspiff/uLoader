@@ -210,6 +210,7 @@ int get_partitions();
 
 u8 *search_for_ehcmodule_cfg(u8 *p, int size);
 u8 *search_for_uloader_cfg(u8 *p, int size);
+u8 *search_for_fatffs_module_cfg(u8 *p, int size);
 
 
 #endif

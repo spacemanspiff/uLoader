@@ -16,6 +16,8 @@ extern u32 nand_mode;
 
 extern u32 load_dol();
 
+extern int shadow_mload;
+
 extern int dont_use_diary;
 
 u32 dolparameter=1;
@@ -23,6 +25,9 @@ u32 dolparameter=1;
 #define CERTS_SIZE	0xA00
 
 static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "/sys/cert.sys";
+
+static const char NO_MLOAD[] ATTRIBUTE_ALIGN(32) = "no_mload";
+
 
 s32 GetCerts(signed_blob** Certs, u32* Length)
 {
@@ -532,11 +537,13 @@ const u8 newcode[] = "4E800020";
 
 int is_channel_hook=0;
 
+u32 do_wip_code(void);
+
 void patch_dol(void *Address, int Section_Size, int mode)
 {
 	DCFlushRange(Address, Section_Size);
 	//if(mode)
-	
+
 	__Patch_Error001((void *) Address, Section_Size);
 
 	
@@ -563,6 +570,7 @@ void patch_dol(void *Address, int Section_Size, int mode)
 
 	vidolpatcher(Address, Section_Size);
 	
+	do_wip_code();
 
 	/*HOOKS STUFF - FISHEARS*/
 
@@ -827,6 +835,8 @@ int ret;
 	Screen_flip();
 	WPAD_Shutdown();
 	VIDEO_WaitVSync();
+
+	IOS_Open(NO_MLOAD, 0); // shadow mload
 	
 
 	// Cleanup loader information
@@ -994,6 +1004,10 @@ int load_disc(u8 *discid)
 		if(nand_mode & 3)
 			global_mount|= (nand_mode & 3);
 		else global_mount&=~3;
+
+
+		// shadow mload
+		shadow_mload=1;
 		
 
 		if(is_fat)
@@ -1005,6 +1019,13 @@ int load_disc(u8 *discid)
 			{
 			if((global_mount & 3) || dont_use_diary)
 				{
+				
+				if(load_fatffs_module(NULL)<0) return 17;
+				}
+			else 
+			if(shadow_mload) // special: disables ffs and only works with syscall filter fat device (disebled when you opens "NO_MLOAD")
+				{
+				disable_ffs_patch();
 				
 				if(load_fatffs_module(NULL)<0) return 17;
 				}
@@ -1296,6 +1317,9 @@ int load_disc(u8 *discid)
         WDVD_Close();
 
 		ASND_End();
+		
+		
+		IOS_Open(NO_MLOAD, 0); // shadow mload
 
   
    
