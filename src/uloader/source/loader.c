@@ -22,6 +22,11 @@ extern int dont_use_diary;
 
 u32 dolparameter=1;
 
+extern u32 do_wip_code(void);
+extern void wipreset();
+extern void wipregisteroffset(u32 dst, u32 len);
+
+
 #define CERTS_SIZE	0xA00
 
 static const char certs_fs[] ATTRIBUTE_ALIGN(32) = "/sys/cert.sys";
@@ -537,7 +542,6 @@ const u8 newcode[] = "4E800020";
 
 int is_channel_hook=0;
 
-u32 do_wip_code(void);
 
 void patch_dol(void *Address, int Section_Size, int mode)
 {
@@ -569,8 +573,8 @@ void patch_dol(void *Address, int Section_Size, int mode)
 		Search_and_patch_Video_Modes(Address, Section_Size);
 
 	vidolpatcher(Address, Section_Size);
+
 	
-	do_wip_code();
 
 	/*HOOKS STUFF - FISHEARS*/
 
@@ -752,7 +756,7 @@ int ret;
 
     dol_data=title_dol;
 
-
+	
 /*
 	WDVD_Init();
 	
@@ -847,6 +851,8 @@ int ret;
 	entryPoint = load_dol();
 	
 	if(!entryPoint) return -999;
+
+	do_wip_code();
 
  //*((volatile u32 *)0xcd8000c0)|=32; // led on
 //	 while(1);
@@ -1008,6 +1014,8 @@ int load_disc(u8 *discid)
 
 		// shadow mload
 		shadow_mload=1;
+
+		wipreset();
 		
 
 		if(is_fat)
@@ -1279,7 +1287,16 @@ int load_disc(u8 *discid)
 		
 		void* Entry;
 
-		
+	
+
+/*remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+PX=0;PY=50;
+letter_size(12,24);
+bkcolor=0xff000000;
+color=0xffffffff;
+autocenter=0;		
+*/
+		i=0;
 		while (Load(&Address, &Section_Size, &Partition_Offset))
 		{
 	
@@ -1289,7 +1306,18 @@ int load_disc(u8 *discid)
 
 				patch_dol(Address, Section_Size,0);
 
+				if(i>=3) wipregisteroffset((u32)Address, Section_Size);
+				i++;
+
+				//s_printf("sect: %x %x\n", Address, Section_Size);
+				//	PX=0;PY+=32;
+
 		}
+
+		
+
+//Screen_flip();sleep(20);exit(0);
+
 		
 		str_trace="load_disc() section 8";
 
@@ -1317,11 +1345,8 @@ int load_disc(u8 *discid)
         WDVD_Close();
 
 		ASND_End();
-		
-		
-		IOS_Open(NO_MLOAD, 0); // shadow mload
 
-  
+		IOS_Open(NO_MLOAD, 0); // shadow mload
    
 		// Retrieve application entry point
 		
@@ -1332,15 +1357,18 @@ int load_disc(u8 *discid)
 			
 			
 				cabecera2( "Loading Alternative .dol");
-						
+				wipreset();		
 				
 				Entry=(void *) load_dol();
+
 			}
 		else
 			Entry= Exit();
 
 
 		if(!Entry) return -999;
+
+		do_wip_code();
 
 		str_trace="load_disc() section 11a";
 

@@ -90,12 +90,16 @@ return dol_header->entry_point;
 }
 
 #endif
+void wipreset();
+void wipregisteroffset(u32 dst, u32 len);
 
 u32 load_dol() 
 {
 int i;
 dolheader *dol_header;
 u32 current_addr=0;
+
+	wipreset();
 
 	dol_header = (dolheader *) dol_data;
 
@@ -121,7 +125,10 @@ u32 current_addr=0;
 			DCFlushRange ((void *) dol_header->section_start[i], dol_header->section_size[i]);
 			}
 		if(current_addr & 0x80000000)
+			{
 			patch_dol((void *) dol_header->section_start[i], dol_header->section_size[i],1);
+			//if(i>=3) wipregisteroffset((u32)dol_header->section_start[i], dol_header->section_size[i]);
+			}
 		}
    
 

@@ -91,58 +91,38 @@ s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf)
 
 	/* Calculate offset */
 	offset = ((u64)lba) << 2;
+	mod  = ((u32) offset) & 31;
 
-	/* Calculate sizes */
-	mod  = ((u32) iobuf) & 31;
+	
+	buffer=memalign(32, 32768+64);
+	if (!buffer)
+		return -1;
 
-	if (mod) {  // Offset not aligned...
-      u32 left = ((0x20 - mod) < len) ? 0x20 - mod : len;
-      buffer = memalign(32, 0x20);
-      if (!buffer)
-         return -1;
+	while(len>0)
+	{
+	size= (len>32768) ? 32768 : len;
 
-      /* Read data */
-      ret = WDVD_UnencryptedRead(buffer, 0x20, offset - mod);
+	if(size>mod) size-=mod;
+
+	 /* Read data */
+      ret = WDVD_UnencryptedRead(buffer, (size+mod+31) &  ~31, offset - mod);
       if (ret < 0)
          goto out;
 
       /* Copy data */
-      memcpy(iobuf, buffer + mod, left);
-      iobuf += left;
-      len -= left;
-      free (buffer);
+      memcpy(iobuf, buffer + mod, size);
 
-      if (len == 0)
-         return 0;
-	 }
+	  iobuf+=size;
 
-	/* Calculate sizes */
-	mod  = len % 32;
-	size = len - mod;
+	  len-= size;
 
-	/* Read aligned data */
-	if (size) {
-		ret = WDVD_UnencryptedRead(iobuf, size, offset);
-		if (ret < 0)
-			goto out;
+	  offset+= (u64) size;
+
+   
+	  mod=0;
 	}
 
-	/* Read non-aligned data */
-	if (mod) {
-		/* Allocate memory */
-		buffer = memalign(32, 0x20);
-		if (!buffer)
-			return -1;
-
-		/* Read data */
-		ret = WDVD_UnencryptedRead(buffer, 0x20, offset + size);
-		if (ret < 0)
-			goto out;
-
-		/* Copy data */
-		memcpy(iobuf + size, buffer, mod);
-	}
-
+	
 	/* Success */
 	ret = 0;
 

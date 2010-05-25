@@ -11,7 +11,7 @@
 
 u32 doltableoffset[64];
 u32 doltablelength[64];
-u32 doltableentries;
+u32 doltableentries=0;
 
 void wipreset()
 {
@@ -25,6 +25,10 @@ void wipregisteroffset(u32 dst, u32 len)
 	doltableentries++;
 }
 
+//extern int PX,PY;
+
+//void s_printf(char *cad, ...);
+
 void patchu8(u32 offset, u8 value)
 {
 	u32 i = 0;
@@ -37,6 +41,7 @@ void patchu8(u32 offset, u8 value)
 	}
 	if (offset-tempoffset < doltablelength[i])
 	{
+//s_printf("%2.2x", *(u8 *)(offset-tempoffset+doltableoffset[i]));
 		*(u8 *)(offset-tempoffset+doltableoffset[i]) = value;
 	}
 }
@@ -44,6 +49,7 @@ void patchu8(u32 offset, u8 value)
 void wipparsebuffer(u8 *buffer, u32 length)
 // The buffer needs a 0 at the end to properly terminate the string functions
 {
+	int i;
 	u32 pos = 0;
 	u32 offset;
 	char buf[10];
@@ -68,15 +74,19 @@ void wipparsebuffer(u8 *buffer, u32 length)
 				offset++;
 				pos +=2;		
 			}	
+		//	s_printf("\n");
 		}
 		if (strchr((char *)(buffer + pos), 10) == NULL)
 		{
-			return;
+			break;
 		} else
 		{
 			pos += (u32)strchr((char *)(buffer + pos), 10)-(u32)(buffer + pos) + 1;
 		}
 	}
+
+	for(i=0;i<doltableentries;i++)
+		DCFlushRange((void *) doltableoffset[i], doltablelength[i]);
 }
 
 static u8 *wipCode= NULL;
@@ -107,6 +117,7 @@ u32 load_wip_code(u8 *discid)
 			memcpy(tempbuffer, discid, 4);
 			snprintf(filepath, 128, "sd:/codes/%s.wip", tempbuffer);
 			fp = fopen(filepath, "rb");
+			
 			}
 		if(!fp)
 			{

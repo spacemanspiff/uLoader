@@ -66,7 +66,7 @@
 
 
 
-char uloader_version[5]="5.0C"; // yes, you can change here the current version of the application
+char uloader_version[5]="5.1B"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
 
@@ -2398,6 +2398,8 @@ error:
 	return NULL;
 }
 
+s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf);
+
 char* disc_BannerTitle(u32 lba, SoundInfo *snd ){
 	void *banner = NULL;
 	int size;
@@ -2407,7 +2409,7 @@ char* disc_BannerTitle(u32 lba, SoundInfo *snd ){
 	init_ciso_table=1;
 	lba_start=lba;
 
-	size = wbfs_extract_file2(fp, "opening.bnr", &banner, fun_fat_read);
+	size = wbfs_extract_file2(fp, "opening.bnr", &banner, __WBFS_ReadDVD/*fun_fat_read*/);
 	
 
 	if (!banner || size <= 0) goto error;
@@ -2621,6 +2623,7 @@ thread_in_second_plane=0;
 		Get_AlternativeDol(discid);
 
 	load_wip_code(discid);
+	
 	
 	if(sd_ok)
 		{

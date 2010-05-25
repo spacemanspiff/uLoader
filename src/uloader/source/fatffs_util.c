@@ -1179,19 +1179,32 @@ int FAT_get_title(u64 id, void **dol, u8 *str_id, int dont_use_boot)
 
 	Tmd=(tmd*)SIGNATURE_PAYLOAD((signed_blob *)title_tmd);
 
+	if(!Tmd) exit(0);
+
     u16 boot_index = Tmd->boot_index;
 	Content = Tmd->contents;
 	group_id= Tmd->group_id;
 
 	title_ios=(u32) (Tmd->sys_version & 0xff);
 
+	str_trace="FAT_get_title() section 3a";
+
 	// obtain the complete game ID
 	
-	sprintf((void *) str_id, "%04x%02x", (u32) id, group_id);
+	{
+	static char str_id2[16];
+
+	sprintf((void *) str_id2, "%04x%02x", (u32) id, group_id);
+
+	str_trace="FAT_get_title() section 3b";
+
+	memcpy(str_id2, str_id, 6);
+	}
 
 	// read shared list
 	void *shared_db= NULL;
 	int shared_db_len=0;
+
 
 	sprintf(dir_path, "%s/shared/#shared.dtb", &dev_names[(nand_mode & 1)==0][0]);
 	

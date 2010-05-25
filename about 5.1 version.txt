@@ -1,9 +1,9 @@
-Version 5.0C
+Version 5.1
 ------------
 
 - Added dev/mload shadow engine (to avoid PoP device detection)
 
-- Added .wip file support (put it in folder sd:/ codes or usb:/ codes). You can use 3, 4 or 6 chars for the ID
+- Added .wip file support (put it in folder sd:/ codes or usb:/ codes). You can use 3, 4 or 6 chars for the ID (corrected)
 
 - Removed port 1 USB support (because it don´t work)
 
