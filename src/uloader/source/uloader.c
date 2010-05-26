@@ -66,7 +66,7 @@
 
 
 
-char uloader_version[5]="5.1B"; // yes, you can change here the current version of the application
+char uloader_version[5]="5.1D"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
 
@@ -3646,7 +3646,7 @@ get_games:
 
 				
 
-				if(load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
+				if(header && header->id && load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
 					{
 
 					load_alt_game_disc=(mode_disc & 3)!=0;
@@ -5310,7 +5310,12 @@ get_games:
 
 									if(temp_sel>=0)
 									     snd_fx_yes();
-									else snd_fx_no();
+									else 
+										{
+										snd_fx_no();
+										
+										goto meapilas1;
+										}
 
 									game_mode=temp_sel+1;
 
@@ -5321,7 +5326,7 @@ get_games:
 
 									if(dolmenubuffer) free(dolmenubuffer);dolmenubuffer=NULL;
 
-									if(load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
+									if(header && header->id && load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
 										{
 
 										load_alt_game_disc=(mode_disc & 3)!=0;
@@ -5368,7 +5373,7 @@ get_games:
 											game_mode=0; // block game_mode, active parental_mode
 										}
 								
-
+									meapilas1: ;
 									}
 								}
 							}
