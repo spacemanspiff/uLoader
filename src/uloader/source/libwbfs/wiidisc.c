@@ -5,6 +5,8 @@
 
 #include "wiidisc.h"
 
+#include "../debug.h"
+
 void aes_set_key(u8 *key);
 void aes_decrypt(u8 *iv, u8 *inbuf, u8 *outbuf, unsigned long long len);
 
@@ -113,7 +115,6 @@ static u32 do_fst(wiidisc_t *d,u8 *fst, const char *names, u32 i)
                 }
 		return size;
 	}
-        //printf("name    %s\n",name);
 
 	if (fst[12*i]) {
 
@@ -131,10 +132,12 @@ static u32 do_fst(wiidisc_t *d,u8 *fst, const char *names, u32 i)
                         partition_read(d,offset, 0, size,1);
 		return i + 1;
 	}
+
 }
 
 static void do_files(wiidisc_t*d)
 {
+
 	u8 *b = wbfs_ioalloc(0x480); // XXX: determine actual header size
 	u32 dol_offset;
 	u32 fst_offset;
@@ -146,6 +149,12 @@ static void do_files(wiidisc_t*d)
 	u32 n_files;
 	partition_read(d,0, b, 0x480,0);
 
+#ifdef ENABLE_DEBUG
+	char descr[256];
+	snprintf(descr, 256, "header%d", d->partition_number);
+	debug_dump_mem(b, 0x480, descr);
+#endif
+
 	dol_offset = _be32(b + 0x0420);
 	fst_offset = _be32(b + 0x0424);
 	fst_size = _be32(b + 0x0428)<<2;
@@ -154,18 +163,36 @@ static void do_files(wiidisc_t*d)
 	partition_read(d,apl_offset, apl_header, 0x20,0);
 	apl_size = 0x20 + _be32(apl_header + 0x14) + _be32(apl_header + 0x18);
         // fake read dol and partition
-        partition_read(d,apl_offset, 0, apl_size,1);
+	if (apl_size) 
+	        partition_read(d,apl_offset, 0, apl_size,1);
         partition_read(d,dol_offset, 0,  (fst_offset - dol_offset)<<2,1);
         
+#ifdef ENABLE_DEBUG
+	sprintf(log_buffer, "do_files: partition number: %d\n"
+			    "\tfst size=%d offset=%d\n"
+			    "\tapl size=%d offset=%d\n"
+			    "\tdol offset=%d", d->partition_number, fst_size, fst_offset, apl_size, apl_offset, dol_offset);
+	debug_log(log_buffer);
+#endif
 
-	fst = wbfs_ioalloc(fst_size);
-	if (fst == 0)
-		wbfs_fatal("malloc fst");
-	partition_read(d,fst_offset, fst, fst_size,0);
-	n_files = _be32(fst + 8);
+	if (fst_size) {
+		fst = wbfs_ioalloc(fst_size);
+		if (fst == 0)
+			wbfs_fatal("malloc fst");
+		partition_read(d,fst_offset, fst, fst_size,0);
+#ifdef ENABLE_DEBUG
+		snprintf(descr, 256, "fst%d", d->partition_number);
+		debug_dump_mem(fst, fst_size, descr);
+#endif
+		n_files = _be32(fst + 8);
 
-	if (n_files > 1)
-		do_fst(d,fst, (char *)fst + 12*n_files, 0);
+		// Fix parsing fst if not valid
+		if (12*n_files <= fst_size ) { 
+			if (n_files > 1) {
+				do_fst(d,fst, (char *)fst + 12*n_files, 0);
+			}
+		}
+	}
         wbfs_iofree(b);
         wbfs_iofree(apl_header);
 	wbfs_iofree(fst);
@@ -187,6 +214,13 @@ static void do_partition(wiidisc_t*d)
 	partition_raw_read(d,0, tik, 0x2a4);
 	partition_raw_read(d,0x2a4>>2, b, 0x1c);
 
+#ifdef ENABLE_DEBUG
+	char descr[256];
+	snprintf(descr, 256, "tik%d", d->partition_number);
+	debug_dump_mem(tik, 0x2a4, descr);
+	snprintf(descr, 256, "sizes%d", d->partition_number);
+	debug_dump_mem(b, 0x1c,descr);
+#endif
 	tmd_size = _be32(b);
 	tmd_offset = _be32(b + 4);
 	cert_size = _be32(b + 8);
@@ -194,20 +228,41 @@ static void do_partition(wiidisc_t*d)
 	h3_offset = _be32(b + 0x10);
 	d->partition_data_offset = _be32(b + 0x14);
         d->partition_block = (d->partition_raw_offset+d->partition_data_offset)>>13;
+#ifdef ENABLE_DEBUG
+	sprintf(log_buffer, "do_partition: partition number: %d\n"
+			    "\ttmd size=%d offset=%lld\n"
+			    "\tcert size=%d offset=%lld\n"
+			    "\th3 offset=%lld", d->partition_number, tmd_size, tmd_offset, cert_size, cert_offset, h3_offset);
+	debug_log(log_buffer);
+#endif
 	tmd = wbfs_ioalloc(tmd_size);
 	if (tmd == 0)
 		wbfs_fatal("malloc tmd");
 	partition_raw_read(d,tmd_offset, tmd, tmd_size);
 
+#ifdef ENABLE_DEBUG
+	snprintf(descr, 256, "tmd%d", d->partition_number);
+	debug_dump_mem(tmd, tmd_size, descr);
+#endif
 	cert = wbfs_ioalloc(cert_size);
 	if (cert == 0)
 		wbfs_fatal("malloc cert");
 	partition_raw_read(d,cert_offset, cert, cert_size);
 
+#ifdef ENABLE_DEBUG
+	snprintf(descr, 256, "cert%d", d->partition_number);
+	debug_dump_mem(cert, cert_size, descr);
+#endif
 
 	_decrypt_title_key(tik, d->disc_key);
 
 	partition_raw_read(d,h3_offset, 0, 0x18000);
+
+#ifdef ENABLE_DEBUG
+	snprintf(descr, 256, "h3-%d", d->partition_number);
+	debug_dump_mem(0, 0x18000, descr);
+#endif
+
         wbfs_iofree(b);
         wbfs_iofree(tik);
 	wbfs_iofree(cert);
@@ -245,14 +300,28 @@ static void do_disc(wiidisc_t*d)
                 return ;
         }
 	disc_read(d,0x40000>>2, b, 0x100);
+	debug_dump_mem(b, 0x100,"part");
 	n_partitions = _be32(b);
 	disc_read(d,_be32(b + 4), b, 0x100);
+	debug_dump_mem(b, 0x100,"part2");
+#ifdef ENABLE_DEBUG
+	sprintf(log_buffer, "do_disc: found %d partitions\n", n_partitions);
+	debug_log(log_buffer);
+#endif
 	for (i = 0; i < n_partitions; i++){
 		partition_offset[i] = _be32(b + 8 * i);
 		partition_type[i] = _be32(b + 8 * i+4);
+#ifdef ENABLE_DEBUG
+		sprintf(log_buffer, "\tpartition %d - offset: %lld type: %lld\n",  i, partition_offset[i], partition_type[i]);
+		debug_log(log_buffer);
+#endif
         }
+
 	for (i = 0; i < n_partitions; i++) {
                 d->partition_raw_offset = partition_offset[i];
+#ifdef ENABLE_DEBUG
+		d->partition_number = i;
+#endif
                 if(!test_parition_skip(partition_type[i],d->part_sel))
                         do_partition(d);
 	}

@@ -6,6 +6,7 @@
 #include "utils.h"
 
 #include "wdvd.h"
+#include "landvd.h"
 
 #include "libwbfs/libwbfs.h"
 
@@ -77,6 +78,18 @@ void __WBFS_Spinner(s32 x, s32 max)
 		}
 }
 
+s32 __WBFS_ReadLAN(void *fp, u32 lba, u32 len, void *iobuf)
+{
+	u64 offset;
+	s32 ret;
+
+	offset = ((u64)lba) << 2;
+
+	ret = LAN_UnencryptedRead(iobuf, len, offset);
+
+	return ret;
+}
+
 
 s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf)
 {
@@ -88,6 +101,28 @@ s32 __WBFS_ReadDVD(void *fp, u32 lba, u32 len, void *iobuf)
 
 	/* Calculate offset */
 	offset = ((u64)lba) << 2;
+
+	mod  = offset % 32;
+	if (mod) {  // Offset not aligned...
+		u32 left = ((0x20 - mod) < len) ? 0x20 - mod : len;
+		buffer = memalign(32, 0x20);
+		if (!buffer)
+			return -1;
+
+		/* Read data */
+		ret = WDVD_UnencryptedRead(buffer, 0x20, offset - mod);
+		if (ret < 0)
+			goto out;
+
+		/* Copy data */
+		memcpy(iobuf, buffer + mod, left);
+		iobuf += left;
+		len -= left;
+		free (buffer);
+
+		if (len == 0)
+			return 0;
+	}
 
 	/* Calcualte sizes */
 	mod  = len % 32;
@@ -508,7 +543,11 @@ s32 WBFS_AddGame(int mode)
 		return -1;
 	u32 count = wbfs_count_usedblocks(hdd);
 
+#ifdef USE_LAN
+	u32 estimation = wbfs_estimate_disc(hdd,  __WBFS_ReadLAN,__WBFS_Spinner, (mode==0)  ? ONLY_GAME_PARTITION : ALL_PARTITIONS);
+#else
 	u32 estimation = wbfs_estimate_disc(hdd,  __WBFS_ReadDVD,__WBFS_Spinner, (mode==0)  ? ONLY_GAME_PARTITION : ALL_PARTITIONS);
+#endif
 
 	a=(double)estimation;
 	b=( ((double)count) * ((double)(hdd->wbfs_sec_sz/512)));
@@ -521,7 +560,11 @@ s32 WBFS_AddGame(int mode)
 
 
 	/* Add game to USB device */
+#ifdef USE_LAN
+	ret = wbfs_add_disc(hdd, __WBFS_ReadLAN, NULL, __WBFS_Spinner,(mode==0) ? ONLY_GAME_PARTITION : ALL_PARTITIONS, 0);
+#else
 	ret = wbfs_add_disc(hdd, __WBFS_ReadDVD, NULL, __WBFS_Spinner,(mode==0) ? ONLY_GAME_PARTITION : ALL_PARTITIONS, 0);
+#endif
 	if (ret < 0)
 		return ret;
 

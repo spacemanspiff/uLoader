@@ -3,6 +3,8 @@
 #include <malloc.h>
 #include <ogcsys.h>
 
+#include "debug.h"
+
 /* Constants */
 #define IOCTL_DI_READID		0x70
 #define IOCTL_DI_READ		0x71
@@ -65,6 +67,8 @@ s32 WDVD_Reset(void)
 {
 	s32 ret;
 
+	debug_log("WDVD_Reset called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Reset drive */
@@ -72,6 +76,10 @@ s32 WDVD_Reset(void)
 	inbuf[1] = 1;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_RESET, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_Reset exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -82,12 +90,17 @@ s32 WDVD_ReadDiskId(void *id)
 {
 	s32 ret;
 
+	debug_log("WDVD_ReadDiskId called\n");
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Read disc ID */
 	inbuf[0] = IOCTL_DI_READID << 24;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_READID, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_ReadDiskId exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -103,6 +116,9 @@ s32 WDVD_Seek(u64 offset)
 {
 	s32 ret;
 
+	sprintf(log_buffer, "WDVD_Seek called with %lld\n", offset);
+	debug_log(log_buffer);
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Drive seek */
@@ -110,6 +126,10 @@ s32 WDVD_Seek(u64 offset)
 	inbuf[1] = (u32)(offset >> 2);
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_SEEK, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_Seek exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if(ret!=1)
 		{
 	    // Try old cIOS 222
@@ -127,6 +147,11 @@ s32 WDVD_Seek(u64 offset)
 
 s32 WDVD_Offset(u64 offset)
 {
+	sprintf(log_buffer, "WDVD_Offset called with %lld\n", offset);
+	debug_log(log_buffer);
+
+	memset(inbuf, 0, sizeof(inbuf));
+
 	u32 *off = (u32 *)((void *)&offset);
 	s32 ret;
 
@@ -138,6 +163,10 @@ s32 WDVD_Offset(u64 offset)
 	inbuf[2] = (off[1] >> 2);
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_OFFSET, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_Offset exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -148,12 +177,18 @@ s32 WDVD_StopLaser(void)
 {
 	s32 ret;
 
+	debug_log("WDVD_StopLaser called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Stop laser */
 	inbuf[0] = IOCTL_DI_STOPLASER << 24;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_STOPLASER, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_StopLaser exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -164,15 +199,20 @@ s32 WDVD_StopMotor(void)
 {
 	s32 ret;
 
+	debug_log("WDVD_StopMotor called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Stop motor */
 	inbuf[0] = IOCTL_DI_STOPMOTOR << 24;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_STOPMOTOR, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_StopMotor exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
-
 	return (ret == 1) ? 0 : -ret;
 }
 
@@ -180,6 +220,8 @@ s32 WDVD_OpenPartition(u64 offset, void* Ticket, void* Certificate, unsigned int
 {
 	static ioctlv	Vectors[5]		__attribute__((aligned(0x20)));
 	s32 ret;
+
+	debug_log("WDVD_OpenPartition called\n");
 
 	inbuf[0] = IOCTL_DI_OPENPART << 24;
 	inbuf[1] = offset;
@@ -197,6 +239,10 @@ s32 WDVD_OpenPartition(u64 offset, void* Ticket, void* Certificate, unsigned int
 
 	ret = IOS_Ioctlv(di_fd, IOCTL_DI_OPENPART, 3, 2, (ioctlv *)Vectors);
 
+
+	sprintf(log_buffer, "WDVD_OpenPartition exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -207,20 +253,28 @@ s32 WDVD_ClosePartition(void)
 {
 	s32 ret;
 
+	debug_log("WDVD_ClosePartition called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Close partition */
 	inbuf[0] = IOCTL_DI_CLOSEPART << 24;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_CLOSEPART, inbuf, sizeof(inbuf), NULL, 0);
+
+	sprintf(log_buffer, "WDVD_ClosePartition exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
-
 	return (ret == 1) ? 0 : -ret;
 }
 
 s32 WDVD_UnencryptedRead(void *buf, u32 len, u64 offset)
 {
+	sprintf(log_buffer, "WDVD_UnencryptedRead called len=%d offset=%lld\n", len, offset);
+	debug_log(log_buffer);
+
 	s32 ret;
 
 	memset(inbuf, 0, sizeof(inbuf));
@@ -231,15 +285,21 @@ s32 WDVD_UnencryptedRead(void *buf, u32 len, u64 offset)
 	inbuf[2] = (u32)(offset >> 2);
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_UNENCREAD, inbuf, sizeof(inbuf), buf, len);
+
+	sprintf(log_buffer, "WDVD_UnencryptedRead exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
-
 	return (ret == 1) ? 0 : -ret;
 }
 
 s32 WDVD_Read(void *buf, u32 len, u64 offset)
 {
 	s32 ret;
+
+	sprintf(log_buffer, "WDVD_Read called len=%d offset=%lld\n", len, offset);
+	debug_log(log_buffer);
 
 	memset(inbuf, 0, sizeof(inbuf));
 
@@ -249,9 +309,12 @@ s32 WDVD_Read(void *buf, u32 len, u64 offset)
 	inbuf[2] = (u32)(offset >> 2);
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_READ, inbuf, sizeof(inbuf), buf, len);
+
+	sprintf(log_buffer, "WDVD_Read exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
-
 	return (ret == 1) ? 0 : -ret;
 }
 
@@ -259,15 +322,20 @@ s32 WDVD_WaitForDisc(void)
 {
 	s32 ret;
 
+	debug_log("WDVD_WaitForDisc called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Wait for disc */
 	inbuf[0] = IOCTL_DI_WAITCVRCLOSE << 24;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_WAITCVRCLOSE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_WaitForDisc exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
-
 	return (ret == 1) ? 0 : -ret;
 }
 
@@ -275,12 +343,18 @@ s32 WDVD_GetCoverStatus(u32 *status)
 {
 	s32 ret;
 
+	debug_log("WDVD_GetCoverStatus called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Get cover status */
 	inbuf[0] = IOCTL_DI_GETCOVER << 24;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_GETCOVER, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_GetCoverStatus exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -290,7 +364,6 @@ s32 WDVD_GetCoverStatus(u32 *status)
 
 		return 0;
 	}
-
 	return -ret;
 }
 
@@ -298,12 +371,18 @@ s32 WDVD_GetCoverStatus_USB_DVD(u32 *status)
 {
 	s32 ret;
 
+	debug_log("WDVD_GetCoverStatus_USB_DVD called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Get cover status */
 	inbuf[0] = 0x13/*IOCTL_DI_GETCOVER*/ << 24;
 
 	ret = IOS_Ioctl(di_fd, 0x13/*IOCTL_DI_GETCOVER*/, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_GetCoverStatus_USB exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -321,6 +400,9 @@ s32 WDVD_DisableReset(u8 val)
 {
 	s32 ret;
 
+	sprintf(log_buffer, "WDVD_DisableReset called with val=%d\n", val);
+	debug_log(log_buffer);
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Disable/Enable reset */
@@ -328,6 +410,10 @@ s32 WDVD_DisableReset(u8 val)
 	inbuf[1] = val;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_DISABLERESET, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_DisableReset exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 
@@ -337,6 +423,9 @@ s32 WDVD_DisableReset(u8 val)
 s32 WDVD_SetUSBMode(u8 *id, s32 partition)
 {
 	s32 ret;
+
+	sprintf(log_buffer, "WDVD_SetUSBMode called partition=%d - id=%d\n", partition, (id!=0));
+	debug_log(log_buffer);
 
 	memset(inbuf, 0, sizeof(inbuf));
 
@@ -351,9 +440,12 @@ s32 WDVD_SetUSBMode(u8 *id, s32 partition)
 		memcpy(&inbuf[2], id, 6);
 		inbuf[5] = partition;
 		}
-	else if(partition) inbuf[5] = partition;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_SETUSBMODE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
+	sprintf(log_buffer, "WDVD_SetUSBMode exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if(ret!=1)
 		{ // Try old cIOS 222
 		/* Set USB mode */
@@ -371,6 +463,8 @@ s32 WDVD_Read_Disc_BCA(void *buf)
 {
 	s32 ret;
 
+	debug_log("WDVD_Read_Disc_BCA called\n");
+
 	memset(inbuf, 0, sizeof(inbuf));
 
 	/* Disc read */
@@ -378,6 +472,10 @@ s32 WDVD_Read_Disc_BCA(void *buf)
 	//inbuf[1] = 64;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_DISC_BCA, inbuf, sizeof(inbuf), buf, 64);
+
+	sprintf(log_buffer, "WDVD_Read_Disc_BCA exited with status %d\n", ret);
+	debug_log(log_buffer);
+
 	if (ret < 0)
 		return ret;
 

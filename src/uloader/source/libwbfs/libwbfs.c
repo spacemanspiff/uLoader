@@ -3,6 +3,8 @@
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 
+#include "../debug.h"
+
 #include "libwbfs.h"
 
 #define likely(x)       __builtin_expect(!!(x), 1)
@@ -738,7 +740,7 @@ u32 wbfs_estimate_disc
 	wbfs_disc_info_t *info = 0;
 	
 	tot = 0;
-	
+
 	used = wbfs_malloc(p->n_wii_sec_per_disc);
 	if (!used)
 	{
@@ -748,7 +750,7 @@ u32 wbfs_estimate_disc
 	d = wd_open_disc(read_src_wii_disc, callback_data);
 	if (!d)
 	{
-		ERROR("unable to open wii disc");
+		ERROR("unable to open wii disc\n");
 	}
 	
 	wd_build_disc_usage(d,sel,used);

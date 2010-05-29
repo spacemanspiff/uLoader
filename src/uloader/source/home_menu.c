@@ -4,6 +4,8 @@
 #include "http.h"
 #include "ehcmodule.h"
 
+#include "landvd.h"
+
 extern int frames2;
 
 extern int abort_signal;
@@ -639,8 +641,11 @@ char str_id[7];
 			//sleep(4);
 			goto out;
 			}
-	  
+#ifdef USE_LAN	  
+		ret = LAN_Wait();
+#else
 		ret = Disc_Wait();
+#endif
 		if(ret==0) break;
 		if (ret < 0) 
 			{
@@ -669,7 +674,11 @@ char str_id[7];
 	remote_call(draw_add_game_mess);
 
 		/* Open disc */
+#ifdef USE_LAN
+	ret = LAN_Open();
+#else
 	ret = Disc_Open();
+#endif
 	if (ret < 0) 
 		{
 		
@@ -691,7 +700,11 @@ char str_id[7];
 		}
   
 	/* Check disc */
+#ifdef USE_LAN
+	ret = LAN_IsWii();
+#else
 	ret = Disc_IsWii();
+#endif
 	if (ret < 0) 
 		{
 		remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
@@ -714,8 +727,11 @@ char str_id[7];
 
 
 	/* Read header */
+#ifdef USE_LAN
+	LAN_ReadHeader(&header);
+#else
 	Disc_ReadHeader(&header);
-
+#endif
 	
 	memcpy(str_id,header.id,6); str_id[6]=0;
 	
@@ -835,7 +851,7 @@ char str_id[7];
 	SetVideoSleep(0);
 
 	/* Install game */
-	ret = WBFS_AddGame(0);
+	ret =  WBFS_AddGame(0);
 
 	while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
 

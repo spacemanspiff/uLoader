@@ -20,12 +20,13 @@ BUILD		:=	build
 SOURCES		:=	../source ../source/libpng/pngu ../source/libwbfs ../source/resources
 DATA		:=	../data  
 INCLUDES	:=
+#DEBUG           :=      -DENABLE_DEBUG
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -Os -mrvl -Wall $(MACHDEP) $(INCLUDE) $(DEBUG)
+CFLAGS	= -g -Os -mrvl -Wall $(MACHDEP) $(INCLUDE) $(DEBUG) -DUSE_LAN
 CXXFLAGS	=	$(CFLAGS)
 
 LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -T../../rvl.ld
