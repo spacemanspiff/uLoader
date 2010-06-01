@@ -6,6 +6,9 @@
 
 #include "wiidisc.h"
 
+#ifndef WIN32
+#include <netinet/in.h>
+#endif
 void aes_set_key(u8 *key);
 void aes_decrypt(u8 *iv, u8 *inbuf, u8 *outbuf, unsigned long long len);
 
@@ -270,7 +273,7 @@ static void do_disc(wiidisc_t*d)
         wbfs_iofree(b);
 }
 
-wiidisc_t *wd_open_disc(read_wiidisc_callback_t read,void*fp)
+wiidisc_t *wd_open_disc(read_wiidisc_callback_t read,HANDLE_TYPE fp)
 {
         wiidisc_t *d = wbfs_malloc(sizeof(wiidisc_t));
         if(!d)

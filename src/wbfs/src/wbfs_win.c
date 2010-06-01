@@ -3,15 +3,23 @@
 // Licensed under the terms of the GNU GPL, version 2
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
+#ifdef WIN32
 #include <windows.h>
 #include "commdlg.h"
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <stdio.h>     /* for printf */
 #include <stdlib.h>    /* for exit */
+#ifdef WIN32
 #include "xgetopt.h"
+#include <conio.h>
+#endif
 #include <sys/stat.h>
 
 #include <ctype.h>
-#include <conio.h>
 
 #ifdef WIN32
 #include <direct.h>
@@ -23,15 +31,9 @@
 #include "tools.h"
 #include "libwbfs.h"
 
-#ifdef WIN32
-#define snprintf _snprintf
-#endif
-
+#include "os.h"
 
 int block_ciso=0;
-
-wbfs_t *wbfs_try_open(char *disc, char *partition, int reset);
-wbfs_t *wbfs_try_open_partition(char *fn, int reset);
 
 u32 wbfs_add_cfg(wbfs_t *p);
 
@@ -44,61 +46,62 @@ char ciso_map[32768];
 int ciso_map_off[32768];
 unsigned ciso_size=64*32768;
 
-int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
+int read_wii_disc_sector(HANDLE_TYPE handle, u32 _offset, u32 count, void *buf)
 {
-	HANDLE *handle = (HANDLE *)_handle;
-	LARGE_INTEGER large;
-	DWORD read;
+	DWORD readBytes;
 	u32 read_size;
 	u64 offset = _offset;
+	u64 large;
 	int finish=0;
 	offset <<= 2ULL;
 	
+#ifndef WIN32
+	printf("Esta version todavia no funciona correctamente.\n");
+	exit(0);
+#endif
 	while((int) count>0)
     {
     
 	read_size=count;
 
-		if(ciso_mode== (int) _handle)
+		if(ciso_mode== (int) handle) 
 		{
 		u64 lba;
 		int off=ciso_map_off[(u32)(offset/(u64)ciso_size)];
 		if(read_size>ciso_size) read_size=ciso_size;
-		if(off<0) {memset(buf,0,read_size);if(off==-2) finish=1; read=read_size; goto skip_1;}
+		if(off<0) {memset(buf,0,read_size);if(off==-2) finish=1; readBytes=read_size; goto skip_1;}
 
 		lba=((u64) off) * ((u64) ciso_size);
 		lba+=32768ULL;
 	//	printf("coffset %i size %i\n",_offset,count);
-		large.QuadPart = lba+ (offset &  ((u64)(ciso_size-1)));
-		
+		large = lba+ (offset &  ((u64)(ciso_size-1)));
 		}
-		else {large.QuadPart = offset;}
+		else {large = offset;}
 
-		if (SetFilePointerEx(handle, large, NULL, FILE_BEGIN) == FALSE)
+		if (!os_seek(handle, large))
 		{
 			wbfs_error("error seeking in disc file");
 			return 1;
 		}
 		
-		read = 0;
-		if (ReadFile(handle, buf, read_size, &read, NULL) == FALSE)
+		if (!os_read(handle, buf, count,&readBytes))
 		{
 			wbfs_error("error reading wii disc sector");
 			return 1;
 		}
 
-		if (read != read_size)
+		if (readBytes != read_size)
 		{
-			if(ciso_mode!= (int) _handle || 1)
+			if(ciso_mode!= (int) handle || 1) 
 				{
 				wbfs_error("error reading wii disc sector (size mismatch)");
 				return 1;
 				}
 		}
 skip_1:
-	count-=read;
-	buf=((char *) buf)+read;
-	offset+=(u64) read;
+	count-=readBytes;
+	buf=((char *) buf)+readBytes;
+	offset+=(u64) readBytes;
 	}
 	if(finish) return 1;
 
@@ -126,25 +129,21 @@ else
 	}
 }
 
-int write_wii_disc_sector(void *_handle, u32 lba, u32 count, void *buf)
+int write_wii_disc_sector(HANDLE_TYPE handle, u32 lba, u32 count, void *buf)
 {
-	HANDLE *handle = (HANDLE *)_handle;
-	LARGE_INTEGER large;
 	DWORD written;
 	u64 offset = lba;
 	
 	offset *= 0x8000;
-	large.QuadPart = offset;
-	
-	if (SetFilePointerEx(handle, large, NULL, FILE_BEGIN) == FALSE)
+
+	if (! os_seek(handle, offset))
 	{
-		fprintf(stderr,"\n\n%lld %p\n", offset, handle);
+		fprintf(stderr,"\n\n%lld\n", offset);
 		wbfs_error("error seeking in wii disc sector (write)");
 		return 1;
 	}
 	
-	written = 0;
-	if (WriteFile(handle, buf, count * 0x8000, &written, NULL) == FALSE)
+	if (! os_write(handle, buf, count * 0x8000, &written))
 	{
 		wbfs_error("error writing wii disc sector");
 		return 1;
@@ -274,11 +273,11 @@ void wbfs_applet_makehbc(wbfs_t *p)
 			snprintf(pngname, 7 + 1 + 8, "%c%c%c%c%c%c\\icon.png", b[0], b[1], b[2], b[3], b[4], b[5]);
 			snprintf(xmlname, 7 + 1 + 8, "%c%c%c%c%c%c\\meta.xml", b[0], b[1], b[2], b[3], b[4], b[5]);
 			
-			CreateDirectory(dirname, NULL);
+			os_createDir(dirname);
 			printf("%s\n", dirname);
 			
-			CopyFile("boot.dol", dolname, FALSE);
-			CopyFile("icon.png", pngname, FALSE);
+			os_copyFile("boot.dol", dolname);
+			os_copyFile("icon.png", pngname);
 
 			xml = fopen(xmlname, "wb");
 			fprintf(xml,"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
@@ -302,7 +301,7 @@ void wbfs_applet_init(wbfs_t *p)
 
 void wbfs_applet_estimate(wbfs_t *p, char *argv)
 {
-	HANDLE *handle = CreateFile(argv, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE_TYPE handle = os_open(argv, FILE_READ);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -312,7 +311,7 @@ void wbfs_applet_estimate(wbfs_t *p, char *argv)
 	{
 		u32 estimation = wbfs_estimate_disc(p, read_wii_disc_sector, handle, ONLY_GAME_PARTITION);
 		fprintf(stderr, "%.2fG\n", (estimation / (GB))* 512.0f);
-		CloseHandle(handle);
+		os_close(handle);
 	}
 }
 
@@ -325,7 +324,7 @@ void wbfs_applet_addcfg(wbfs_t *p)
 	wbfs_disc_t *d;
 
 
-		d = wbfs_open_disc(p, "__CFG_");
+		d = wbfs_open_disc(p, (u8*) "__CFG_");
 		
 		if (d)
 		{
@@ -347,7 +346,7 @@ void wbfs_applet_add(wbfs_t *p, char *argv)
 
 
 
-	HANDLE *handle = CreateFile(argv, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE_TYPE handle = open(argv, FILE_READ);
 	
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -355,30 +354,25 @@ void wbfs_applet_add(wbfs_t *p, char *argv)
 	}
 	else
 	{
-		DWORD read = 0;
+		DWORD readBytes = 0;
 		u32 count = wbfs_count_usedblocks(p);
 		u32 estimation = wbfs_estimate_disc(p, read_wii_disc_sector, handle, ONLY_GAME_PARTITION);
-		LARGE_INTEGER large;
-		large.QuadPart = 0;
-		
-		SetFilePointerEx(handle, large, NULL, FILE_BEGIN);
+		os_seek(handle, 0);
 
 	    if( ((double)estimation)> ( ((double)count) * ((double) (p->wbfs_sec_sz/512))))
 			{
 			fprintf(stderr, "no space left on device (disc full)");
 			
-			CloseHandle(handle);
+			os_close(handle);
 			return;
 			}
 		
-		ReadFile(handle, discinfo, 6, &read, NULL);
+		os_read(handle, discinfo, 6, &readBytes);
         
 		if(discinfo[0]=='C' && discinfo[1]=='I' && discinfo[2]=='S' && discinfo[3]=='O')
 			{
-			LARGE_INTEGER large;
-			large.QuadPart=32768ULL;
-			SetFilePointerEx(handle, large, NULL, FILE_BEGIN);
-			ReadFile(handle, discinfo, 6, &read, NULL);
+			os_seek(handle, 32768);
+			os_read(handle, discinfo, 6, &readBytes);
 			}
 
 		d = wbfs_open_disc(p, discinfo);
@@ -394,7 +388,7 @@ void wbfs_applet_add(wbfs_t *p, char *argv)
 			wbfs_add_disc(p, read_wii_disc_sector, handle, _spinner, ONLY_GAME_PARTITION, 0);
         }
 
-		CloseHandle(handle);
+		os_close(handle);
 	}
 }
 
@@ -410,7 +404,7 @@ void wbfs_applet_isoextract(wbfs_t *p, char *argv)
 	
 	if (d)
 	{
-		HANDLE *handle;
+		HANDLE_TYPE handle;
 		char isoname[0x100];
 		int i,len;
 		
@@ -429,25 +423,20 @@ void wbfs_applet_isoextract(wbfs_t *p, char *argv)
 		
 		strncpy(isoname + len, ".iso", 0x100 - len);
 		
-		handle = CreateFile(isoname, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL);
-		
+		handle = os_open(isoname, FILE_WRITE);
+
 		if (handle == INVALID_HANDLE_VALUE)
 		{
 			fprintf(stderr, "unable to open disc file (%s) for writing\n", isoname);
 		}
 		else
 		{
-			LARGE_INTEGER large;
-
 			fprintf(stderr, "writing to %s\n", isoname);
-
-			large.QuadPart = (d->p->n_wii_sec_per_disc / 2) * 0x8000ULL;
-			SetFilePointerEx(handle, large, NULL, FILE_BEGIN);
-			SetEndOfFile(handle);
+			os_truncate(handle, (d->p->n_wii_sec_per_disc / 2) * 0x8000ULL);
 
 			wbfs_extract_disc(d,write_wii_disc_sector, handle, _spinner);
 			
-			CloseHandle(handle);
+			os_close(handle);
 		}
 		
 		wbfs_close_disc(d);
@@ -509,7 +498,7 @@ void wbfs_applet_extract(wbfs_t *p, char *argv)
 	
 	if (d)
 	{
-		HANDLE *handle;
+		HANDLE_TYPE handle;
 		char isoname[0x100];
 		int i,len;
 		
@@ -528,7 +517,7 @@ void wbfs_applet_extract(wbfs_t *p, char *argv)
 		
 		strncpy(isoname + len, ".ciso", 0x100 - len);
 		
-		handle = CreateFile(isoname, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW  , 0, NULL);
+		handle = os_open(isoname, FILE_WRITE);
 		
 		if (handle == INVALID_HANDLE_VALUE)
 		{
@@ -537,17 +526,13 @@ void wbfs_applet_extract(wbfs_t *p, char *argv)
 		}
 		else
 		{
-			LARGE_INTEGER large;
-
 			fprintf(stderr, "writing to %s\n", isoname);
 
-			large.QuadPart = 0;//(d->p->n_wii_sec_per_disc / 2) * 0x8000ULL;
-			SetFilePointerEx(handle, large, NULL, FILE_BEGIN);
-			SetEndOfFile(handle);
+			os_truncate(handle, 0);
 
 			wbfs_extract_disc2(d,write_wii_disc_sector, handle, _spinner);
 			
-			CloseHandle(handle);
+			os_close(handle);
 		}
 		
 		wbfs_close_disc(d);
@@ -601,7 +586,7 @@ int usage(char **argv)
 			wbfs_applets[i].function_with_twoarguments ? "file.png" : "");
 	}
 
-system("pause");
+	os_waitChar();
 	return EXIT_FAILURE;
 }
 
@@ -609,11 +594,10 @@ int Ask_Yes_no()
 {
  char c;
 
-	while(1) {if(!kbhit()) break; getch();}
-
+ os_waitChar();
 while(1)
 	{
-	c = getchar();
+	c = os_getchar();
 	if(c==10 || c==13) continue;
 
 	if (toupper(c) != 'Y')
@@ -646,18 +630,16 @@ int main(int argc, char *argv[])
 	else
 	{
 	wbfs_t *p;
-			
-	while(1) {if(!kbhit()) break; getch();}
-
+	os_waitChar();
     while(1)
 	{
 		while(1)
 		{
-		system("cls");
+		os_clearScreen();
 		printf("wbfs windows port build 'delta'\nModified by Hermes\n\n");
 		printf("Press Device letter:\n\n");
 
-		device_letter[0]=getch();
+		device_letter[0]=os_getch();
 		device_letter[1]=0;
 
 		if(device_letter[0]==27) return 0;
@@ -676,7 +658,7 @@ int main(int argc, char *argv[])
 	    printf("\n\nFormat as WBFS? (y/n)\n\n");
         if(Ask_Yes_no())
 			{
-			system("cls");
+			os_clearScreen();
 			printf("!!! Warning ALL data on drive '%s' will be lost irretrievably !!!\n\n", device_letter);
 		    printf("Are you sure? (y/n): ");
 			
@@ -688,8 +670,8 @@ int main(int argc, char *argv[])
 				}
 			}
 		printf("\nPress Any Key\n");
-		while(1) {if(!kbhit()) break; getch();}
-		getch();
+		os_waitChar();
+		os_getch();
 
 		}
 	}
@@ -697,7 +679,7 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 	int k;
-	system("cls");
+	os_clearScreen();
 	printf("wbfs windows port build 'delta'\nModified by Hermes\n\n");
 
 	printf("Device: %c\n\n",device_letter[0]);
@@ -709,11 +691,11 @@ int main(int argc, char *argv[])
     
 	printf(" 1-> Add 2-> Add PNG 3-> Extract 4-> ISO Extract 5-> Remove\n 6->Remove CFG 8->Integrity Check 0-> Format\n");
 
-	k=getch();
+	k=os_getch();
 
 	if(k==224)
 		{
-		k=getch();
+		k=os_getch();
 		if(k==80 && pos_list>=0) pos_list++;
 		if(k==72 && pos_list>=0) {pos_list--;if(pos_list<0) pos_list=0;}
 		}
@@ -724,54 +706,35 @@ int main(int argc, char *argv[])
     // add game
 	if(k=='1') 
 		{
-		OPENFILENAME ofn;
 		char szFileName[MAX_PATH] = "";
-
-		ZeroMemory(&ofn, sizeof(ofn));
-
-		ofn.lStructSize = sizeof(ofn); 
-		ofn.hwndOwner =NULL;
-		ofn.lpstrFilter = "ISO Files (*.iso; *.ciso)\0*.iso;*.ciso\0\0\0";
-		ofn.lpstrFile = szFileName;
-		ofn.nMaxFile = MAX_PATH;
-		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_SHAREAWARE ;
-		ofn.lpstrDefExt = "iso";
-		
-		if(GetOpenFileName(&ofn)) 
+		if(os_chooseFile(szFileName, MAX_PATH, 
+			"ISO Files (*.iso; *.ciso)\0*.iso;*.ciso\0\0\0", "iso")) 
 			{
-			system("cls");
+			os_clearScreen();
 			wbfs_applet_add(p, szFileName);
 
 			printf("\nPress Any Key\n");
-			while(1) {if(!kbhit()) break; getch();}
-			getch();
+#if 0
+			while(1) {if(!kbhit()) break; os_getch();}
+#endif
+			os_getch();
 			}
 		}
 
 	// add .png
 	if(k=='2' && pos_list>=0 && string_id[0]!=0) 
 		{
-		OPENFILENAME ofn;
 		char szFileName[MAX_PATH] = "";
-
-		ZeroMemory(&ofn, sizeof(ofn));
-
-		ofn.lStructSize = sizeof(ofn); 
-		ofn.hwndOwner =NULL;
-		ofn.lpstrFilter = "PNG Files (*.png)\0*.png\0\0\0";
-		ofn.lpstrFile = szFileName;
-		ofn.nMaxFile = MAX_PATH;
-		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_SHAREAWARE ;
-		ofn.lpstrDefExt = "png";
 		
-		if(GetOpenFileName(&ofn)) 
+		if(os_chooseFile(szFileName,MAX_PATH,
+			"PNG Files (*.png)\0*.png\0\0\0", "png")) 
 			{
-				system("cls");
+				os_clearScreen();
 				wbfs_applet_png(p, string_id, szFileName);
 
 				printf("\nPress Any Key\n");
-				while(1) {if(!kbhit()) break; getch();}
-				getch();
+				os_waitChar();
+				os_getch();
 			}
 		}
 
@@ -779,29 +742,28 @@ int main(int argc, char *argv[])
 	if(k=='3' && pos_list>=0 && string_id[0]!=0)
 		{
 			
-			system("cls");
+			os_clearScreen();
 			chdir(current_directory);
 			printf("extract %s to .ciso format? (y/n)\n\n",string_id);
 			if(Ask_Yes_no())
 				wbfs_applet_extract(p, string_id);
 			printf("\nPress Any Key\n");
-			while(1) {if(!kbhit()) break; getch();}
-			getch();
+			os_waitChar();
+			os_getch();
 
 		}
 		
 	// extract .iso
 	if(k=='4' && pos_list>=0  && string_id[0]!=0)
 		{
-			
-			system("cls");
+			os_clearScreen();	
 			chdir(current_directory);
 			printf("extract %s to .iso format? (y/n)\n\n",string_id);
 			if(Ask_Yes_no())
 				wbfs_applet_isoextract(p, string_id);
 			printf("\nPress Any Key\n");
-			while(1) {if(!kbhit()) break; getch();}
-			getch();
+			os_waitChar();
+			os_getch();
 
 		}
 		
@@ -809,7 +771,7 @@ int main(int argc, char *argv[])
 	if(k=='5' && pos_list>=0  && string_id[0]!=0)
 		{   
 			
-			system("cls");
+			os_clearScreen();
 			chdir(current_directory);
 			printf("!!! Warning it remove %s game !!!\n\n", string_id);
 			printf("Are you sure? (y/n):\n");
@@ -817,8 +779,8 @@ int main(int argc, char *argv[])
 				wbfs_applet_remove(p, string_id);
 
 			printf("\nPress Any Key\n");
-			while(1) {if(!kbhit()) break; getch();}
-			getch();
+			os_waitChar();
+			os_getch();
 
 		}
 
@@ -826,7 +788,7 @@ int main(int argc, char *argv[])
 	if(k=='6' && pos_list>=0  && string_id[0]!=0)
 		{   
 			
-			system("cls");
+			os_clearScreen();
 			chdir(current_directory);
 			printf("!!! Warning it remove game CFG for %s!!!\n\n", string_id);
 			printf("Are you sure? (y/n):\n");
@@ -834,8 +796,8 @@ int main(int argc, char *argv[])
 				wbfs_applet_remove_cfg(p, string_id);
 
 			printf("\nPress Any Key\n");
-			while(1) {if(!kbhit()) break; getch();}
-			getch();
+			os_waitChar();
+			os_getch();
 
 		}
 
@@ -847,11 +809,11 @@ int main(int argc, char *argv[])
 
 	if(k=='0')
 		{
-		system("cls");	
+		os_clearScreen();
 	    printf("\n\nFormat as WBFS? (y/n)\n\n");
         if(Ask_Yes_no())
 			{
-			system("cls");
+			os_clearScreen();
 			printf("!!! Warning ALL data on drive '%s' will be lost irretrievably !!!\n\n", device_letter);
 		    printf("Are you sure? (y/n):\n");
 			
@@ -863,15 +825,15 @@ int main(int argc, char *argv[])
 				if(!p)
 					{
 					printf("Exiting by ERROR\n");
-					while(1) {if(!kbhit()) break; getch();}
-					getch();
+					os_waitChar();
+					os_getch();
 					return -1;
 					}
 				}
 			}
 		printf("\nPress Any Key\n");
-		while(1) {if(!kbhit()) break; getch();}
-		getch();
+		os_waitChar();
+		os_getch();
 
 		}
 
@@ -915,7 +877,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "!!! Warning ALL data on drive '%s' will be lost irretrievably !!!\n\n", partition);
 		fprintf(stderr, "Are you sure? (y/n): ");
 
-		c = getchar();
+		c = os_getchar();
 		if (toupper(c) != 'Y')
 		{
 			fprintf(stderr, "Aborted.\n");

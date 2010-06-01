@@ -5,7 +5,13 @@
 
 
 #include "libwbfs.h"
+#ifdef WIN32
 #include <conio.h>
+#else
+#include <ncurses.h>
+#undef ERR
+#include <netinet/in.h>
+#endif
 #include <ctype.h>
 
 #ifndef WIN32
@@ -45,7 +51,7 @@ wbfs_t*wbfs_open_hd(
 					rw_sector_callback_t read_hdsector,
 					rw_sector_callback_t write_hdsector,
 					close_callback_t close_hd,
-					void *callback_data,
+					HANDLE_TYPE callback_data,
 					int hd_sector_size,
 #ifdef WIN32
 					int num_hd_sector,
@@ -87,7 +93,7 @@ extern int block_ciso;
 wbfs_t*wbfs_open_partition(rw_sector_callback_t read_hdsector,
                            rw_sector_callback_t write_hdsector,
 						   close_callback_t close_hd,
-                           void *callback_data,
+                           HANDLE_TYPE callback_data,
                            int hd_sector_size, int num_hd_sector, u32 part_lba, int reset)
 {
         wbfs_t *p = wbfs_malloc(sizeof(wbfs_t));
@@ -338,7 +344,10 @@ for(i=0;i<p->max_disc;i++)
 
 									keyinput=0;
 									
+//FIXME
+#if 0									
 									while(1) {if(!kbhit()) break; getch();}
+#endif
 
 									while(1)
 										{//1
@@ -380,7 +389,10 @@ if(!bad_error)
 	int j;
 
 	printf("Checking for lost blocks... (Press any key to start)\n");
+//FIXME:!!!
+#if 0
 	while(1) {if(!kbhit()) break; getch();}
+#endif
 	getch();
 	
 	for(i=0;i<p->n_wbfs_sec/(32);i++)
@@ -404,7 +416,10 @@ if(!bad_error)
 if(in_use) free(in_use);
 printf("End\n\nPress Any Key\n");
 
+// FIXME!!!
+#if 0
 while(1) {if(!kbhit()) break; getch();}
+#endif
 getch();
 }
 
@@ -643,7 +658,7 @@ u32 wbfs_add_disc
 	(
 		wbfs_t *p,
 		read_wiidisc_callback_t read_src_wii_disc,
-		void *callback_data,
+		HANDLE_TYPE callback_data,
 		progress_callback_t spinner,
 		partition_selector_t sel,
 		int copy_1_1
@@ -888,7 +903,7 @@ error:
 u32 wbfs_estimate_disc
 	(
 		wbfs_t *p, read_wiidisc_callback_t read_src_wii_disc,
-		void *callback_data,
+		HANDLE_TYPE callback_data,
 		partition_selector_t sel
 	)
 {
@@ -1121,7 +1136,7 @@ error:
 }
 
 // data extraction ISO
-u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,void *callback_data,progress_callback_t spinner)
+u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,HANDLE_TYPE callback_data,progress_callback_t spinner)
 {
         wbfs_t *p = d->p;
         u8* copy_buffer = 0;
@@ -1169,7 +1184,7 @@ error:
         return 1;
 }
 // data extraction CISO
-u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,void *callback_data,progress_callback_t spinner)
+u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,HANDLE_TYPE callback_data,progress_callback_t spinner)
 {
         wbfs_t *p = d->p;
         u8* copy_buffer = 0;

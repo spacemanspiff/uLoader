@@ -71,9 +71,9 @@ typedef struct wbfs_disc_info
 //
 
 // callback definition. Return 1 on fatal error (callback is supposed to make retries until no hopes..)
-typedef int (*rw_sector_callback_t)(void*fp,u32 lba,u32 count,void*iobuf);
+typedef int (*rw_sector_callback_t)(HANDLE_TYPE handle,u32 lba,u32 count,void*iobuf);
 typedef void (*progress_callback_t)(int status,int total);
-typedef void (*close_callback_t)(void*fp);
+typedef void (*close_callback_t)(HANDLE_TYPE fp);
 
 
 typedef struct wbfs_s
@@ -103,7 +103,7 @@ typedef struct wbfs_s
         rw_sector_callback_t write_hdsector;
 		close_callback_t close_hd;
 
-        void *callback_data;
+        HANDLE_TYPE callback_data;
 
         u16 max_disc;
         u32 freeblks_lba;
@@ -126,6 +126,9 @@ typedef struct wbfs_disc_s
 
 #define WBFS_MAGIC (('W'<<24)|('B'<<16)|('F'<<8)|('S'))
 
+wbfs_t *wbfs_try_open(char *disc, char *partition, int reset);
+wbfs_t *wbfs_try_open_partition(char *fn, int reset);
+
 /*! @brief open a MSDOS partitionned harddrive. This tries to find a wbfs partition into the harddrive 
    @param read_hdsector,write_hdsector: accessors to a harddrive
    @hd_sector_size: size of the hd sector. Can be set to zero if the partition in already initialized
@@ -136,8 +139,8 @@ typedef struct wbfs_disc_s
 */
 wbfs_t*wbfs_open_hd(rw_sector_callback_t read_hdsector,
                  rw_sector_callback_t write_hdsector,
-				 close_callback_t close_hd,
-                 void *callback_data,
+		 close_callback_t close_hd,
+                 HANDLE_TYPE callback_data,
                  int hd_sector_size, int num_hd_sector, int reset);
 
 /*! @brief open a wbfs partition
@@ -151,8 +154,8 @@ wbfs_t*wbfs_open_hd(rw_sector_callback_t read_hdsector,
 */
 wbfs_t*wbfs_open_partition(rw_sector_callback_t read_hdsector,
                            rw_sector_callback_t write_hdsector,
-						   close_callback_t close_hd,
-                           void *callback_data,
+			   close_callback_t close_hd,
+                           HANDLE_TYPE callback_data,
                            int hd_sector_size, int num_hd_sector, u32 partition_lba, int reset);
 
 
@@ -200,11 +203,11 @@ u32 wbfs_count_usedblocks(wbfs_t*p);
   @sel: selects which partitions to copy.
   @copy_1_1: makes a 1:1 copy, whenever a game would not use the wii disc format, and some data is hidden outside the filesystem.
  */
-u32 wbfs_add_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, void *callback_data,
+u32 wbfs_add_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, HANDLE_TYPE callback_data,
                   progress_callback_t spinner,partition_selector_t sel,int copy_1_1);
 
 
-u32 wbfs_estimate_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, void *callback_data,
+u32 wbfs_estimate_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, HANDLE_TYPE callback_data,
                   partition_selector_t sel);
 
 /*! remove a wiidvd inside a partition */
@@ -219,12 +222,12 @@ u32 wbfs_trim(wbfs_t*p);
 /*! extract a disc from the wbfs, unused sectors are just untouched, allowing descent filesystem to only really usefull space to store the disc.
 Even if the filesize is 4.7GB, the disc usage will be less.
  */
-u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,void *callback_data,progress_callback_t spinner);
+u32 wbfs_extract_disc(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,HANDLE_TYPE callback_data,progress_callback_t spinner);
 
 /*! extract a disc from the wbfs (to CISO format), unused sectors are just untouched, allowing descent filesystem to only really usefull space to store the disc.
 Even if the filesize is 4.7GB, the disc usage will be less.
  */
-u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,void *callback_data,progress_callback_t spinner);
+u32 wbfs_extract_disc2(wbfs_disc_t*d, rw_sector_callback_t write_dst_wii_sector,HANDLE_TYPE callback_data,progress_callback_t spinner);
 
 
 u32 wbfs_add_png(wbfs_disc_t*d, char *png);

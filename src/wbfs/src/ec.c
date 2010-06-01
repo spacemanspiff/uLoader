@@ -7,10 +7,12 @@
 
 #include "tools.h"
 
+#ifdef DEBUG
 // y**2 + x*y = x**3 + x + b
 static u8 ec_b[30] =
 	"\x00\x66\x64\x7e\xde\x6c\x33\x2c\x7f\x8c\x09\x23\xbb\x58\x21"
 	"\x3b\x33\x3b\x20\xe9\xce\x42\x81\xfe\x11\x5f\x7d\x8f\x90\xad";
+#endif
 
 // order of the addition group of points
 static u8 ec_N[30] =
@@ -24,6 +26,7 @@ static u8 ec_G[60] =
 	"\x01\x00\x6a\x08\xa4\x19\x03\x35\x06\x78\xe5\x85\x28\xbe\xbf"
 	"\x8a\x0b\xef\xf8\x67\xa7\xca\x36\x71\x6f\x7e\x01\xf8\x10\x52";
 
+#ifdef DEBUG
 static void elt_print(char *name, u8 *a)
 {
 	u32 i;
@@ -35,6 +38,7 @@ static void elt_print(char *name, u8 *a)
 
 	printf("\n");
 }
+#endif
 
 static void elt_copy(u8 *d, u8 *a)
 {
@@ -185,6 +189,7 @@ static void elt_inv(u8 *d, u8 *a)
 	elt_square(d, s);
 }
 
+#ifdef DEBUG
 static int point_is_on_curve(u8 *p)
 {
 	u8 s[30], t[30];
@@ -208,6 +213,7 @@ static int point_is_on_curve(u8 *p)
 
 	return elt_is_zero(s);
 }
+#endif
 
 static int point_is_zero(u8 *p)
 {

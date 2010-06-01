@@ -1,0 +1,6 @@
+Para compilar en GNU/Linux ejecute:
+	$ make OS=linux
+
+Para compilar en Windows ejecute:
+	$ make
+

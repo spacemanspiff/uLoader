@@ -4,6 +4,8 @@
 
 #include "tools.h"
 
+#include "os.h"
+
 #include <stddef.h>	// to accommodate certain broken versions of openssl
 #include <openssl/md5.h>
 #include <openssl/aes.h>
@@ -426,8 +428,8 @@ void dump_tmd(u8 *tmd)
 	u8 *p;
 
 	printf("       issuer: %s\n", tmd + 0x140);
-	printf("  sys_version: %016llx\n", be64(tmd + 0x0184));
-	printf("     title_id: %016llx\n", be64(tmd + 0x018c));
+	printf("  sys_version: %016" FORMAT64BITS "x\n", be64(tmd + 0x0184));
+	printf("     title_id: %016" FORMAT64BITS "x\n", be64(tmd + 0x018c));
 	printf("   title_type: %08x\n", be32(tmd + 0x0194));
 	printf("     group_id: %04x\n", be16(tmd + 0x0198));
 	printf("title_version: %04x\n", be16(tmd + 0x01dc));
@@ -437,7 +439,7 @@ void dump_tmd(u8 *tmd)
 	n = be16(tmd + 0x01de);
 	p = tmd + 0x01e4;
 	for (i = 0; i < n; i++) {
-		printf("cid %08x  index %04x  type %04x  size %08llx\n",
+		printf("cid %08x  index %04x  type %04x  size %08" FORMAT64BITS "x\n",
 		       be32(p), be16(p + 4), be16(p + 6), be64(p + 8));
 		p += 0x24;
 	}

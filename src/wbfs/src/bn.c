@@ -7,6 +7,7 @@
 
 #include <tools.h>
 
+#ifdef  __DEBUG__
 static void bn_print(char *name, u8 *a, u32 n)
 {
 	u32 i;
@@ -18,6 +19,7 @@ static void bn_print(char *name, u8 *a, u32 n)
 
 	printf("\n");
 }
+#endif
 
 static void bn_zero(u8 *d, u32 n)
 {
