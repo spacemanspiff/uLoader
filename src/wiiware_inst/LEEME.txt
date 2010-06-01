@@ -1,0 +1,14 @@
+- Soporte de Eliminación de WiiWare/VC (borrar y ver bd. de compartidos -
+  borrar conteos de referencia)
+
+- Chequeo de integridad??? revisar que todo este mas o menos bien.
+
+- Listado de titulos instalados
+
+- Ver de crear #uloader.dat (caratulas y que mas???)
+
+- Crear nand ?
+
+- Ordenar para hacer un release
+
+- Probar en Win32
