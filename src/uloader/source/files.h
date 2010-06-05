@@ -24,12 +24,12 @@ struct _files
 extern struct _files files[MAX_ENTRY];
 
 int is_ext(char *a,char *b);
-char * get_name_short(char *name);
-char * get_name_short_fromUTF8(char *name);
+char *get_name_short(char *name);
+char *get_name_short_fromUTF8(char *name);
 void char_to_utf8(char *s, char *d);
 void utf8_to_char(char *s, char *d);
-char * get_name(char *name);
-char * get_name_from_UTF8(char *name);
+char *get_name(char *name);
+char *get_name_from_UTF8(char *name);
 
 void read_list_file(unsigned char *dirname, int flag);
 

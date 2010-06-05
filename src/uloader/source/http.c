@@ -35,9 +35,9 @@
 
 char net_error[256];
 
-char *http_host=NULL;
+char *http_host = NULL;
 u16 http_port;
-char *http_path=NULL;
+char *http_path = NULL;
 
 
 http_res result;
@@ -45,7 +45,8 @@ u32 http_status;
 u32 content_length;
 u8 *http_data;
 
-s32 tcp_socket (void) {
+s32 tcp_socket (void) 
+{
 	s32 s, res;
 
 	s = net_socket (PF_INET, SOCK_STREAM, 0);
@@ -72,7 +73,8 @@ s32 tcp_socket (void) {
 }
 
 
-s32 tcp_connect (char *host, const u16 port) {
+s32 tcp_connect (char *host, const u16 port) 
+{
 	struct hostent *hp;
 	struct sockaddr_in sa;
 	s32 s, res;
@@ -90,9 +92,9 @@ s32 tcp_connect (char *host, const u16 port) {
 		return s;
 
 	memset (&sa, 0, sizeof (struct sockaddr_in));
-	sa.sin_family= AF_INET;
+	sa.sin_family = AF_INET;
 	sa.sin_len = sizeof (struct sockaddr_in);
-	sa.sin_port= htons (port);
+	sa.sin_port = htons (port);
 	memcpy ((char *) &sa.sin_addr, hp->h_addr_list[0], hp->h_length);
 
 
@@ -100,7 +102,7 @@ s32 tcp_connect (char *host, const u16 port) {
 	t = gettime ();
 	while (true) {
 		if (ticks_to_millisecs (diff_ticks (t, gettime ())) >
-				TCP_CONNECT_TIMEOUT) {
+		    TCP_CONNECT_TIMEOUT) {
 			sprintf (net_error, "tcp_connect timeout\n");
 			net_close (s);
 
@@ -108,7 +110,7 @@ s32 tcp_connect (char *host, const u16 port) {
 		}
 
 		res = net_connect (s, (struct sockaddr *) &sa,
-							sizeof (struct sockaddr_in));
+				   sizeof (struct sockaddr_in));
 
 		if (res < 0) {
 			if (res == -EISCONN)
@@ -133,7 +135,8 @@ s32 tcp_connect (char *host, const u16 port) {
 }
 
 
-bool tcp_write (const s32 s, const u8 *buffer, const u32 length) {
+bool tcp_write (const s32 s, const u8 *buffer, const u32 length) 
+{
 	const u8 *p;
 	u32 step, left, block, sent;
 	s64 t;
@@ -182,7 +185,8 @@ bool tcp_write (const s32 s, const u8 *buffer, const u32 length) {
 	return left == 0;
 }
 
-bool http_split_url (char **host, char **path, const char *url) {
+bool http_split_url (char **host, char **path, const char *url) 
+{
 	const char *p;
 	char *c;
 
@@ -205,7 +209,7 @@ bool http_split_url (char **host, char **path, const char *url) {
 struct header_block
 {
 	u32 size;
-    u8 *data;
+	u8 *data;
 };
 
 #define HTTP_BUFFER_SIZE 1024*5
@@ -217,49 +221,47 @@ struct header_block * read_block(s32 s)
       
         static struct header_block buffer;
 
-		u32 offset = 0;
+	u32 offset = 0;
         buffer.data = malloc(HTTP_MAX_BUFFER+HTTP_BUFFER_SIZE);
         buffer.size = 0;
 
-		int retry=10;
+	int retry = 10;
 
-        if(buffer.data == NULL) {
+        if (buffer.data == NULL) {
                 return NULL;
         }
 	
         
-		usleep(200*1000);
-        while(1)
-        {
-		if(offset>=HTTP_MAX_BUFFER)
-			{
-			free(buffer.data);buffer.data=NULL;
+	usleep(200*1000);
+        while (1)  {
+		if (offset >= HTTP_MAX_BUFFER) {
+			free(buffer.data);
+			buffer.data = NULL;
                         
-            return NULL;
-			}
+			return NULL;
+		}
 		retry--;
 			
-              
-        s32 bytes_read = net_read(s, buffer.data + offset, HTTP_BUFFER_SIZE);
+		s32 bytes_read = net_read(s, buffer.data + offset, HTTP_BUFFER_SIZE);
                 
-             
-		if(bytes_read< 0)
-			{
-			if(retry>0 && bytes_read == -EAGAIN) {usleep(100*1000);continue;}
-			free(buffer.data);buffer.data=NULL;	
+		if(bytes_read< 0) {
+			if (retry>0 && bytes_read == -EAGAIN) {
+				usleep(100*1000);
+				continue;
+			}
+			free(buffer.data);
+			buffer.data = NULL;	
 			return NULL;
 			
-			}
-		else retry=10;
+		} else 
+			retry = 10;
 		
 	   
-		if(bytes_read == 0)
-			{
-			  break;
-			}
+		if (bytes_read == 0) {
+			break;
+		}
 		
 		offset += bytes_read;
-                          
         }
 
         buffer.size = offset;
@@ -267,13 +269,15 @@ struct header_block * read_block(s32 s)
         return &buffer;
 }
 
-bool http_request (const char *url, const u32 max_size) {
+bool http_request (const char *url, const u32 max_size) 
+{
 	http_status = 404;
 	content_length = 0;
 	http_data = NULL;
 	unsigned char *content_start = NULL;
 
-	if (!http_split_url(&http_host, &http_path, url)) return false;
+	if (!http_split_url(&http_host, &http_path, url)) 
+		return false;
 
 	http_port = 80;
 
@@ -296,73 +300,83 @@ bool http_request (const char *url, const u32 max_size) {
 //	debug_printf("tcp_write returned %d\n", b);
 	free (request);
 
-	if(!b) goto error;
+	if (!b) 
+		goto error;
 
-    struct header_block *response = (void *) read_block(s);
+	struct header_block *response = (void *) read_block(s);
 	net_close (s);
 	
-		if (!response) {
-			http_status = 404;
-			result = HTTPR_ERR_REQUEST;
-			goto error;
-		}
+	if (!response) {
+		http_status = 404;
+		result = HTTPR_ERR_REQUEST;
+		goto error;
+	}
 
 		
 	result = HTTPR_OK;
 
-    content_length = 0;
+	content_length = 0;
         int i;
-        for(i = 3; i < response->size; i++)
-        {
-        if(response->data[i] == '\n' && response->data[i-1] == '\r' &&
-           response->data[i-2] == '\n' && response->data[i-3] == '\r')
+        for (i = 3; i < response->size; i++) {
+		if(response->data[i] == '\n' && response->data[i-1] == '\r' &&
+		   response->data[i-2] == '\n' && response->data[i-3] == '\r')
                 {
-                content_start  = response->data + i + 1;
-                content_length = response->size - i - 1;
-                break;
+			content_start  = response->data + i + 1;
+			content_length = response->size - i - 1;
+			break;
                 }
         }
          
 		
-		if(content_start == NULL) goto error;
+	if(content_start == NULL) 
+		goto error;
 		
         http_data = (u8 *) malloc (content_length+16);
 		  
-        if(http_data == NULL) goto error;
+        if (http_data == NULL) 
+		goto error;
 
         memset(http_data,0,content_length+16);
-		memcpy(http_data, content_start, content_length);
+	memcpy(http_data, content_start, content_length);
 
-		free (response->data); response->data=NULL;
+	free (response->data); 
+	response->data=NULL;
 		
-    if(http_host) free (http_host); http_host=NULL;
-	if(http_path) free (http_path); http_path=NULL;
+	if (http_host) 
+		free (http_host); 
+	http_host = NULL;
+
+	if (http_path) 
+		free (http_path); 
+	http_path = NULL;
 
 	result = HTTPR_OK;
-
 	return true;
 
 error:
 
-	if(http_host) free (http_host); http_host=NULL;
-	if(http_path) free (http_path); http_path=NULL;
+	if (http_host) 
+		free (http_host); 
+	http_host = NULL;
 
-return false;
+	if (http_path) 
+		free (http_path); 
+	http_path = NULL;
+
+	return false;
 }
 
 bool http_get_result (u32 *_http_status, u8 **content, u32 *length) {
-	if (http_status) *_http_status = http_status;
+	if (http_status) 
+		*_http_status = http_status;
 
 	if (result == HTTPR_OK) {
 		*content = http_data;
 		*length = content_length;
-
 	} else {
 		*content = NULL;
 		*length = 0;
 	}
-
-	
 
 	return true;
 }
@@ -375,56 +389,55 @@ extern void net_deinit(void);
 void http_deinit(void)
 {
 	net_deinit();
-	netInit=0;
+	netInit = 0;
 }
 
 int download_file(char *url, u8 **outbuf, u32 *outlen)
 {
 
-int retval;
-u32 http_status;
-int retry=2;
+	int retval;
+	u32 http_status;
+	int retry=2;
 
 
-	if (!netInit)
-		{
-
-		while (1) 
-			{
+	if (!netInit) {
+		while (1) {
 			retval = net_init ();
-			if (retval < 0) 
-				{
-				if (retval != -EAGAIN) 
-					{
+			if (retval < 0) {
+				if (retval != -EAGAIN) {
 					sprintf (net_error, "net_init failed: %d", retval);
 					return -1;
-					}
 				}
-			if (!retval) break;
-			usleep(100000);
 			}
+			if (!retval) 
+				break;
+
+			usleep(100000);
+		}
 		sleep(1);
 		netInit = 1;
-		}
-	if(!url) return -2;
+	}
+	if (!url) 
+		return -2;
 
-    while(1)
-	{
-	retry--;
-	retval = http_request(url, (u32) (1 << 31));
-	if (!retval) 
-		{
-		sprintf (net_error, "Error making http request");
-		if(retry<0) return -2; else continue;
+	while(1) {
+		retry--;
+		retval = http_request(url, (u32) (1 << 31));
+
+		if (!retval) {
+			sprintf (net_error, "Error making http request");
+			if (retry<0) 
+				return -2; 
+			else 
+				continue;
 		}
-	break;
+		break;
 	}
 	
 	retval = http_get_result(&http_status, outbuf, outlen);
-	if (!retval) 
-		{
+	if (!retval) {
 		sprintf (net_error, "Error getting http file");
 		return -3;
-		}
-return 0;
+	}
+	return 0;
 }

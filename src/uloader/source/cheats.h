@@ -4,7 +4,7 @@
 #include "global.h"
 
 #ifdef ALTERNATIVE_VERSION
-	#include "oggplayer.h"
+#include "oggplayer.h"
 #endif
 
 #define MAX_LIST_CHEATS 25
@@ -18,22 +18,19 @@ struct _data_cheats
 {
 	void *title;
 	void *description;
-
+  
 	int apply;
 	u8 *values;
 	int len_values;
-
+  
 };
 
-typedef struct
-{
-struct
-	{
-	u8 id[6];
-	u8 sel[25];
-	u8 magic;
-	}
-	cheats[1024];
+typedef struct {
+	struct {
+		u8 id[6];
+		u8 sel[25];
+		u8 magic;
+	} cheats[1024];
 } _cheat_file;
 
 extern int len_cheats;
@@ -49,6 +46,4 @@ void create_cheats();
 
 int load_cheats(u8 *discid);
 
-
 #endif
-
