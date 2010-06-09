@@ -19,23 +19,24 @@ static void * remote_thread(void *priv)
   
 	LWP_InitQueue(&remote_queue);
 	
-	while(remote_loop) {
-	
+	while (remote_loop) {
+
 		if (remote_command != 2) {
-			remote_thread_status=0;
+			remote_thread_status = 0;
 			LWP_ThreadSleep(remote_queue);
 		}
 		if (!remote_loop)
 			break;
-		remote_thread_status=1;
+
+		remote_thread_status = 1;
 		
 		switch (remote_command) {
 		case 1:
-			remote_return=USBStorage2_Init();
-			remote_command=0;
+			remote_return = USBStorage2_Init();
+			remote_command = 0;
 			break;
 		case 2:
-			func=remote_arg[0];
+			func = remote_arg[0];
 			func();
 			break;
 		}
@@ -60,8 +61,8 @@ int remote_init(void)
 	if (LWP_CreateThread(&h_remote,
 			     (void *) remote_thread, 
 			     NULL, NULL,
-			     STACKSIZE,REMOTE_PRIORITY)==-1){
-		remote_thread_status=0;
+			     STACKSIZE,REMOTE_PRIORITY) == -1) {
+		remote_thread_status = 0;
 		return -1;
 	}
 
@@ -71,8 +72,7 @@ int remote_init(void)
 
 void remote_end()
 {
-
-	if (h_remote<0)
+	if (h_remote < 0)
 		return;
 
 	while ( remote_status() )
@@ -85,13 +85,14 @@ void remote_end()
 	LWP_ThreadSignal(remote_queue);
 	LWP_JoinThread(h_remote, NULL);
 	
-	h_remote=-1;
+	h_remote = -1;
 }
 
 int remote_ret()
 {
 	if (remote_status())
 		return REMOTE_BUSY;
+
 	return remote_return;
 }
 
@@ -101,9 +102,9 @@ int remote_USBStorage2_Init(void)
 	if( remote_status() )
 		return REMOTE_BUSY;
 	
-	remote_thread_status = 1;
-	remote_return       = -1;
-	remote_command      =  1;
+	remote_thread_status =  1;
+	remote_return        = -1;
+	remote_command       =  1;
 	LWP_ThreadSignal(remote_queue);
 
 	return 0;
@@ -127,8 +128,8 @@ int remote_call(void *func)
 
 void remote_call_abort()
 {
-	if (remote_command==2)
-		remote_command=0;
+	if (remote_command == 2)
+		remote_command = 0;
 
 }
 

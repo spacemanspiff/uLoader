@@ -158,7 +158,7 @@ void adpcm_decode(void *dsp_buf, void *adpcm_info, void *adpcm_data,
 		delta = (short) (1 << (i & 0xff & 0xf));
 		index1 = (i & 0xff) >> 4;
 		
-		for(i = 0; i < 14; i += 2) {
+		for (i = 0; i < 14; i += 2) {
 			//thisbyte = brcdata.ReadByte();
 			thisbyte = cdata[rpos++];
 			j = (thisbyte & 0xff) >> 4;
@@ -167,21 +167,21 @@ void adpcm_decode(void *dsp_buf, void *adpcm_info, void *adpcm_data,
 			nibbles[i+1] = (short) j;
 		}
 
-		for(i = 0; i < 14; i++) {
+		for (i = 0; i < 14; i++) {
 			if(nibbles[i] >= 8)
 				nibbles[i] = (short)(nibbles[i] - 16);       
 		}
 			
-		for(i = 0; i<14 ; i++) {
-			sample = (delta * nibbles[i])<<11;
+		for(i = 0; i<14; i++) {
+			sample  = (delta * nibbles[i])<<11;
 			sample += CoEfficients[index1 * 2] * hist;
 			sample += CoEfficients[index1 * 2 + 1] * hist2;
-			sample = sample + 1024;
-			sample = sample >> 11;
-			if(sample > 32767)
+			sample +=  1024;
+			sample >>= 11;
+			if (sample > 32767)
 				sample = 32767;
 
-			if(sample < -32768)
+			if (sample < -32768)
 				sample = -32768;
 			//bwpdata.Write((short)sample);
 			dsp[wpos] = (short)sample;
@@ -281,7 +281,8 @@ void parse_bns(void *data_bns, SoundInfo *snd)
 
 	//printf("BNS: %.4s 0x%x %x %d\n", bns->bns,
 	//		bns->version, bns->filesize, bns->chunkcount);
-	if (memcmp(bns, "BNS ", 4) != 0) return;
+	if (memcmp(bns, "BNS ", 4) != 0)
+		return;
 
 	for (i=0; i<bns->chunkcount; i++) {
 		b_chunk = (void*)bns + bns->chunkinfo[i].offset;
@@ -291,7 +292,8 @@ void parse_bns(void *data_bns, SoundInfo *snd)
 		//		b_chunk->type,
 		//		b_chunk->size);
 		if (memcmp(b_chunk->type, "INFO", 4)==0) {
-			if (!i_chunk) i_chunk = (void*)(b_chunk+1);
+			if (!i_chunk) 
+				i_chunk = (void*)(b_chunk+1);
 			//printf("   l:%d c:%d s:%d %x %x %x\n",
 			//	i_chunk->loop,
 			//	i_chunk->channels,
@@ -301,12 +303,15 @@ void parse_bns(void *data_bns, SoundInfo *snd)
 			//	i_chunk->offset);
 		}
 		if (memcmp(&b_chunk->type, "DATA", 4)==0) {
-			if (!d_chunk) d_chunk = (void*)(b_chunk+1);
+			if (!d_chunk) 
+				d_chunk = (void*)(b_chunk+1);
 		}
 	}
 
-	if (!i_chunk || !d_chunk) return;
-	if (i_chunk->channels < 1 || i_chunk->channels > 2) return;
+	if (!i_chunk || !d_chunk) 
+		return;
+	if (i_chunk->channels < 1 || i_chunk->channels > 2)
+		return;
 
 	dsp_size = i_chunk->samples * i_chunk->channels * sizeof(short);
 	dsp_data = memalign(32, dsp_size + 14*2);
@@ -418,16 +423,21 @@ void parse_riff(void *data, SoundInfo *snd)
 	//printf("'%.4s %x %.4s %.4s %x\n",
 	//		riff->ChunkID, _le32(&riff->ChunkSize), riff->Format,
 	//		riff->Subchunk1ID, sub1_size);
-	if (memcmp(riff->ChunkID, "RIFF", 4)) return;
-	if (memcmp(riff->Format,  "WAVE", 4)) return;
-	if (memcmp(riff->Subchunk1ID,  "fmt ", 4)) return;
+	if (memcmp(riff->ChunkID, "RIFF", 4)) 
+		return;
+	if (memcmp(riff->Format,  "WAVE", 4))
+		return;
+	if (memcmp(riff->Subchunk1ID,  "fmt ", 4)) 
+		return;
 
 	short AudioFormat   = _le16(&riff->AudioFormat);
 	short NumChannels   = _le16(&riff->NumChannels);
 	short BitsPerSample = _le16(&riff->BitsPerSample);
 	int SampleRate      = _le32(&riff->SampleRate);
-	if (AudioFormat != 1 || BitsPerSample != 16) return;
-	if (NumChannels < 1 || NumChannels > 2) return;
+	if (AudioFormat != 1 || BitsPerSample != 16)
+		return;
+	if (NumChannels < 1 || NumChannels > 2)
+		return;
 
 	//printf("f:%d c:%d r:%d b:%d\n", AudioFormat, NumChannels,
 	//		SampleRate, BitsPerSample);
@@ -441,17 +451,20 @@ void parse_riff(void *data, SoundInfo *snd)
 			riff_data = chnk;
 			break;
 		}
-		if (size <= 0) break;
+		if (size <= 0)
+			break;
 		chnk = ((void*)chnk) + sizeof(RIFF_chnk) + size;
 	}
-	if (riff_data == NULL) return;
+	if (riff_data == NULL)
+		return;
 
 	int Size = _le32(&riff_data->size);
 	short *ss = (void*)(riff_data + 1);
 	short *dsp_data;
 	int i;
 	dsp_data = memalign(32, Size+2048);
-	if (!dsp_data) return;
+	if (!dsp_data)
+		return;
 	// byte order
 	for (i=0; i<Size/2; i++) {
 		dsp_data[i] = _le16(ss);
@@ -549,19 +562,23 @@ double ext_to_double(unsigned char a_extended[10])
 		double dval;
 		unsigned char cval[8];
 	} value;
+
 	unsigned char extended[10];
 	memcpy(extended, a_extended, 10);
 	//for (i=0;i<10;i++) printf("%02x ", extended[i]); puts("");
 	/* I'll assume little endian for now.  Easy to fix to big endian anyway */
 	/* also assuming positive for simplicity */
 	found=0;
-	for (i = 2; i < 10; i++) found |= extended[i];
-	if (!found) return 0;
+	for (i = 2; i < 10; i++) 
+		found |= extended[i];
+	if (!found) 
+		return 0;
 	exponent = (((extended[0]&0x7F) << 8) | extended[1]) - 15359;
-	found=0;
+	found = 0;
 	while(!found) {
 		found = (extended[2] & 0x80);
-		for (i = 2; i < 9; i++) extended[i] = (extended[i] << 1) | (extended[i+1] >> 7);
+		for (i = 2; i < 9; i++) 
+			extended[i] = (extended[i] << 1) | (extended[i+1] >> 7);
 		extended[9] = extended[9] << 1;
 		exponent--;
 	}
@@ -603,10 +620,14 @@ void parse_aiff(void *data, SoundInfo *snd)
 		// next chunk:
 		chnk = (void*)(chnk+1) + chnk->size;
 	}
-	if (!comm || !ssnd) return;
+	if (!comm || !ssnd) 
+		return;
+
 	int dsp_size = ssnd->size - ssnd->offset - 8;
 	void *dsp_data = memalign(32, dsp_size);
-	if (!dsp_data) return;
+	if (!dsp_data) 
+		return;
+
 	memcpy(dsp_data, (void*)(ssnd+1) + ssnd->offset, dsp_size);
 	snd->dsp_data = dsp_data;
 	snd->channels = comm->channels;
@@ -626,22 +647,24 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 	char *name_start, *name;
 	u8 u8_tag[4] = {0x55, 0xAA, 0x38, 0x2D}; // "U.8-"
 	
-	if(memcmp(((char *) banner)+0x40, "IMET", 4))
-		{
-		if(memcmp(((char *) banner)+0x80, "IMET", 4)) return;
-		data_hdr+=0x40;
-		}
+	if(memcmp(((char *) banner)+0x40, "IMET", 4)) {
+		if (memcmp(((char *) banner) + 0x80, "IMET", 4))
+			return;
+		data_hdr += 0x40;
+	}
 
 	u8_hdr = data_hdr;
 	
-	if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
+	if (memcmp(u8_hdr->tag, u8_tag, 4))
+		return;
 	
 
 	node = data_hdr + u8_hdr->rootnode_offset;
 	num = node->size;
 	name_start = (char*)&node[num];
-	if (num>5) num = 5;
-	for (i=1; i<num; i++) {
+	if (num > 5) 
+		num = 5;
+	for (i = 1; i < num; i++) {
 		off = *(int*)(&node[i]) & 0x00FFFFFF;
 		name = name_start + off;
 		//printf("%d %.20s [0x%x] @ %x\n", i, name, node[i].size, node[i].data_offset);
@@ -655,15 +678,15 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 			retry:
 			//printf("[%.4s]\n", (char*)sound_data);
 			//dbg_pause();
-			if (memcmp(sound_data, "BNS ", 4)==0) {
+			if (memcmp(sound_data, "BNS ", 4) == 0) {
 				parse_bns(sound_data, snd);
-			} else if (memcmp(sound_data, "RIFF", 4)==0) {
+			} else if (memcmp(sound_data, "RIFF", 4) == 0) {
 				parse_riff(sound_data, snd);
-			} else if (memcmp(sound_data, "FORM", 4)==0) {
+			} else if (memcmp(sound_data, "FORM", 4) == 0) {
 				parse_aiff(sound_data, snd);
-			} else if (memcmp(sound_data, "LZ77", 4)==0 && lz_data == NULL) {
+			} else if (memcmp(sound_data, "LZ77", 4) == 0 && lz_data == NULL) {
 				//unsigned lz_hdr = ((unsigned*)sound_data)[1];
-				lz_data = decompress_lz77(sound_data+8, size-8, &size);
+				lz_data = decompress_lz77(sound_data + 8, size - 8, &size);
 				//printf("de-LZ: %p %x %x %x %x %.4s\n", lz_data,
 				//		node[i].size, size, lz_hdr, lz_hdr>>8, (char*)lz_data);
 				sound_data = lz_data;
@@ -672,7 +695,8 @@ void parse_banner_snd(void *banner, SoundInfo *snd)
 			//SAFE_FREE(lz_data);
 			if(lz_data){
 				free(lz_data);
-				lz_data=NULL;}
+				lz_data = NULL;
+			}
 			
 		}
 	}
@@ -701,140 +725,133 @@ void parse_banner_tpl(void *banner, void **tpl_1)
 	struct U8_node *node;
 	int i, num, off;
 	char *name_start, *name;
-	int count=0;
+	int count = 0;
 	
-	u16 last_w=0, last_h=0;
+	u16 last_w =0, last_h = 0;
 	
 	u16 w,h;
 	u32 t;
-	u8 u8_tag[4] = {0x55, 0xAA, 0x38, 0x2D}; // "U.8-"
+	u8 u8_tag[4] = { 0x55, 0xAA, 0x38, 0x2D }; // "U.8-"
 	
-	*tpl_1=NULL;
+	*tpl_1 = NULL;
 
-	if(memcmp(((char *) banner)+0x40, "IMET", 4))
-		{
-		if(memcmp(((char *) banner)+0x80, "IMET", 4)) return;
-		data_hdr+=0x40;
-		}
+	if (memcmp(((char *) banner) + 0x40, "IMET", 4)) {
+		if (memcmp(((char *) banner) + 0x80, "IMET", 4))
+			return;
+		data_hdr += 0x40;
+	}
 
 	u8_hdr = data_hdr;
 	
-	if (memcmp(u8_hdr->tag, u8_tag, 4)) return;
+	if (memcmp(u8_hdr->tag, u8_tag, 4))
+		return;
+
 	node = data_hdr + u8_hdr->rootnode_offset;
 	num = node->size;
 	name_start = (char*)&node[num];
-	if (num>5) num = 5;
-	for (i=1; i<num; i++) {
+
+	if (num > 5)
+		num = 5;
+
+	for (i = 1; i < num; i++) {
 		off = *(int*)(&node[i]) & 0x00FFFFFF;
 		name = name_start + off;
 		
-		if(!strcmp(name, "icon.bin"))
-		{
-		IMD5 *imd5 = data_hdr + node[i].data_offset;
-		void *icon_data = (void*)imd5 + sizeof(IMD5);
-		unsigned size = imd5->filesize;
-		void *lz_data =NULL;
+		if (!strcmp(name, "icon.bin")) {
+			IMD5 *imd5 = data_hdr + node[i].data_offset;
+			void *icon_data = (void*)imd5 + sizeof(IMD5);
+			unsigned size = imd5->filesize;
+			void *lz_data =NULL;
   
-		if (memcmp(icon_data, "LZ77", 4)==0)
-			{
-			struct U8_archive_header *u8_hdr2;
-			struct U8_node *node2;
+			if (memcmp(icon_data, "LZ77", 4) == 0) {
+				struct U8_archive_header *u8_hdr2;
+				struct U8_node *node2;
 
-			lz_data = decompress_lz77(icon_data+8, size-8, &size);
-			if(lz_data)
-				{
-				u8_hdr2= lz_data;
+				lz_data = decompress_lz77(icon_data+8, size-8, &size);
+				if(lz_data) {
+					u8_hdr2 = lz_data;
                
-
-				if (!memcmp(u8_hdr2->tag, u8_tag, 4))
-					{
-					int j, num2, off2;
-					char *name_start2, *name2;
-					node2 = lz_data + u8_hdr2->rootnode_offset;
-					num2 = node2->size;
-					name_start2 = (char*)&node2[num2];
-					//if (num2>10) num2 = 5;
-					count=0;
-					for (j=1; j<num2; j++) 
-						{
-						off2 = *(int*)(&node2[j]) & 0x00FFFFFF;
-						name2 = name_start2 + off2;
+					if (!memcmp(u8_hdr2->tag, u8_tag, 4)) {
+						int j, num2, off2;
+						char *name_start2, *name2;
+						node2 = lz_data + u8_hdr2->rootnode_offset;
+						num2 = node2->size;
+						name_start2 = (char*)&node2[num2];
+						//if (num2>10) num2 = 5;
+						count = 0;
+						for (j = 1; j < num2; j++) {
+							off2 = *(int*)(&node2[j]) & 0x00FFFFFF;
+							name2 = name_start2 + off2;
 						
-						if(!strcmp(name2, "timg") && node2[j].type==1) 
-							{
-							
-							num2=node2[j].size;
-							j++;
-							count=1;
-							break;
+							if (!strcmp(name2, "timg") && node2[j].type == 1) {
+								num2 = node2[j].size;
+								j++;
+								count = 1;
+								break;
 							}
 						}
-					if(count==0) goto no_found; // timg folder not found
+						if (count == 0) 
+							goto no_found; // timg folder not found
 
-					int pri_j=j;
+						int pri_j = j;
 					
-					for (; j<num2; j++) 
-						{
-						off2 = *(int*)(&node2[j]) & 0x00FFFFFF;
-						name2 = name_start2 + off2;
+						for (; j<num2; j++) {
+							off2 = *(int*)(&node2[j]) & 0x00FFFFFF;
+							name2 = name_start2 + off2;
+					
+							if (strstr(name2, ".tpl")) {
+								h = be16(lz_data + node2[j].data_offset + 0x14);
+								w = be16(lz_data + node2[j].data_offset + 0x16);
+								t = be32(lz_data + node2[j].data_offset + 0x18);
+							
+								if (count == 1) {
+									pri_j = j;
+									count++;
+									continue;
+								} // skip the first
 
-					
-						if( strstr(name2, ".tpl"))
-							{
-						
-							h = be16(lz_data + node2[j].data_offset + 0x14);
-							w = be16(lz_data + node2[j].data_offset + 0x16);
-							t = be32(lz_data + node2[j].data_offset + 0x18);
-							
-							if(count==1)  {pri_j=j;count++;continue;} // skip the first
-					
-							
-							if((w*h>=last_w*last_h )&& (t==4 || t==5 ||  t==14))
-								{
+								if ((w*h >= last_w*last_h) && (t == 4 || t == 5 ||  t == 14)) {
+									last_w = w;
+									last_h = h;
+									count++;
 								
-								last_w=w;last_h=h;
-								count++;
-                                
-								if(*tpl_1) free(*tpl_1);*tpl_1=malloc(node2[j].size);
-								if(*tpl_1) memcpy(*tpl_1, lz_data + node2[j].data_offset, node2[j].size);
-
+									if(*tpl_1) 
+										free(*tpl_1);
+									*tpl_1 = malloc(node2[j].size);
+									if (*tpl_1) 
+										memcpy(*tpl_1, lz_data + node2[j].data_offset, node2[j].size);
 								}
-							
 							}
-					
 						}
 
-					if(!*tpl_1) 
-						{
-						j=pri_j;
+						if (!*tpl_1) {
+							j = pri_j;
 
 							h = be16(lz_data + node2[j].data_offset + 0x14);
 							w = be16(lz_data + node2[j].data_offset + 0x16);
 							t = be32(lz_data + node2[j].data_offset + 0x18);
 						
-							if(t>3)
-								{
+							if (t > 3) {
+								if (*tpl_1)
+									free(*tpl_1);
+								*tpl_1 = malloc(node2[j].size);
 								
-                                
-								if(*tpl_1) free(*tpl_1);*tpl_1=malloc(node2[j].size);
-								if(*tpl_1) memcpy(*tpl_1, lz_data + node2[j].data_offset, node2[j].size);
-
-								}
-
+								if (*tpl_1) 
+									memcpy(*tpl_1, lz_data + node2[j].data_offset, node2[j].size);
+							}
 						}
-                     //
-					 free(lz_data); 
-					
-					return;
+						//
+						free(lz_data); 
+						return;
 					}
-
+					
 				no_found:
 					free(lz_data); 
-				
-				return;
+					
+					return;
 				}
 				
-		
+				
 			}
 		}
 		

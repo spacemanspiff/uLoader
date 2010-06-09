@@ -23,47 +23,47 @@ static u32 be32(const u8 *p)
 
 u16 rgb32to16(u32 color)
 {
-u16 c16;
+	u16 c16;
 
-	c16=((color>>3) & 0x1f) | ((color>>6) & 0x3e0) | ((color>>9) & 0x7c00) | 0x8000;
+	c16 = ((color>>3) & 0x1f) | ((color>>6) & 0x3e0) | ((color>>9) & 0x7c00) | 0x8000;
 
-return c16;
+	return c16;
 }
+
 static void out_rgb(u32 color, int x, int y, int w, int h)
 {
-int x2, y2,l;
+	int x2, y2,l;
 
-u16 *p;
-u16 color2;
-int h2=76;
+	u16 *p;
+	u16 color2;
+	int h2 = 76;
 
 
-x2=(x+1)*tpl_w/w;
-x=x*tpl_w/w;
+	x2 = (x+1)*tpl_w/w;
+	x = x*tpl_w/w;
 	
 
-y2=((y+1)*h2)/h;
-y=(y*h2)/h;
+	y2 = ((y+1)*h2)/h;
+	y = (y*h2)/h;
 
-// align to uLoader final icon
-y+=16;
-y2+=16;
+        // align to uLoader final icon
+	y  += 16;
+	y2 += 16;
 
-color2=rgb32to16(color);
+	color2 = rgb32to16(color);
 
-for(; y<=y2; y++)
-	{
-	if(y>=tpl_h) break;
+	for(; y <= y2; y++) {
+		if (y >= tpl_h) 
+			break;
 
-	p= &mem [tpl_w*y+x];
-    l=x;
-	for(; l<=x2; l++)
-		{
-		if(l>=tpl_w) break;
-		*p++= color2;
+		p = &mem [tpl_w*y+x];
+		l = x;
+		for(; l<=x2; l++) {
+			if (l >= tpl_w)
+				break;
+			*p++ = color2;
 		}
 	}
-
 }
 
 static void i4(int w, int h, int o)
@@ -127,8 +127,6 @@ static void i8(int w, int h, int o)
 
 			out_rgb(0xff000000 | (pix[0]<<16) | (pix[1]<<8) | (pix[2]), x, y, w, h);
 		}
-
-	
 }
 
 
@@ -136,8 +134,6 @@ static void ia4(int w, int h, int o)
 {
 	
 	int x, y;
-
-
 	for (y = 0; y < h; y++)
 		for (x = 0; x < w; x++) {
 			u8 pix[3];
@@ -206,7 +202,6 @@ static void rgb5a3(int w, int h, int o)
 
 static void rgb5(int w, int h, int o)
 {
-	
 	int x, y;
 
 	for (y = 0; y < h; y++)
@@ -225,11 +220,10 @@ static void rgb5(int w, int h, int o)
 			raw = buf[o + 2*off] << 8;
 			raw |= buf[o + 2*off + 1];
 
-			// RGB5A3
-			
-				pix[0] = (raw >> 8) & 0xf8;
-				pix[1] = (raw >> 3) & 0xfc;
-				pix[2] = (raw << 3) & 0xf8;
+			// RGB5A3	
+			pix[0] = (raw >> 8) & 0xf8;
+			pix[1] = (raw >> 3) & 0xfc;
+			pix[2] = (raw << 3) & 0xf8;
 			
 
 			out_rgb(0xff000000 | (pix[0]<<16) | (pix[1]<<8) | (pix[2]), x, y, w, h);
@@ -311,8 +305,8 @@ static void cmp(int w, int h, int o)
 
 void * tpl_2_rgba(void *tpl)
 {
-u16 w, h, o, t;
-u32 n;
+	u16 w, h, o, t;
+	u32 n;
 
 	buf=tpl;
 
@@ -321,14 +315,19 @@ u32 n;
 	t = be32(buf + 0x18);
 	o = be32(buf + 0x1c);
 
-	mem=memalign(32,(u32) tpl_w * (u32) tpl_h*2+32);
-	if(!mem) return NULL;
+	mem = memalign(32,(u32) tpl_w * (u32) tpl_h*2 + 32);
+	if (!mem) 
+		return NULL;
     
 	// fill color
-	for(n=0;n< ((u32) tpl_w * (u32) tpl_h);n++) mem[n]=rgb32to16(0xffc0c0d0);
+	for (n = 0; n < ((u32) tpl_w * (u32) tpl_h); n++) 
+		mem[n] = rgb32to16(0xffc0c0d0);
 
 	// draw line
-	for(n=0;n<tpl_w;n++) {mem[(tpl_h-20)*tpl_w+n]=rgb32to16(0xff808090);mem[(tpl_h-16)*tpl_w+n]=rgb32to16(0xff808090);}
+	for (n = 0; n < tpl_w; n++) {
+		mem[(tpl_h-20)*tpl_w+n] = rgb32to16(0xff808090);
+		mem[(tpl_h-16)*tpl_w+n] = rgb32to16(0xff808090);
+	}
 	//memset(mem, 255, tpl_w * tpl_h*4+32);
 
 	// XXX: check more header stuff here
@@ -358,10 +357,10 @@ u32 n;
 		break;
 	
 	default:
-	
-		free(mem);mem=NULL;
+		free(mem);
+		mem = NULL;
 	}
 
-return mem;
+	return mem;
 }
 

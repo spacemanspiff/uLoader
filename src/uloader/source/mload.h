@@ -27,28 +27,28 @@
 #include "unistd.h"
 
 #define MLOAD_MLOAD_THREAD_ID	0x4D4C4400
-#define MLOAD_GET_IOS_BASE	    0x4D4C4401
-#define MLOAD_LOAD_MODULE		0x4D4C4480
-#define MLOAD_RUN_MODULE		0x4D4C4481
+#define MLOAD_GET_IOS_BASE	0x4D4C4401
+#define MLOAD_LOAD_MODULE	0x4D4C4480
+#define MLOAD_RUN_MODULE	0x4D4C4481
 #define MLOAD_RUN_THREAD        0x4D4C4482
 
-#define MLOAD_STOP_THREAD		0x4D4C4484
+#define MLOAD_STOP_THREAD	0x4D4C4484
 #define MLOAD_CONTINUE_THREAD   0x4D4C4485
 
 #define MLOAD_GET_LOAD_BASE     0x4D4C4490
-#define MLOAD_MEMSET			0x4D4C4491
+#define MLOAD_MEMSET		0x4D4C4491
 
-#define MLOAD_GET_EHCI_DATA		0x4D4C44A0
-#define MLOAD_GET_LOG			0x4D4C44A1
+#define MLOAD_GET_EHCI_DATA	0x4D4C44A0
+#define MLOAD_GET_LOG		0x4D4C44A1
 
-#define MLOAD_SET_ES_IOCTLV		0x4D4C44B0
+#define MLOAD_SET_ES_IOCTLV	0x4D4C44B0
 
-#define MLOAD_GETW				0x4D4C44C0
-#define MLOAD_GETH				0x4D4C44C1
-#define MLOAD_GETB				0x4D4C44C2
-#define MLOAD_SETW				0x4D4C44C3
-#define MLOAD_SETH				0x4D4C44C4
-#define MLOAD_SETB				0x4D4C44C5
+#define MLOAD_GETW		0x4D4C44C0
+#define MLOAD_GETH		0x4D4C44C1
+#define MLOAD_GETB		0x4D4C44C2
+#define MLOAD_SETW		0x4D4C44C3
+#define MLOAD_SETH		0x4D4C44C4
+#define MLOAD_SETB		0x4D4C44C5
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,40 +59,37 @@ extern "C" {
 
 #define getbe32(x) ((adr[x]<<24) | (adr[x+1]<<16) | (adr[x+2]<<8) | (adr[x+3]))
 
-typedef struct 
-{
-        u32		ident0;
-		u32		ident1;
-		u32		ident2;
-		u32		ident3;
-        u32		machinetype;
-        u32		version;
-        u32		entry;
-        u32     phoff;
-        u32     shoff;
-        u32		flags;
-        u16     ehsize;
-        u16     phentsize;
-        u16     phnum;
-        u16     shentsize;
-        u16     shnum;
-        u16     shtrndx;
+typedef struct {
+	u32		ident0;
+	u32		ident1;
+	u32		ident2;
+	u32		ident3;
+	u32		machinetype;
+	u32		version;
+	u32		entry;
+	u32     phoff;
+	u32     shoff;
+	u32		flags;
+	u16     ehsize;
+	u16     phentsize;
+	u16     phnum;
+	u16     shentsize;
+	u16     shnum;
+	u16     shtrndx;
 } elfheader;
 
-typedef struct 
-{
-       u32      type;
-       u32      offset;
-       u32      vaddr;
-       u32      paddr;
-       u32      filesz;
-       u32      memsz;
-       u32      flags;
-       u32      align;
+typedef struct {
+	u32      type;
+	u32      offset;
+	u32      vaddr;
+	u32      paddr;
+	u32      filesz;
+	u32      memsz;
+	u32      flags;
+	u32      align;
 } elfphentry;
 
-typedef struct
-{
+typedef struct {
 	void *start;
 	int prio;
 	void *stack;
@@ -217,7 +214,7 @@ int mload_seth(const void * addr, u16 dat);
 int mload_setb(const void * addr, u8 dat);
 
 #ifdef __cplusplus
-  }
+}
 #endif
 
 
