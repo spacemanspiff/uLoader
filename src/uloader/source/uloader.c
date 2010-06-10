@@ -4264,7 +4264,7 @@ get_games:
 								cios = cios_list[0];
 #endif
 
-							i f((mode_disc & 2) && cios == 249)
+							if ((mode_disc & 2) && cios == 249)
 								cios = cios_list[0]; // force cIOS 222 for USB DVD
 					
 							sprintf(name_button," cIOS %i ", cios_list[0]);
@@ -4843,7 +4843,7 @@ get_games:
 								color = INK0;
 								bkcolor = 0xefffffff;
 								s_printf_z = 10;
-								i f((header->version & 3) == 3) {
+								if ((header->version & 3) == 3) {
 									PX += 48; 
 									bkcolor = 0;
 									s_printf("SD");
