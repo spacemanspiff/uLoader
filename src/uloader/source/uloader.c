@@ -1377,7 +1377,7 @@ void remote_DVD_disc()
 										
 										p += (0x26 + disc_buffer[n + p + 0x13] + 3) & ~3;
 									} else
-										multi_ciso[n].len=0;
+										multi_ciso[n].len = 0;
 								}
 								
 								if (m < 8) // bad UDF format
@@ -4541,20 +4541,20 @@ get_games:
 								7*(edit2_mode == 5) + 
 								9*(edit2_mode == 6);
 
-							if (Draw_button(600 - 32 - strlen(&letrero[idioma][9][0])*8, 
-									ylev + 108*4 - 64, &letrero[idioma][9][0])) 
-								select_game_bar = 69;
-						} else {
-							if (Draw_button(36, ylev + 108*4 - 64, &letrero[idioma][8][0])) 
-								select_game_bar = (edit_cfg != 1) ? 9 : 10;
+						if (Draw_button(600 - 32 - strlen(&letrero[idioma][9][0])*8, 
+								ylev + 108*4 - 64, &letrero[idioma][9][0])) 
+							select_game_bar = 69;
+					} else {
+						if (Draw_button(36, ylev + 108*4 - 64, &letrero[idioma][8][0])) 
+							select_game_bar = (edit_cfg != 1) ? 9 : 10;
 					
-							//if (!(is_fat && header && header->version & 2))
-							//if (edit_cfg!=1)
-							//	if (Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][22/*54+(edit_cfg==1)*/][0])) select_game_bar=9;
+						//if (!(is_fat && header && header->version & 2))
+						//if (edit_cfg!=1)
+						//	if (Draw_button(x_temp+16, ylev+108*4-64, &letrero[idioma][22/*54+(edit_cfg==1)*/][0])) select_game_bar=9;
 
-							if (Draw_button(600 - 32 - strlen(&letrero[idioma][9][0])*8, ylev + 108 * 4 - 64, &letrero[idioma][9][0])) 
-								select_game_bar = 11;
-						}
+						if (Draw_button(600 - 32 - strlen(&letrero[idioma][9][0])*8, ylev + 108 * 4 - 64, &letrero[idioma][9][0])) 
+							select_game_bar = 11;
+					}
 
 					/////////////////////////////////////
 					if (warning_time) {
@@ -4778,8 +4778,8 @@ get_games:
 						}
 			
 						/*
-						if (temp_game_cnt>=gameCnt) 
-							temp_game_cnt=0;
+						  if (temp_game_cnt>=gameCnt) 
+						  temp_game_cnt=0;
 						*/
 
 						if (temp_game_cnt < gameCnt) {
@@ -5568,1431 +5568,1631 @@ get_games:
 					}
 				} // limit left_right
 
-				// TODO: QUEDAMOS ACA POR HOY!!!                   
 				if((new_pad & WPAD_BUTTON_A) && 
-				   (gameList!=NULL || (mode_disc && game_mode) || (mode_disc==0 && select_game_bar>=10000 && select_game_bar<=10016)))
-				{
-					if(parental_mode && select_game_bar!=1/*(!mode_disc || (mode_disc && select_game_bar!=1))*/)
-					{
-						direct_launch=0;
-						if(select_game_bar>=20000 && select_game_bar<20010)
-						{
-							for(n=0;n<4;n++) if(parental_str[n]==0) break;
-							if(n<4) {parental_str[n]=select_game_bar+48-20000;snd_fx_yes();}
-							if(n>=4) {
-								for(n=0;n<4;n++)
-								{
-									if(config_file.parental[n]!=(parental_str[n]-48)) break;
+				   (gameList != NULL || (mode_disc && game_mode) || 
+				    (mode_disc == 0 && select_game_bar >= 10000 && select_game_bar <= 10016))) {
+					if (parental_mode && select_game_bar != 1/*(!mode_disc || (mode_disc && select_game_bar!=1))*/) {
+						direct_launch = 0;
+						if (select_game_bar >= 20000 && select_game_bar < 20010) {
+							for (n = 0; n < 4; n++) 
+								if(parental_str[n] == 0) 
+									break;
+							if (n < 4) {
+								parental_str[n] = select_game_bar + 48 - 20000;
+								snd_fx_yes();
+							}
+							if (n >= 4) {
+								for (n = 0;n < 4; n++) {
+									if (config_file.parental[n] != (parental_str[n] - 48))
+										break;
 								}
-								if(select_game_bar+48-20000=='0') n++;
-								if(n==5)
-								{
-									parental_control_on=0;
-									snd_fx_yes();
-									if(parental_mode==9999);
-									else
-										if(parental_mode>=1024) game_mode=parental_mode-1024;
-										else go_home=1;
+								if (select_game_bar + 48 - 20000 == '0') 
+									n++;
 
-									parental_mode=0;
-								}
-								else
-								{
-									for(n=0;n<4;n++) parental_str[n]=0;
+								if (n == 5) {
+									parental_control_on = 0;
+									snd_fx_yes();
+									if (parental_mode == 9999)
+										;
+									else if (parental_mode >= 1024) 
+										game_mode = parental_mode - 1024;
+									else 
+										go_home = 1;
+
+									parental_mode = 0;
+								} else {
+									for (n = 0;n < 4; n++) 
+										parental_str[n] = 0;
 									parental_control_on++;
 									snd_fx_no();
-									if(game_mode==0) parental_mode=0;
-									if(parental_control_on>=5) {sleep(3);exit_by_reset=3; goto exit_ok;}
+									if (game_mode == 0)
+										parental_mode = 0;
+									if (parental_control_on >= 5) {
+										sleep(3);
+										exit_by_reset = 3; 
+										goto exit_ok;
+									}
 								}		  
 										  
 							}
-							select_game_bar=0;
+							select_game_bar = 0;
 						}
-					}
-					else
-					{// q
-						if(test_gfx_page)
-						{ // w
-							if(cheat_mode && txt_cheats)
-							{
-								if(test_gfx_page<0)
-								{
-									actual_cheat-=5;if(actual_cheat<0) actual_cheat=0;
+					} else {// q
+						if (test_gfx_page) { // w
+							if (cheat_mode && txt_cheats) {
+								if (test_gfx_page < 0) {
+									actual_cheat -= 5;
+									if (actual_cheat < 0) 
+										actual_cheat = 0;
 									snd_fx_yes();
 								}
-								if(test_gfx_page>0)
-								{
-									actual_cheat+=5;if(actual_cheat>=num_list_cheats) actual_cheat=num_list_cheats-5;
+								if (test_gfx_page > 0) {
+									actual_cheat += 5;
+									if (actual_cheat >= num_list_cheats) 
+										actual_cheat = num_list_cheats - 5;
 									snd_fx_yes();
+								}
+							} else if (insert_favorite == 0) {
+								if (gameList != NULL) {
+									if (test_gfx_page < 0) {
+										scroll_mode = 1;
+										px = py = -100;
+										snd_fx_yes();
+									}
+									if (test_gfx_page > 0) {
+										scroll_mode = -1;
+										px = py = -100;
+										snd_fx_yes();
+									}
 								}
 							}
-							else
-								if(insert_favorite==0)
-								{
-									if(gameList!=NULL)
-									{
-										if(test_gfx_page<0)
-										{scroll_mode=1;px=py=-100;snd_fx_yes();}
-										if(test_gfx_page>0)
-										{scroll_mode=-1;px=py=-100;snd_fx_yes();}
-									}
-								}
-						}// w
-						else
-							if(game_mode==0)
-							{// r
-								if((old_pad & WPAD_BUTTON_B) && is_favorite)
-								{
-									if(temp_sel>=0)
-									{
-										insert_favorite=game_datas[temp_sel].ind+1;
-										snd_fx_yes();
-
-										mem_move_chan=NULL;
-
-										if(game_datas[temp_sel].png_bmp) 
-											memcpy(&text_move_chan, &game_datas[temp_sel].texture, sizeof(GXTexObj));
-										else
-											if(alternative_default_cover)
-												memcpy(&text_move_chan, &default_game_texture2, sizeof(GXTexObj));
-											else
-												memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
-
-
-						
+						} else if(game_mode==0)	{// r
+							if ((old_pad & WPAD_BUTTON_B) && is_favorite) {
+								if (temp_sel >= 0) {
+									insert_favorite = game_datas[temp_sel].ind + 1;
+									snd_fx_yes();
 									
-									}
-								}
-								else
-								{
-									// insert game in favorites
-									if(insert_favorite)
-									{
-								
-										struct discHdr *header = &gameList[insert_favorite-1];
-										int n,m=0;
-
-										if(temp_sel>=0)
-										{
-											for(n=0;n<15;n++)
-											{
-												if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
-												{
-													if(m==0)
-													{m=1;memcpy(&config_file.id[n][0],&config_file.id[temp_sel][0],8);config_file.id[n][6]=0;memset(&config_file.id[temp_sel][0],0,8);}
-													else {memset(&config_file.id[n][0],0,8);} // elimina repeticiones
-
-													break;
-												}
-											}
-											snd_fx_yes();
-											memcpy(&config_file.id[temp_sel][0],header->id,6);
-											config_file.id[temp_sel][6]=0;
-											insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
-											temp_sel=-1;
-											for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-											if(!mode_disc) save_cfg(0); else save_cfg(1);
-											load_png=1;
-	
-										}
-									}
+									mem_move_chan = NULL;
+									
+									if (game_datas[temp_sel].png_bmp) 
+										memcpy(&text_move_chan, &game_datas[temp_sel].texture, sizeof(GXTexObj));
+									else if (alternative_default_cover)
+										memcpy(&text_move_chan, &default_game_texture2, sizeof(GXTexObj));
 									else
-									{
-										int n;
-										struct discHdr *header;
-										if(!is_favorite) last_game=actual_game;
-
-										if(select_game_bar==10016)  {is_fat=0;load_cfg(1);parental_control_on=1;snd_fx_yes();if(!(mode_disc & 2)) mode_disc=1;Screen_flip();goto get_games;}
-										if(select_game_bar==10015)  {parental_control_on=1;snd_fx_yes();is_fat=1;Screen_flip();goto get_games;}
+										memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
+								}
+							} else {
+								// insert game in favorites
+								if (insert_favorite) {
 									
-
-										if(select_game_bar>=10000 && select_game_bar<10004)  
-										{is_fat=0;snd_fx_yes();current_partition=select_game_bar-10000;Screen_flip();goto get_games;}
-
-										if(temp_sel>=0)
-											snd_fx_yes();
-										else 
-										{
-											snd_fx_no();
-										
-											goto meapilas1;
-										}
-
-										game_mode=temp_sel+1;
-
-										header = &gameList[game_datas[game_mode-1].ind];
-
-										/******************************************/
-										// dol menu
-
-										if(dolmenubuffer) free(dolmenubuffer);dolmenubuffer=NULL;
-
-										if(header && header->id && load_dolmenu((char *) header->id)>=0 && dolmenubuffer && dolmenubuffer[0].offset==0ULL)
-										{
-
-											load_alt_game_disc=(mode_disc & 3)!=0;
-
-											if(mode_disc & 3) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
-
-											if(!mode_disc)
-												header= &gameList[game_datas[game_mode-1].ind];
-											else header= disc_header;
-
-
-											wdm_alternativedol(header->id);
-										
-											if(mode_disc & 3) {remote_call(remote_DVD_disc);usleep(1000*50);}
-										}
-
-										/******************************************/
+									struct discHdr *header = &gameList[insert_favorite - 1];
+									int n,m = 0;
 									
-										if(is_fat)
-										{
-											f_size= ((float) header->magic)/ GB_SIZE;
-										}
-										else
-											if(WBFS_GameSize(header->id, &f_size)) f_size=0.0f;
+									if (temp_sel >= 0) {
+										for(n = 0; n < 15; n++) {
+											if (strncmp((char *) header->id, (char *) &config_file.id[n][0],6) == 0) {
+												if (m == 0) {
+													m = 1;
+													memcpy(&config_file.id[n][0], &config_file.id[temp_sel][0], 8);
+													config_file.id[n][6] = 0;
+													memset(&config_file.id[temp_sel][0], 0, 8);
+												} else { // elimina repeticiones
+													memset(&config_file.id[n][0], 0, 8);
+												}
 
-										if(is_favorite) test_favorite=0; else test_favorite=1;
-									
-										for(n=0;n<15;n++)
-										{
-											if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
-											{
-												if(!is_favorite) test_favorite=0; else test_favorite=1;
 												break;
 											}
 										}
-									
-									
-										game_cfg_field1= (void *) &game_datas[game_mode-1].config;
+										snd_fx_yes();
+										memcpy(&config_file.id[temp_sel][0],header->id, 6);
+										config_file.id[temp_sel][6] = 0;
+										insert_favorite = 0;
 
-										// game is locked
-										if(game_cfg_field1->game_locked!=0 && parental_control_on)
-										{
-											parental_mode=game_mode+1024;
-											game_mode=0; // block game_mode, active parental_mode
+										if (mem_move_chan) 
+											free(mem_move_chan);
+										mem_move_chan = NULL;
+
+										temp_sel = -1;
+										for (n = 0;n < 15; n++) {
+											if (game_datas[n].png_bmp) 
+												free(game_datas[n].png_bmp);
+											game_datas[n].png_bmp = NULL;
 										}
-								
-									meapilas1: ;
+										if (!mode_disc) 
+											save_cfg(0); 
+										else 
+											save_cfg(1);
+										load_png = 1;
 									}
+								} else {
+									int n;
+									struct discHdr *header;
+									if (!is_favorite)
+										last_game=actual_game;
+
+									if (select_game_bar == 10016) {
+										is_fat = 0;
+										load_cfg(1);
+										parental_control_on = 1;
+										snd_fx_yes();
+										if (!(mode_disc & 2)) 
+											mode_disc = 1;
+										Screen_flip();
+										goto get_games;
+									}
+
+									if (select_game_bar == 10015) {
+										parental_control_on = 1;
+										snd_fx_yes();
+										is_fat = 1;
+										Screen_flip();
+										goto get_games;
+									}
+									
+									if(select_game_bar >= 10000 && select_game_bar < 10004) {
+										is_fat = 0;
+										snd_fx_yes();
+										current_partition = select_game_bar - 10000;
+										Screen_flip();
+										goto get_games;
+									}
+
+									if (temp_sel >= 0)
+										snd_fx_yes();
+									else {
+										snd_fx_no();
+										
+										goto meapilas1;
+									}
+									
+									game_mode = temp_sel + 1;
+
+									header = &gameList[game_datas[game_mode - 1].ind];
+
+									/******************************************/
+									// dol menu
+
+									if (dolmenubuffer) 
+										free(dolmenubuffer);
+									dolmenubuffer = NULL;
+
+									if (header && header->id && load_dolmenu((char *) header->id) >= 0 && 
+									    dolmenubuffer && dolmenubuffer[0].offset == 0ULL) {
+										
+										load_alt_game_disc = (mode_disc & 3) != 0;
+
+										if (mode_disc & 3) {
+											remote_call_abort();
+											while (remote_ret() == REMOTE_BUSY) 
+												usleep(1000*50);
+										}
+
+										if (!mode_disc)
+											header = &gameList[game_datas[game_mode - 1].ind];
+										else 
+											header = disc_header;
+
+
+										wdm_alternativedol(header->id);
+										
+										if (mode_disc & 3) {
+											remote_call(remote_DVD_disc);
+											usleep(1000*50);
+										}
+									}
+									
+									/******************************************/
+									
+									if (is_fat) {
+										f_size = ((float) header->magic)/ GB_SIZE;
+									} else if (WBFS_GameSize(header->id, &f_size)) 
+										f_size = 0.0f;
+
+									if (is_favorite) 
+										test_favorite = 0; 
+									else 
+										test_favorite = 1;
+									
+									for (n = 0;n < 15; n++) {
+										if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6) == 0) {
+											if (!is_favorite) 
+												test_favorite = 0; 
+											else 
+												test_favorite = 1;
+											break;
+										}
+									}
+									
+									game_cfg_field1 = (void *) &game_datas[game_mode - 1].config;
+									
+									// game is locked
+									if(game_cfg_field1->game_locked != 0 && parental_control_on) {
+										parental_mode = game_mode + 1024;
+										game_mode = 0; // block game_mode, active parental_mode
+									}
+									
+								meapilas1: ;
 								}
 							}
-							else
-							{
-							skip_game:
+						} else {
+						skip_game:
 
-								if(select_game_bar==1) {
+							if (select_game_bar == 1) {
 														
-									int n;  // return
-									int f_j=0;
-									snd_fx_no();
+								int n;  // return
+								int f_j = 0;
+								snd_fx_no();
 
-									if(mode_disc && game_mode && !edit_cfg) 
-									{
-										remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-										mode_disc&=~1;f_j=1;parental_control_on=1;parental_mode=0;
-										if(dvd_only) is_fat=it_have_fat;
-									}
-									if(!(mode_disc & 1) && game_mode && !edit_cfg) parental_mode=0;
+								if (mode_disc && game_mode && !edit_cfg) {
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+									mode_disc &= ~1;
+									f_j = 1;
+									parental_control_on = 1;
+									parental_mode = 0;
+									if (dvd_only) 
+										is_fat = it_have_fat;
+								}
 
-									game_mode=0;edit_cfg=0;select_game_bar=0;
-									for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
+								if (!(mode_disc & 1) && game_mode && !edit_cfg) 
+									parental_mode = 0;
+
+								game_mode = 0;
+								edit_cfg = 0;
+								select_game_bar = 0;
+								for (n = 0;n < 15; n++) {
+									if (game_datas[n].png_bmp) 
+										free(game_datas[n].png_bmp);
+									game_datas[n].png_bmp = NULL;
+								}
 												   
-									load_png=1;
-									direct_launch=0;
-									rumble=0;
-									last_select=select_game_bar;
-									make_rumble_off();
-									if(f_j) {Screen_flip();save_cfg(1);goto get_games;}
-								} 
+								load_png = 1;
+								direct_launch = 0;
+								rumble = 0;
+								last_select = select_game_bar;
+								make_rumble_off();
+								if (f_j) {
+									Screen_flip();
+									save_cfg(1);
+									goto get_games;
+								}
+							} 
 
-								if(select_game_bar==2) 
-								{ // Configuration (load)
-									struct discHdr *header;
+							if(select_game_bar == 2) {
+								// Configuration (load)
+								struct discHdr *header;
 
-									if(!mode_disc)
-										header= &gameList[game_datas[game_mode-1].ind];
-									else header= disc_header;
+								if (!mode_disc)
+									header = &gameList[game_datas[game_mode - 1].ind];
+								else
+									header = disc_header;
 
-									direct_launch=0;
+								direct_launch = 0;
 
-									memcpy(discid,header->id,6); discid[6]=0;
+								memcpy(discid, header->id, 6);
+								discid[6] = 0;
 
-									snd_fx_yes();
+								snd_fx_yes();
 
-									select_game_bar=0;
+								select_game_bar = 0;
 												   
-									memset(disc_conf,0,256*1024);
+								memset(disc_conf, 0, 256*1024);
 
-									if(!mode_disc || is_fat)
-									{
-										global_GetProfileDatas(discid, disc_conf);
-									}
-									else
-										dol_GetProfileDatas(discid, disc_conf);
+								if (!mode_disc || is_fat) {
+									global_GetProfileDatas(discid, disc_conf);
+								} else
+									dol_GetProfileDatas(discid, disc_conf);
 
 
-									game_datas[game_mode-1].config=disc_conf[4]+(disc_conf[5]<<8)+(disc_conf[6]<<16)+(disc_conf[7]<<24);
+								game_datas[game_mode - 1].config = disc_conf[4] + (disc_conf[5] <<8 ) + 
+									                          (disc_conf[6] << 16) + (disc_conf[7] << 24);
 
-									game_cfg_field1= (void *) &game_datas[game_mode-1].config;
+								game_cfg_field1 = (void *) &game_datas[game_mode - 1].config;
 
 #ifndef DONT_USE_IOS249
-									if((game_cfg_field1->ios_selected & 1) || force_ios249) cios=249; 
-									else { if(game_cfg_field1->ios_selected & 2) cios=cios_list[1]; else cios=cios_list[0];}
+								if ((game_cfg_field1->ios_selected & 1) || force_ios249) 
+									cios = 249; 
+								else { 
+									if (game_cfg_field1->ios_selected & 2) 
+										cios = cios_list[1]; 
+									else 
+										cios=cios_list[0];
+								}
 #else
-									/*if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;
-									  game_datas[game_mode-1].config &=~1;
-									*/
-									if((game_cfg_field1->ios_selected & 1)) cios=cios_list[2]; 
-									else { if(game_cfg_field1->ios_selected & 2) cios=cios_list[1]; else cios=cios_list[0];}
+								/*if(game_datas[game_mode-1].config & 2) cios=223; else cios=222;
+								  game_datas[game_mode-1].config &=~1;
+								*/
+								if ((game_cfg_field1->ios_selected & 1)) 
+									cios = cios_list[2]; 
+								else { 
+									if (game_cfg_field1->ios_selected & 2) 
+										cios = cios_list[1];
+									else 
+										cios = cios_list[0];}
 #endif
 													
-									dont_use_diary= game_cfg_field1->dont_use_diary;
+								dont_use_diary = game_cfg_field1->dont_use_diary;
+								//shadow_mload= game_cfg_field1->shadow_mload;
+								forcevideo = game_cfg_field1->modevideo;
 
-									//shadow_mload= game_cfg_field1->shadow_mload;
+								langsel = game_cfg_field1->language;
+								if (langsel > 10) 
+									langsel = 0;
 
-									forcevideo= game_cfg_field1->modevideo;
+								nand_mode = game_cfg_field1->nand_mode;
 
-									langsel= game_cfg_field1->language;if(langsel>10) langsel=0;
+								force_ingame_ios = game_cfg_field1->skip_boot;
+								game_locked_cfg = game_cfg_field1->game_locked;
 
-									nand_mode= game_cfg_field1->nand_mode;
+								bca_mode = game_cfg_field1->bca_mode;
 
-									force_ingame_ios= game_cfg_field1->skip_boot;
-									game_locked_cfg= game_cfg_field1->game_locked;
+								hook_selected = game_cfg_field1->hook_selected + 1;
 
-									bca_mode= game_cfg_field1->bca_mode;
+								edit_cfg = 1;
+							}
 
-									hook_selected= game_cfg_field1->hook_selected+1;
-
-									edit_cfg=1;
-								}
-
-								if(select_game_bar>=300 && select_game_bar<320) 
-								{
-
-									if(select_game_bar>=310)
-									{
-										struct discHdr *header;
-										int n;  // return
-										int f_j=0;
+							if (select_game_bar >= 300 && select_game_bar < 320) {
+								if (select_game_bar >= 310) {
+									struct discHdr *header;
+									int n;  // return
+									int f_j = 0;
 														
-										//snd_fx_yes();
+									//snd_fx_yes();
 
-										edit_cfg=0;
+									edit_cfg = 0;
 
-										if(!mode_disc)
-											header= &gameList[game_datas[game_mode-1].ind];
-										else header= disc_header;
-
-										if(mode_disc && game_mode && !edit_cfg) 
-										{
-											remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-											mode_disc&=~1;f_j=1;parental_control_on=1;parental_mode=0;
-											if(dvd_only) is_fat=it_have_fat;
-										}
-
-										if(!(mode_disc & 1) && game_mode && !edit_cfg) parental_mode=0;
-
-										game_mode=0;edit_cfg=0;
-										for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-													   
-										load_png=1;
-										direct_launch=0;
-										rumble=0;
-										last_select=select_game_bar;
-										make_rumble_off();
-
-										n=call_home_menu(header, select_game_bar-310);
-
-										select_game_bar=0;
-										if(f_j || n==2) goto get_games;
-										load_png=1;
-										continue;
-									}
-									else
-									{
-										edit_cfg= select_game_bar; snd_fx_yes();
-									}
-								}
-
-								if(select_game_bar==3) {int n;// add favorite
-									struct discHdr *header;
-									direct_launch=0;
-									select_game_bar=0;is_favorite=1;insert_favorite=game_datas[game_mode-1].ind+1;
-									if(!mode_disc)
-										header= &gameList[game_datas[game_mode-1].ind];
-									else header= disc_header;
-
-									alternative_default_cover=0;
-												    
-									snd_fx_yes();
-
-									mem_move_chan=game_datas[game_mode-1].png_bmp;
-
-									if(game_datas[game_mode-1].png_bmp) 
-										memcpy(&text_move_chan, &game_datas[game_mode-1].texture, sizeof(GXTexObj));
-									else if(is_fat && (header->version & 2))
-									{memcpy(&text_move_chan, &default_game_texture2, sizeof(GXTexObj));alternative_default_cover=1;}
-									else
-										memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
-
-									game_datas[game_mode-1].png_bmp=NULL;
-													
-									game_mode=0;edit_cfg=0;
-													
-									for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-									save_cfg(0);
-									load_png=1;
-								} 
-
-								if(select_game_bar==4) {// del favorite
-									int n;
-									direct_launch=0;
-									select_game_bar=0;is_favorite=1; 
-
-									snd_fx_yes();
-
-									memset(&config_file.id[game_mode-1][0],0,8);
-									game_mode=0;edit_cfg=0;
-									for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-									save_cfg(0);
-									load_png=1;
-								}
-
-								if(select_game_bar==55)
-								{
-									struct discHdr *header;
-
-									if(mode_disc & 3) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
-
-									if(!mode_disc)
-										header= &gameList[game_datas[game_mode-1].ind];
-									else header= disc_header;
-
-									direct_launch=0;
-									select_game_bar=0;//is_favorite=1; 
-
-									snd_fx_yes();
-
-									menu_alternativedol(header->id);
-									old_pad|=new_pad;
-									new_pad=0;
-//													new_pad &=~ WPAD_BUTTON_A | WPAD_BUTTON_B;
-
-									if(mode_disc & 3) {remote_call(remote_DVD_disc);usleep(1000*50);}
-
-								}
-								if(select_game_bar==56)
-								{
-									show_bca^=1;
-									if((show_bca & 1) && bca_status_read==1) bca_status_read=2;
-								
-								}
-								if(select_game_bar==57)
-								{
-									if(show_bca) update_bca(discid, BCA_Data);
-								}
-
-								if(select_game_bar>=500 && select_game_bar<500+MAX_LIST_CHEATS)
-								{
-									snd_fx_yes();
-									data_cheats[select_game_bar-500].apply^=1;
-								}
-								if(select_game_bar>=30 && select_game_bar<38)
-								{
-
-									snd_fx_yes();
-									ciso_sel=select_game_bar-30;
-
-									remote_DVD_disc_status=3;
-													
-								}
-								// WDM menu
-								if(select_game_bar>=450 && select_game_bar<462 && dolmenubuffer)
-								{
-									skip_alternative_dol=1;
-									AlternativeDol_infodat.id[0]=0;dol_data= NULL;
-
-									dolparameter=dolmenubuffer[select_game_bar-449].parameter;
-
-									if(dolmenubuffer[select_game_bar-449].offset)
-									{
-										memcpy(AlternativeDol_infodat.id, dolmenubuffer[0].name, 6);
-										dol_len=AlternativeDol_infodat.size=dolmenubuffer[select_game_bar-449].size;
-										AlternativeDol_infodat.offset=dolmenubuffer[select_game_bar-449].offset;
-										str_trace="WDM Get_AlternativeDol alloc";
-										dol_data= (u8 *) SYS_AllocArena2MemLo(dol_len+32768,32);
-										if(!dol_data) {AlternativeDol_infodat.id[0]=0;} // cancel
-										str_trace="";
-									}
-
-
-									select_game_bar=5; // run game
-								
-								}
-
-								// run game, cheats...
-
-								if(select_game_bar==5 || select_game_bar==1000 || select_game_bar==1001) 
-								{
-									struct discHdr *header;
-
-
-									if(((nand_mode & 1) && !sd_ok) || ((nand_mode & 2) && !ud_ok)) 
-									{
-										warning_osd=1;
-										snd_fx_no();
-										goto ignore_all;
-									}
-
-									load_alt_game_disc=0;
-													
-									if(mode_disc & 3) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
-
-									if(!mode_disc)
-										header= &gameList[game_datas[game_mode-1].ind];
+									if (!mode_disc)
+										header = &gameList[game_datas[game_mode - 1].ind];
 									else 
-									{
-										header= disc_header;
-										if(mode_disc & 3)
-											load_alt_game_disc=1;
+										header = disc_header;
+
+									if (mode_disc && game_mode && !edit_cfg) {
+										remote_call_abort();
+										while (remote_ret() == REMOTE_BUSY) 
+											usleep(1000*50);
+										mode_disc &= ~1;
+										f_j = 1;
+										parental_control_on = 1;
+										parental_mode = 0;
+										if (dvd_only) 
+											is_fat = it_have_fat;
 									}
-														
-									if(is_fat)
-									{
-										load_alt_game_disc=1;
+
+									if (!(mode_disc & 1) && game_mode && !edit_cfg)
+										parental_mode = 0;
+
+									game_mode = 0;
+									edit_cfg = 0;
+									for (n = 0; n < 15; n++) {
+										if (game_datas[n].png_bmp) 
+											free(game_datas[n].png_bmp);
+										game_datas[n].png_bmp = NULL;
 									}
-									//else
-														
-									direct_launch=0;
+													   
+									load_png = 1;
+									direct_launch = 0;
+									rumble = 0;
+									last_select = select_game_bar;
+									make_rumble_off();
 
-									snd_fx_yes();
+									n = call_home_menu(header, select_game_bar - 310);
 
-									if(is_fat && (header->version & 2)) cheats_for_wiiware=1; else cheats_for_wiiware=0;
+									select_game_bar = 0;
+									if(f_j || n == 2) 
+										goto get_games;
+									load_png = 1;
+									continue;
+								} else {
+									edit_cfg = select_game_bar; snd_fx_yes();
+								}
+							}
 
-									memcpy(discid,header->id,6); discid[6]=0;
+							if (select_game_bar == 3) {
+								int n;// add favorite
+								struct discHdr *header;
+								direct_launch = 0;
+								select_game_bar = 0;
+								is_favorite = 1;
+								insert_favorite = game_datas[game_mode - 1].ind + 1;
+
+								if (!mode_disc)
+									header = &gameList[game_datas[game_mode - 1].ind];
+								else 
+									header = disc_header;
+
+								alternative_default_cover = 0;
+												    
+								snd_fx_yes();
+
+								mem_move_chan = game_datas[game_mode - 1].png_bmp;
+
+								if (game_datas[game_mode-1].png_bmp) 
+									memcpy(&text_move_chan, &game_datas[game_mode-1].texture, sizeof(GXTexObj));
+								else if (is_fat && (header->version & 2)) {
+									memcpy(&text_move_chan, &default_game_texture2, sizeof(GXTexObj));
+									alternative_default_cover = 1;
+								} else
+									memcpy(&text_move_chan, &default_game_texture, sizeof(GXTexObj));
+
+								game_datas[game_mode - 1].png_bmp = NULL;
 													
-									if(select_game_bar==5)
-										if(load_cheats(discid)) cheat_mode=1;
-
-									if(select_game_bar>=1000) cheat_mode=0;
+								game_mode = 0;
+								edit_cfg = 0;
 													
-									set_cheats_list(discid);
-									if(select_game_bar==1000) create_cheats();
+								for (n = 0;n < 15; n++) {
+									if (game_datas[n].png_bmp) 
+										free(game_datas[n].png_bmp);
+									game_datas[n].png_bmp = NULL;
+								}
+								save_cfg(0);
+								load_png = 1;
+							} 
 
-													
-									if(select_game_bar==1001) len_cheats=0; // don't apply cheats
-						
-									select_game_bar=0;
+							if(select_game_bar == 4) {// del favorite
+								int n;
+								direct_launch = 0;
+								select_game_bar = 0;
+								is_favorite = 1; 
 
-									if(!cheat_mode)
-									{
-										select_game_bar=0;
-										Screen_flip();
+								snd_fx_yes();
 
-										// is VC title
-										if(is_fat && (header->version & 2)) 
-										{
-											game_mode|= 0x400000;
-											if(header->version & 1) nand_mode|=1; else nand_mode|=2;
-															
-										}
+								memset(&config_file.id[game_mode-1][0], 0, 8);
+								game_mode = 0;
+								edit_cfg = 0;
+								for (n = 0;n < 15; n++) {
+									if (game_datas[n].png_bmp) 
+										free(game_datas[n].png_bmp);
+									game_datas[n].png_bmp = NULL;
+								}
+								save_cfg(0);
+								load_png = 1;
+							}
 
-										ret=load_game_routine(discid, game_mode | (0x800000 *(mode_disc!=0)) | (0x200000 * (( mode_disc & 2)!=0)));
-                           
-										//////////////////////////////////
-										remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-														
-													
-										draw_background();
-			
-												
-										SelectFontTexture(1); // selecciona la fuente de letra extra
+							if (select_game_bar == 55) {
+								struct discHdr *header;
 
-										letter_size(8,32);
-																
-										PX=0; PY= SCR_HEIGHT/2; color= INK0; bkcolor=0;
-																
-										bkcolor=0;
-										autocenter=1;
-										SetTexture(NULL);
-
-										DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 0, 0xa00000ff);
-										DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 0, 4, 0xa0000000);
-
-										display_loader_error(ret);
-                                                       
-										Screen_flip();
-										sleep(3);
-
-										//////////////////////////////////
-										break;
-									}
-								ignore_all: ;
-								} // load game
-								// josete2k
-								if(select_game_bar==6) {if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
-									exit_by_reset=return_reset; // fixed by hermes //SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+								if (mode_disc & 3) {
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
 								}
 
-								if(select_game_bar==9)  {/*if(edit_cfg==1) edit_cfg=2; else */edit_cfg=1;snd_fx_yes();}
+								if (!mode_disc)
+									header = &gameList[game_datas[game_mode-1].ind];
+								else
+									header = disc_header;
+
+								direct_launch = 0;
+								select_game_bar = 0;
+								//is_favorite=1; 
+
+								snd_fx_yes();
+
+								menu_alternativedol(header->id);
+								old_pad |= new_pad;
+								new_pad = 0;
+								
+								//new_pad &=~ WPAD_BUTTON_A | WPAD_BUTTON_B;
+
+								if (mode_disc & 3) {
+									remote_call(remote_DVD_disc);
+									usleep(1000*50);
+								}
+								
+							}
+
+							if (select_game_bar == 56) {
+								show_bca ^= 1;
+								if ((show_bca & 1) && bca_status_read == 1)
+									bca_status_read = 2;
+							}
+
+							if (select_game_bar == 57) {
+								if (show_bca)
+									update_bca(discid, BCA_Data);
+							}
 							
-								// BCA from disc (offset 0x100)
-								if(select_game_bar==20)  {bca_mode&=128;snd_fx_yes();}
-								// BCA from database (sd:/bca_database.txt)
-								if(select_game_bar==21)  {bca_mode=1;snd_fx_yes();make_rumble_off();if(!get_bca(discid, BCA_Data)) bca_mode=128;}
+							if (select_game_bar >= 500 && select_game_bar < 500 + MAX_LIST_CHEATS) {
+								snd_fx_yes();
+								data_cheats[select_game_bar - 500].apply ^= 1;
+							}
+							if (select_game_bar >= 30 && select_game_bar < 38) {
+								snd_fx_yes();
+								ciso_sel = select_game_bar - 30;
+								remote_DVD_disc_status = 3;
+							}
 
-								// Grab BCA from database (WBFS Only)
-								if(select_game_bar==22)  {
-									make_rumble_off();
-								                     
-									memset(BCA_Data,0,64);
+							// WDM menu
+							if (select_game_bar >= 450 && select_game_bar < 462 && dolmenubuffer) {
+								skip_alternative_dol = 1;
+								AlternativeDol_infodat.id[0] = 0;
+								dol_data = NULL;
 
-									if(get_bca(discid, BCA_Data))
-									{  
-										if(global_SetBCA(discid, BCA_Data))
-										{
-											snd_fx_yes();bca_mode=0;bca_saved=1;
-										}
-										else {snd_fx_no();bca_saved=128;}
-									} 
-									else {snd_fx_no();bca_saved=128;bca_mode=128;}
+								dolparameter = dolmenubuffer[select_game_bar - 449].parameter;
 
+								if (dolmenubuffer[select_game_bar - 449].offset) {
+									memcpy(AlternativeDol_infodat.id, dolmenubuffer[0].name, 6);
+									dol_len = AlternativeDol_infodat.size = dolmenubuffer[select_game_bar - 449].size;
+									AlternativeDol_infodat.offset = dolmenubuffer[select_game_bar - 449].offset;
+									str_trace = "WDM Get_AlternativeDol alloc";
+									dol_data = (u8 *) SYS_AllocArena2MemLo(dol_len + 32768,32);
+									if (!dol_data) {
+										AlternativeDol_infodat.id[0] = 0;
+									} // cancel
+									str_trace = "";
 								}
-								// hooktype selection
-								if(select_game_bar==25)  {
-									hook_selected--; if(hook_selected<1) hook_selected=8;
-								}
-								if(select_game_bar==26)  {
-									hook_selected++; if(hook_selected>8) hook_selected=1;
+								select_game_bar = 5; // run game
+							}
+
+							// run game, cheats...
+							if (select_game_bar == 5 || select_game_bar == 1000 || select_game_bar == 1001) {
+								struct discHdr *header;
+
+								if (((nand_mode & 1) && !sd_ok) || 
+								    ((nand_mode & 2) && !ud_ok))  {
+									warning_osd = 1;
+									snd_fx_no();
+									goto ignore_all;
 								}
 
-								// nand ->60 sd->61 usb ->62 nand export -> 63 <<->64 >> -> 65 delete ->66 (nand_mode)
+								load_alt_game_disc = 0;
+													
+								if (mode_disc & 3) {
+									remote_call_abort();
+									while(remote_ret() == REMOTE_BUSY)
+										usleep(1000*50);
+								}
 
-								// NAND SAVES (emulation off)
-								if(select_game_bar==60)  {
-									save_exist=-1;
-									nand_mode&=~3;
-									snd_fx_yes();
+								if (!mode_disc)
+									header = &gameList[game_datas[game_mode - 1].ind];
+								else {
+									header = disc_header;
+									if (mode_disc & 3)
+										load_alt_game_disc = 1;
 								}
-								// SD SAVES
-								if(select_game_bar==61)  {
-									save_exist=0;
-									nand_mode= (nand_mode & 0x1c) | 1;
-									snd_fx_yes();
+														
+								if(is_fat) {
+									load_alt_game_disc = 1;
 								}
-								// USB SAVES
-								if(select_game_bar==62)  {
-									save_exist=0;
-									nand_mode=(nand_mode & 0x1c) | 2;
-									snd_fx_yes();
+								//else
+														
+								direct_launch = 0;
+
+								snd_fx_yes();
+								
+								if (is_fat && (header->version & 2)) 
+									cheats_for_wiiware = 1;
+								else 
+									cheats_for_wiiware = 0;
+
+								memcpy(discid,header->id,6); 
+								discid[6] = 0;
+													
+								if (select_game_bar == 5)
+									if (load_cheats(discid)) 
+										cheat_mode = 1;
+
+								if (select_game_bar >= 1000)
+									cheat_mode = 0;
+													
+								set_cheats_list(discid);
+								if (select_game_bar == 1000)
+									create_cheats();
+
+													
+								if (select_game_bar == 1001) 
+									len_cheats = 0; // don't apply cheats
+						
+								select_game_bar = 0;
+
+								if (!cheat_mode) {
+									select_game_bar = 0;
+									Screen_flip();
+
+									// is VC title
+									if (is_fat && (header->version & 2)) {
+										game_mode |= 0x400000;
+										if (header->version & 1) 
+											nand_mode |= 1; 
+										else 
+											nand_mode |= 2;
+															
+									}
+
+									ret = load_game_routine(discid, 
+												game_mode | (0x800000 *(mode_disc!=0)) | 
+												            (0x200000 * (( mode_disc & 2) != 0)));
+                           
+									//////////////////////////////////
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+														
+									draw_background();
+
+									SelectFontTexture(1); // selecciona la fuente de letra extra
+									letter_size(8, 32);
+																
+									PX = 0; 
+									PY = SCR_HEIGHT/2;
+									color = INK0; 
+									bkcolor = 0;
+																
+									bkcolor = 0;
+									autocenter = 1;
+									SetTexture(NULL);
+
+									DrawRoundFillBox((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16, 540, 64, 0, 0xa00000ff);
+									DrawRoundBox    ((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16, 540, 64, 0, 4, 0xa0000000);
+
+									display_loader_error(ret);
+                                                       
+									Screen_flip();
+									sleep(3);
+
+									//////////////////////////////////
+									break;
 								}
-								// nand export
-								if(select_game_bar==63 && (nand_mode & 3))  
-								{
-									struct discHdr *header;
-									make_rumble_off();
+							ignore_all: ;
+							} // load game
+							// josete2k
+							if (select_game_bar == 6) {
+								if (mode_disc) {
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+								}
+								exit_by_reset = return_reset; // fixed by hermes //SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+							}
+
+							if (select_game_bar == 9) {
+								/*
+								  if(edit_cfg == 1) 
+									  edit_cfg=2; 
+								  else 
+								*/
+								edit_cfg = 1;
+								snd_fx_yes();
+							}
+							
+							// BCA from disc (offset 0x100)
+							if (select_game_bar == 20) {
+								bca_mode &= 128;
+								snd_fx_yes();
+							}
+
+							// BCA from database (sd:/bca_database.txt)
+							if (select_game_bar == 21) {
+								bca_mode = 1;
+								snd_fx_yes();
+								make_rumble_off();
+								if (!get_bca(discid, BCA_Data)) 
+									bca_mode = 128;
+							}
+
+							// Grab BCA from database (WBFS Only)
+							if (select_game_bar == 22)  {
+								make_rumble_off();
+								
+								memset(BCA_Data, 0, 64);
+								
+								if (get_bca(discid, BCA_Data)) {  
+									if(global_SetBCA(discid, BCA_Data)) {
+										snd_fx_yes();
+										bca_mode = 0;
+										bca_saved = 1;
+									} else {
+										snd_fx_no();
+										bca_saved = 128;
+									}
+								} else {
+									snd_fx_no();
+									bca_saved = 128;
+									bca_mode = 128;
+								}
+							}
+							// hooktype selection
+							if (select_game_bar == 25)  {
+								hook_selected--; 
+								if (hook_selected < 1)
+									hook_selected = 8;
+							}
+
+							if (select_game_bar == 26)  {
+								hook_selected++;
+								if (hook_selected > 8) 
+									hook_selected = 1;
+							}
+
+							// nand ->60 sd->61 usb ->62 
+							// nand export -> 63 <<->64 >> -> 65 delete ->66 (nand_mode)
+
+							// NAND SAVES (emulation off)
+							if (select_game_bar == 60)  {
+								save_exist  = -1;
+								nand_mode  &= ~3;
+								snd_fx_yes();
+							}
+
+							// SD SAVES
+							if(select_game_bar == 61)  {
+								save_exist = 0;
+								nand_mode = (nand_mode & 0x1c) | 1;
+								snd_fx_yes();
+							}
+
+							// USB SAVES
+							if (select_game_bar == 62)  {
+								save_exist = 0;
+								nand_mode = (nand_mode & 0x1c) | 2;
+								snd_fx_yes();
+							}
+
+							// nand export
+							if (select_game_bar == 63 && (nand_mode & 3)) {
+								struct discHdr *header;
+								make_rumble_off();
 											
-									if(!mode_disc)  header= &gameList[game_datas[game_mode-1].ind];
-									else header= disc_header;
+								if (!mode_disc)
+									header = &gameList[game_datas[game_mode - 1].ind];
+								else 
+									header = disc_header;
 														
-									if(header)
-									{
-										edit2_mode=2;
+								if(header) {
+									edit2_mode = 2;
 
-										create_FAT_FFS_Directory(header);
+									create_FAT_FFS_Directory(header);
 
-										if(test_FAT_game(get_FAT_directory1()) || test_FAT_game(get_FAT_directory2()))
-											warning_message="Save Found in FAT. Are You Sure Rewrite It?";
-										else
-											warning_message="#Save in FAT is Empty. Press YES to Start";
-									}
-
-									warning_time=90;
-									snd_fx_yes();
+									if (test_FAT_game(get_FAT_directory1()) || 
+									    test_FAT_game(get_FAT_directory2()))
+										warning_message = "Save Found in FAT. Are You Sure Rewrite It?";
+									else
+										warning_message = "#Save in FAT is Empty. Press YES to Start";
 								}
-								// NAND FOLDER --                
-								if(select_game_bar==64)  {
-									save_exist=0;
-									nand_mode=((nand_mode-4) & 0xc) | (nand_mode & 0x13);
-									snd_fx_yes();
-								}
-								// NAND FOLDER ++						
-								if(select_game_bar==65)  {
-									save_exist=0;
-									nand_mode=((nand_mode+4) & 0xc) | (nand_mode & 0x13);
-									snd_fx_yes();
-								}
-								if(select_game_bar==66 && (nand_mode & 3))
-								{
-									struct discHdr *header;
+								warning_time = 90;
+								snd_fx_yes();
+							}
 
-									make_rumble_off();
+							// NAND FOLDER --                
+							if (select_game_bar == 64)  {
+								save_exist = 0;
+								nand_mode = ((nand_mode - 4) & 0xc) | (nand_mode & 0x13);
+								snd_fx_yes();
+							}
+							// NAND FOLDER ++						
+							if(select_game_bar == 65)  {
+								save_exist = 0;
+								nand_mode = ((nand_mode + 4) & 0xc) | (nand_mode & 0x13);
+								snd_fx_yes();
+							}
 
-									if(!mode_disc)  header= &gameList[game_datas[game_mode-1].ind];
-									else header= disc_header;
+							if (select_game_bar == 66 && (nand_mode & 3)) {
+								struct discHdr *header;
 
-									if(header)
-									{
-										create_FAT_FFS_Directory(header);
-										if(test_FAT_game(get_FAT_directory1()) || test_FAT_game(get_FAT_directory2()))
-										{
-											edit2_mode=1;
+								make_rumble_off();
 
-											warning_message="Save Found. Are You Sure To Delete It?";
-											warning_time=90;
-											snd_fx_yes();
-										}
-										else
-										{
-											warning_message="#No Saves To Delete";
-											warning_time=90;
-											snd_fx_no();
-										}
-									}
-									// delete saves
-													 
-								}
-								// real delete save
-								if(select_game_bar==67)  {
-										
-									char * name="nononono";
-									make_rumble_off();
+								if (!mode_disc) 
+									header = &gameList[game_datas[game_mode - 1].ind];
+								else 
+									header = disc_header;
 
-									edit2_mode=0;
-									save_exist=0;
-													 
-														
-									if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+								if(header) {
+									create_FAT_FFS_Directory(header);
+									if (test_FAT_game(get_FAT_directory1()) || 
+									    test_FAT_game(get_FAT_directory2()))   {
+										edit2_mode = 1;
 
-									if(nand_mode & 1)
-									{down_mess="Deleting Save From SD";}
-									if(nand_mode & 2)
-									{down_mess="Deleting Save From USB";}
-														
-									if(test_FAT_game(get_FAT_directory1())) name=get_FAT_directory1();
-									else	
-										if(test_FAT_game(get_FAT_directory2())) name=get_FAT_directory2();
-
-									down_frame=0;
-									remote_call(down_uload_gfx);usleep(1000*50);
-
-									if(FAT_DeleteDir(name) ||  remove(name))
-									{
-										warning_message="Error Deleting Save";
+										warning_message = "Save Found. Are You Sure To Delete It?";
+										warning_time = 90;
+										snd_fx_yes();
+									} else {
+										warning_message = "#No Saves To Delete";
+										warning_time = 90;
 										snd_fx_no();
 									}
-									else
-									{
-										warning_message="#Save Deleted";
-										snd_fx_yes();
-									}
-									warning_time=90;
-									remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-									down_mess="";
-									down_frame=-1;
-													
-									if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
+								}
+								// delete saves
+							}
+
+							// real delete save
+							if (select_game_bar == 67)  {
+										
+								char * name="nononono";
+								make_rumble_off();
+
+								edit2_mode = 0;
+								save_exist = 0;
+
+								if (mode_disc) {
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
 								}
 
-								// real nand export
-								if(select_game_bar==68)  {
+								if (nand_mode & 1) {
+									down_mess = "Deleting Save From SD";
+								}
+								
+								if (nand_mode & 2) {
+									down_mess = "Deleting Save From USB";
+								}
+								
+								if (test_FAT_game(get_FAT_directory1())) 
+									name = get_FAT_directory1();
+								else if (test_FAT_game(get_FAT_directory2())) 
+									name = get_FAT_directory2();
+								
+								down_frame = 0;
+								remote_call(down_uload_gfx);
+								usleep(1000*50);
+
+								if (FAT_DeleteDir(name) ||  remove(name)) {
+									warning_message = "Error Deleting Save";
+									snd_fx_no();
+								} else {
+									warning_message = "#Save Deleted";
+									snd_fx_yes();
+								}
+
+								warning_time = 90;
+								remote_call_abort();
+								while (remote_ret() == REMOTE_BUSY) 
+									usleep(1000*50);
+								down_mess = "";
+								down_frame = -1;
 													
-									int ret=-123456;
-									make_rumble_off();
+								if (mode_disc) {
+									remote_call(remote_DVD_disc);
+									usleep(1000*50);
+								}
+							}
 
-									edit2_mode=0;
-									save_exist=0;
+							// real nand export
+							if (select_game_bar == 68)  {
+													
+								int ret = -123456;
+								make_rumble_off();
+
+								edit2_mode = 0;
+								save_exist = 0;
 														
-									if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+								if (mode_disc) {
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+								}
 
-									if(nand_mode & 1)
-									{	
-										down_mess="Exporting Datas From NAND To SD";
-									}
-									if(nand_mode & 2)
-									{
-										down_mess="Exporting Datas From NAND To USB";
-									}
+								if (nand_mode & 1) {	
+									down_mess = "Exporting Datas From NAND To SD";
+								}
+								if (nand_mode & 2) {
+									down_mess = "Exporting Datas From NAND To USB";
+								}
 
-									down_frame=0;
-									remote_call(down_uload_gfx);usleep(1000*50);
+								down_frame = 0;
+								remote_call(down_uload_gfx);
+								usleep(1000*50);
 	
-									ret= FFS_to_FAT_Copy(get_FFS_directory1(), get_FAT_directory1());
-									if(ret==-101)
-									{
-										ret= FFS_to_FAT_Copy(get_FFS_directory2(), get_FAT_directory2());
-									}
+								ret = FFS_to_FAT_Copy(get_FFS_directory1(), get_FAT_directory1());
+								if(ret == -101) {
+									ret = FFS_to_FAT_Copy(get_FFS_directory2(), 
+											      get_FAT_directory2());
+								}
 														
-									if(ret==0)
-									{
-										warning_time=90;
+								if(ret == 0) {
+									warning_time = 90;
+									snd_fx_yes();
+								} else if (ret < 0) {
+										warning_time = 90;
+										snd_fx_no();
+								}
+
+								switch (ret) {
+								case 0:
+									warning_message = "#Save Copied";
+									break;
+								case -123456:
+									warning_message = "Stupid Monkey Error";
+									break;
+								case -101:
+									warning_message = "No Save Found";
+									break;
+								case -1:
+									warning_message = "Invalid Path";
+									break;
+								case -2:
+									warning_message = "Out Of Memory";
+									break;
+								case -3:
+									warning_message = "Error In Read Dir";
+									break;
+								case -4:
+									warning_message = "Error Opening FFS File";
+									break;
+								case -5:
+									warning_message = "Error Creating FAT File";
+									break;
+								case -6:
+									warning_message = "Error Seeking FFS File";
+									break;
+								case -7:
+									warning_message = "Error Reading Datas";
+									break;
+								case -8:
+									warning_message = "Error Writing Datas";
+									break;
+								}
+
+								remote_call_abort();
+								while (remote_ret() == REMOTE_BUSY) 
+									usleep(1000*50);
+								down_mess = "";
+								down_frame = -1;
+													
+								if (mode_disc) {
+									remote_call(remote_DVD_disc);
+									usleep(1000*50);
+								}
+							}
+
+							// cancel delete						 
+							if (select_game_bar == 69) {
+								edit2_mode = 0;
+								warning_time = 0;
+								snd_fx_no();
+							}
+
+							// ask delete title
+							if (select_game_bar == 70) {
+								edit2_mode = 3;
+								warning_message = "Are You Sure To Delete The Title?";
+								warning_time = 90;
+								snd_fx_yes();
+							}
+							// ask delete data
+							if (select_game_bar == 71) {
+								edit2_mode = 4;
+								warning_message = "Are You Sure To Delete The Datas?";
+								warning_time = 90;
+								snd_fx_yes();
+							}
+							
+							// delete title or datas
+							if (select_game_bar == 72 ||
+							    select_game_bar == 73)   {
+								struct discHdr *header;
+
+								make_rumble_off();
+								edit2_mode = 0;
+
+								if (!mode_disc) { 
+									header = &gameList[game_datas[game_mode - 1].ind];
+														
+									if (select_game_bar == 72) {
+										if (header->version & 1) {
+											down_mess = "Deleting Title From SD";
+										} else {
+											down_mess = "Deleting Title From USB";
+										}
+									} else {
+										if (header->version & 1) {
+											down_mess = "Deleting Datas From SD";
+										} else {
+											down_mess = "Deleting Datas From USB";
+										}				
+									}
+									
+									sprintf((char *) temp_data, 
+										"%s:/nand/title/00010001/%2.2x%2.2x%2.2x%2.2x%s",
+										(header->version & 1) ? "sd" : "ud", 
+										header->id[0], header->id[1], header->id[2], header->id[3],
+										(select_game_bar == 72) ? "\0" : "/data");
+
+									down_frame = 0;
+									remote_call(down_uload_gfx);
+									usleep(1000*50);
+
+									if (FAT_DeleteDir((char *) temp_data) ||  
+									    (select_game_bar == 72 && remove((char *) temp_data))) {	
+										if (select_game_bar == 72)
+											warning_message = "Error Deleting Title";
+										else
+											warning_message = "Error Deleting Title Datas";
+										snd_fx_no();
+									} else {
+										if (select_game_bar == 72) {
+											warning_message = "#Title Deleted";
+											header->version |= 128;
+										} else
+											warning_message = "#Title Datas Deleted";
 										snd_fx_yes();
 									}
-									else
-										if(ret<0)
-										{
-											warning_time=90;
-											snd_fx_no();
-										}
+									warning_time = 90;
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+									down_mess = "";
+									down_frame = -1;
+								}
+							}
+							
+							// ask update content
+							if (select_game_bar == 74) {
+								edit2_mode = 5;
+								warning_message = "Are You Sure To Update The Content?";
+								warning_time = 90;
+								snd_fx_yes();
+							}
+							
+							// update content
+							if(select_game_bar == 75) {
+								struct discHdr *header;
+								int ret;
+								edit2_mode = 0;
 
-									switch(ret)
-									{
+								make_rumble_off();
+
+								if (!mode_disc) { 
+									header = &gameList[game_datas[game_mode - 1].ind];
+									u64 titleid = 0x0001000100000000ULL; 
+									memcpy(((char *) &titleid)+4, header->id, 4);
+
+									down_frame = 0;
+									remote_call(down_uload_gfx);
+									usleep(1000*50);
+
+									if (header->version & 1) {
+										down_mess = "Updating Title From SD";
+									} else {
+										down_mess = "Updating Title From USB";
+									}
+															
+									ret = Force_Update(titleid, (header->version & 1));
+									warning_time = 90;
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+									down_mess = "";
+									down_frame = -1;
+
+									switch (ret) {
 									case 0:
-										warning_message="#Save Copied";
+										warning_message = "#No Content To Update";
+										snd_fx_yes();
 										break;
-									case -123456:
-										warning_message="Stupid Monkey Error";
-										break;
-									case -101:
-										warning_message="No Save Found";
+									case 1:
+										warning_message = "#Title Updated";
+										snd_fx_yes();
 										break;
 									case -1:
-										warning_message="Invalid Path";
+										warning_message = "Invalid Title";
+										snd_fx_no();
 										break;
 									case -2:
-										warning_message="Out Of Memory";
+										warning_message = "Missing title.tmd";
+										snd_fx_no();
 										break;
 									case -3:
-										warning_message="Error In Read Dir";
+										warning_message = "Error in diropen()";
+										snd_fx_no();
 										break;
 									case -4:
-										warning_message="Error Opening FFS File";
+										warning_message = "Error: Content Damaged";
+										snd_fx_no();
+										break;
+									}
+								}
+							}
+
+							// ask copy DLC
+							if (select_game_bar == 76)  {
+								edit2_mode=6;
+								warning_message = "You Want Copy DLC from NAND?";
+								warning_time = 90;
+								snd_fx_yes();
+							}
+
+							// real DLC copy
+							if (select_game_bar == 77)  {
+								struct discHdr *header;
+								int ret, ret2 = -101;
+
+								edit2_mode = 0;
+
+								make_rumble_off();
+
+								if (mode_disc) {
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+								}
+
+								if (!mode_disc) 
+									header = &gameList[game_datas[game_mode - 1].ind];
+								else 
+									header = disc_header;
+								
+								if (header) { 
+									down_frame = 0;
+									remote_call(down_uload_gfx);
+									usleep(1000*50);
+
+									if (nand_mode & 1) {	
+										down_mess = "Copy DLC From NAND To The SD";
+									}
+									if (nand_mode & 2) {
+										down_mess="Copy DLC From NAND To The USB";
+									}
+									sleep(1);
+														
+									warning_time = 90;
+
+									static char nand_folder[4][8] =  { "nand", "nand2", "nand3", "nand4" };
+
+									sprintf((char *) temp_data, 
+										"%s/%s/title/00010005/%02x%02x%02x%02x/content/#title.tmd", 
+										((nand_mode & 2) != 0) ? "ud:" : "sd:", 
+										&nand_folder[(nand_mode>>2) & 3][0], 
+										header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
+									sprintf((char *) temp_data + 256, 
+										"%s/%s/title/00010005/%02x%02x%02x%02x/content/title.tmd", 
+										((nand_mode & 2) != 0) ? "ud:" : "sd:", 
+										&nand_folder[(nand_mode>>2) & 3][0],
+										header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
+														
+									// backup of title.tmd if exist
+									FAT_copy_file((char *) temp_data, (char *) temp_data + 256);
+
+									sprintf((char *) temp_data, "/ticket/00010005/%02x%02x%02x%02x.tik", 
+										header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
+														
+									sprintf((char *) temp_data + 256, 
+										"%s/%s/ticket/00010005/%02x%02x%02x%02x.tik", 
+										((nand_mode & 2) != 0) ? "ud:" : "sd:", 
+										&nand_folder[(nand_mode>>2) & 3][0], 
+										header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
+
+									ret= FFS_to_FAT_File_Copy((char *) temp_data, (char *) temp_data+256);
+									//down_mess = (char *) temp_data + 256;
+														
+									if(ret == 0) {
+										ret2 = ret;
+										sprintf((char *) temp_data, "/title/00010005/%02x%02x%02x%02x", 
+											header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
+										sprintf((char *) temp_data + 256, 
+											"%s/%s/title/00010005/%02x%02x%02x%02x", 
+											((nand_mode & 2) != 0) ? "ud:" : "sd:", 
+											&nand_folder[(nand_mode>>2) & 3][0], 
+											header->id[0] |32, header->id[1], header->id[2], header->id[3]);
+										
+										ret = FFS_to_FAT_Copy((char *) temp_data, (char *) temp_data + 256);
+									}
+                                            
+									if (ret == 0) {
+										warning_time = 90;
+										snd_fx_yes();
+									} else if (ret < 0) {
+										warning_time = 90;
+										snd_fx_no();
+									}
+
+									switch (ret) {
+									case 0:
+										warning_message = "#DLC Copied";
+										break;
+									case -123456:
+										warning_message = "Stupid Monkey Error";
+										break;
+									case -101:
+										if (ret2 == 0)  
+											warning_message = "No DLC Datas Found";
+										else
+											warning_message = "No DLC Found";
+										break;
+									case -1:
+										warning_message = "Invalid Path";
+										break;
+									case -2:
+										warning_message = "Out Of Memory";
+										break;
+									case -3:
+										warning_message = "Error In Read Dir";
+										break;
+									case -4:
+										warning_message = "Error Opening FFS File";
 										break;
 									case -5:
-										warning_message="Error Creating FAT File";
+										warning_message = "Error Creating FAT File";
 										break;
 									case -6:
-										warning_message="Error Seeking FFS File";
+										warning_message = "Error Seeking FFS File";
 										break;
 									case -7:
-										warning_message="Error Reading Datas";
+										warning_message = "Error Reading Datas";
 										break;
 									case -8:
-										warning_message="Error Writing Datas";
+										warning_message = "Error Writing Datas";
 										break;
 									}
+									remote_call_abort();
+									while (remote_ret() == REMOTE_BUSY) 
+										usleep(1000*50);
+									down_mess = "";
+									down_frame = -1;
 
-
-									remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-									down_mess="";
-									down_frame=-1;
-													
-									if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
-								}
-								// cancel delete						 
-
-								if(select_game_bar==69)  {edit2_mode=0;warning_time=0;snd_fx_no();}
-
-								// ask delete title
-								if(select_game_bar==70)  {edit2_mode=3;warning_message="Are You Sure To Delete The Title?";warning_time=90;snd_fx_yes();}
-								// ask delete data
-								if(select_game_bar==71)  {
-									edit2_mode=4;warning_message="Are You Sure To Delete The Datas?";
-									warning_time=90;snd_fx_yes();
-								}
-							
-								// delete title or datas
-								if(select_game_bar==72 || select_game_bar==73)  {
-									struct discHdr *header;
-
-									make_rumble_off();
-									edit2_mode=0;
-
-									if(!mode_disc) 
-									{ 
-										header= &gameList[game_datas[game_mode-1].ind];
-														
-										if(select_game_bar==72)
-										{
-											if(header->version & 1)
-											{down_mess="Deleting Title From SD";}
-											else
-											{down_mess="Deleting Title From USB";}
-										}
-										else
-										{
-											if(header->version & 1)
-											{down_mess="Deleting Datas From SD";}
-											else
-											{down_mess="Deleting Datas From USB";}
-										}
-														
-										sprintf((char *) temp_data, "%s:/nand/title/00010001/%2.2x%2.2x%2.2x%2.2x%s",
-											(header->version & 1) ? "sd" : "ud", 
-											header->id[0], header->id[1], header->id[2], header->id[3],
-											(select_game_bar==72) ? "\0" : "/data");
-
-
-										down_frame=0;
-										remote_call(down_uload_gfx);usleep(1000*50);
-														
-
-										if(FAT_DeleteDir((char *) temp_data) ||  (select_game_bar==72 && remove((char *) temp_data)))
-										{	
-											if(select_game_bar==72)
-												warning_message="Error Deleting Title";
-											else
-												warning_message="Error Deleting Title Datas";
-
-											snd_fx_no();
-										}
-										else
-										{
-											if(select_game_bar==72)
-											{
-												warning_message="#Title Deleted";
-												header->version|=128;
-											}
-											else
-												warning_message="#Title Datas Deleted";
-
-											snd_fx_yes();
-										}
-										warning_time=90;
-										remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-										down_mess="";
-										down_frame=-1;
+									if (mode_disc) {
+										remote_call(remote_DVD_disc);
+										usleep(1000*50);
 									}
 								}
-
-								// ask update content
-								if(select_game_bar==74)  {
-									edit2_mode=5;warning_message="Are You Sure To Update The Content?";
-									warning_time=90;snd_fx_yes();
-								}
-							
-								// update content
-								if(select_game_bar==75)  {
-									struct discHdr *header;
-									int ret;
-									edit2_mode=0;
-
-									make_rumble_off();
-
-									if(!mode_disc) 
-									{ 
-										header= &gameList[game_datas[game_mode-1].ind];
-										u64 titleid=0x0001000100000000ULL; 
-										memcpy(((char *) &titleid)+4, header->id, 4);
-
-										down_frame=0;
-										remote_call(down_uload_gfx);usleep(1000*50);
-
-										if(header->version & 1)
-										{down_mess="Updating Title From SD";}
-										else
-										{down_mess="Updating Title From USB";}
-															
-										ret=Force_Update(titleid, (header->version & 1));
-										warning_time=90;
-										remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-										down_mess="";
-										down_frame=-1;
-
-										switch(ret)
-										{
-										case 0:
-											warning_message="#No Content To Update";
-											snd_fx_yes();
-											break;
-										case 1:
-											warning_message="#Title Updated";
-											snd_fx_yes();
-											break;
-										case -1:
-											warning_message="Invalid Title";
-											snd_fx_no();
-											break;
-										case -2:
-											warning_message="Missing title.tmd";
-											snd_fx_no();
-											break;
-										case -3:
-											warning_message="Error in diropen()";
-											snd_fx_no();
-											break;
-										case -4:
-											warning_message="Error: Content Damaged";
-											snd_fx_no();
-											break;
-
-
-										}
-									}
-
-													
-								}
-								// ask copy DLC
-								if(select_game_bar==76)  {
-									edit2_mode=6;warning_message="You Want Copy DLC from NAND?";
-									warning_time=90;snd_fx_yes();
-								}
-								// real DLC copy
-								if(select_game_bar==77)  {
-									struct discHdr *header;
-									int ret, ret2=-101;
-
-									edit2_mode=0;
-
-									make_rumble_off();
-
-									if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
-
-									if(!mode_disc)  header= &gameList[game_datas[game_mode-1].ind];
-									else header= disc_header;
-
-									if(header) 
-									{ 
-														
-
-										down_frame=0;
-										remote_call(down_uload_gfx);usleep(1000*50);
-
-										if(nand_mode & 1)
-										{	
-											down_mess="Copy DLC From NAND To The SD";
-										}
-										if(nand_mode & 2)
-										{
-											down_mess="Copy DLC From NAND To The USB";
-										}
-
-
-										sleep(1);
-														
-										warning_time=90;
-
-										static char nand_folder[4][8]= {"nand","nand2","nand3","nand4"};
-
-														
-										sprintf((char *) temp_data, "%s/%s/title/00010005/%02x%02x%02x%02x/content/#title.tmd", 
-											((nand_mode & 2)!=0) ? "ud:" : "sd:", &nand_folder[(nand_mode>>2) & 3][0], header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
-										sprintf((char *) temp_data+256, "%s/%s/title/00010005/%02x%02x%02x%02x/content/title.tmd", 
-											((nand_mode & 2)!=0) ? "ud:" : "sd:", &nand_folder[(nand_mode>>2) & 3][0], header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
-														
-										// backup of title.tmd if exist
-
-										FAT_copy_file((char *) temp_data, (char *) temp_data+256);
-
-										sprintf((char *) temp_data, "/ticket/00010005/%02x%02x%02x%02x.tik", 
-											header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
-														
-										sprintf((char *) temp_data+256, "%s/%s/ticket/00010005/%02x%02x%02x%02x.tik", 
-											((nand_mode & 2)!=0) ? "ud:" : "sd:", &nand_folder[(nand_mode>>2) & 3][0], header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
-
-										ret= FFS_to_FAT_File_Copy((char *) temp_data, (char *) temp_data+256);
-										//down_mess=(char *) temp_data+256;
-														
-														
-										if(ret==0)
-										{
-											ret2=ret;
-											sprintf((char *) temp_data, "/title/00010005/%02x%02x%02x%02x", 
-												header->id[0] | 32, header->id[1], header->id[2], header->id[3]);
-											sprintf((char *) temp_data+256, "%s/%s/title/00010005/%02x%02x%02x%02x", 
-												((nand_mode & 2)!=0) ? "ud:" : "sd:", &nand_folder[(nand_mode>>2) & 3][0], header->id[0] |32, header->id[1], header->id[2], header->id[3]);
-															
-
-											ret= FFS_to_FAT_Copy((char *) temp_data, (char *) temp_data+256);
-										}
-                                            
-										if(ret==0)
-										{
-											warning_time=90;
-											snd_fx_yes();
-										}
-										else
-											if(ret<0)
-											{
-												warning_time=90;
-												snd_fx_no();
-											}
-
-										switch(ret)
-										{
-										case 0:
-											warning_message="#DLC Copied";
-											break;
-										case -123456:
-											warning_message="Stupid Monkey Error";
-											break;
-										case -101:
-											if(ret2==0)  warning_message="No DLC Datas Found";
-											else  warning_message="No DLC Found";
-											break;
-										case -1:
-											warning_message="Invalid Path";
-											break;
-										case -2:
-											warning_message="Out Of Memory";
-											break;
-										case -3:
-											warning_message="Error In Read Dir";
-											break;
-										case -4:
-											warning_message="Error Opening FFS File";
-											break;
-										case -5:
-											warning_message="Error Creating FAT File";
-											break;
-										case -6:
-											warning_message="Error Seeking FFS File";
-											break;
-										case -7:
-											warning_message="Error Reading Datas";
-											break;
-										case -8:
-											warning_message="Error Writing Datas";
-											break;
-										}
-										remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-										down_mess="";
-										down_frame=-1;
-
-										if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
-														
-									}
-								}
-													
-								// Del icon
-								if(select_game_bar==78)  {
-													 
-									if(disc_conf[9]=='C' && disc_conf[10]=='1' && disc_conf[11]=='6')
-									{
-										disc_conf[12]=disc_conf[13]=0; // force invalid X
-									}
-									snd_fx_yes();
-								}
-								// DLC from /nand/
-								if(select_game_bar==79)  {
-													 
-									nand_mode^=16;
-									snd_fx_yes();
-								}
-													 
-								// don't use diary
-								if(select_game_bar==80)  {	 
-									dont_use_diary^=1;
-									snd_fx_yes();
-								}
-
-								/*// shadow mload
-								  if(select_game_bar==81)  {	 
-								  shadow_mload^=1;
-								  snd_fx_yes();
-								  }
-								*/
-
-
-								if(select_game_bar==10 || select_game_bar==11) { // return from config (saving or not)
-												   
-									edit_cfg=0;
-
-									if(select_game_bar==10) snd_fx_yes(); else snd_fx_no();
-									// si no existe crea uno
-									if(!(disc_conf[0]=='H' && disc_conf[1]=='D' && disc_conf[2]=='R'))
-									{
-										disc_conf[0]='H'; disc_conf[1]='D'; disc_conf[2]='R';disc_conf[3]=0;
-										disc_conf[4]=disc_conf[5]=disc_conf[6]=disc_conf[7]=0;
-										disc_conf[8]=disc_conf[9]=disc_conf[10]=disc_conf[11]=0;
-									}
-													
-													
-									disc_conf[4]=disc_conf[5]=disc_conf[6]=disc_conf[7]=0;
-									if(select_game_bar==11) 
-									{
-										disc_conf[4]= game_datas[game_mode-1].config & 255;
-										disc_conf[5]= (game_datas[game_mode-1].config>>8) & 255;
-										disc_conf[6]= (game_datas[game_mode-1].config>>16) & 255;
-										disc_conf[7]= (game_datas[game_mode-1].config>>24) & 255;
-									}
-									else
-									{
-										u32 config=0;
-
-										game_cfg_field1= (void *) &config;
-
-										if(cios==249 || cios==cios_list[2]) game_cfg_field1->ios_selected|=1;
-										if(cios==cios_list[1]) game_cfg_field1->ios_selected|=2;
-
-										game_cfg_field1->modevideo |= forcevideo;
-										game_cfg_field1->language |= langsel;
-										game_cfg_field1->nand_mode |= nand_mode;
-										game_cfg_field1->skip_boot |= ((force_ingame_ios!=0) & 1);
-										game_cfg_field1->game_locked |= ((game_locked_cfg!=0) & 1);
-										game_cfg_field1->bca_mode |= (bca_mode & 1);
-										game_cfg_field1->hook_selected |= (hook_selected-1) & 7;
-										game_cfg_field1->dont_use_diary |= (dont_use_diary!=0);
-
-										//game_cfg_field1->shadow_mload |= (shadow_mload!=0);
-														
-										disc_conf[4]= config & 255;
-										disc_conf[5]= (config>>8) & 255;
-										disc_conf[6]= (config>>16) & 255;
-										disc_conf[7]= (config>>24) & 255;
-									}
-
-									game_datas[game_mode-1].config=disc_conf[4]+(disc_conf[5]<<8)+(disc_conf[6]<<16)+(disc_conf[7]<<24);
-									select_game_bar=0;
-									make_rumble_off();
-									if(select_game_bar!=11)
-									{
-										if(!mode_disc)
-											global_SetProfileDatas(discid, disc_conf);
-										else 
-											dol_SetProfileDatas(discid, disc_conf);
-									}
-												   
-								}
-								if(select_game_bar>=100 && select_game_bar<=111)
-								{
-									langsel= select_game_bar-100;
-									snd_fx_yes();
-								}
-								if(select_game_bar>=200 && select_game_bar<=203)
-								{
-									forcevideo= select_game_bar-200;
-									snd_fx_yes();
-								}
-
-								if(select_game_bar==210)
-								{
-									game_locked_cfg=(game_locked_cfg==0);
-									snd_fx_yes();usleep(250);
-								}
-								if(select_game_bar>=400 && select_game_bar<=402)
-								{
-									switch(select_game_bar-400)
-									{
-									case 0:
-										cios=cios_list[0];break;
-									case 1:
-										cios=cios_list[1];break;
-									case 2:
-#ifndef DONT_USE_IOS249
-										cios=249;break;
-#else
-										cios=cios_list[2];break;
-#endif
-									}
-									//cios= (select_game_bar-300) ? 249 : 222;
-									snd_fx_yes();
-								}
-								if(select_game_bar==403)
-								{
-									force_ingame_ios=(force_ingame_ios==0);
-									snd_fx_yes();
-								}
-
-												  
-							
-
 							}
+
+							// Del icon
+							if (select_game_bar == 78) {
+								if (disc_conf[9] == 'C' && 
+								    disc_conf[10] == '1' && 
+								    disc_conf[11] == '6')   {
+									disc_conf[12] = disc_conf[13] = 0; // force invalid X
+								}
+								snd_fx_yes();
+							}
+							// DLC from /nand/
+							if(select_game_bar == 79)  {
+													 
+								nand_mode ^= 16;
+								snd_fx_yes();
+							}
+													 
+							// don't use diary
+							if(select_game_bar == 80)  {	 
+								dont_use_diary ^= 1;
+								snd_fx_yes();
+							}
+
+							/*// shadow mload
+							  if (select_game_bar == 81)  {	 
+							          shadow_mload ^= 1;
+							          snd_fx_yes();
+							  }
+							*/
+
+
+							if (select_game_bar == 10 || select_game_bar == 11) { // return from config (saving or not)
+												   
+								edit_cfg = 0;
+
+								if (select_game_bar == 10) 
+									snd_fx_yes(); 
+								else 
+									snd_fx_no();
+								// si no existe crea uno
+								if (!(disc_conf[0] == 'H' && 
+								      disc_conf[1] == 'D' && 
+								      disc_conf[2] == 'R')) {
+									disc_conf[0] = 'H'; 
+									disc_conf[1] = 'D'; 
+									disc_conf[2] = 'R';
+									disc_conf[3] = 0;
+									disc_conf[4] = disc_conf[5] = disc_conf[6] = disc_conf[7] = 0;
+									disc_conf[8] = disc_conf[9] = disc_conf[10] = disc_conf[11] = 0;
+								}
+													
+								disc_conf[4] = disc_conf[5] = disc_conf[6] = disc_conf[7] = 0;
+								if (select_game_bar == 11) {
+									disc_conf[4] =  game_datas[game_mode-1].config        & 255;
+									disc_conf[5] = (game_datas[game_mode-1].config >>  8) & 255;
+									disc_conf[6] = (game_datas[game_mode-1].config >> 16) & 255;
+									disc_conf[7] = (game_datas[game_mode-1].config >> 24) & 255;
+								} else {
+									u32 config = 0;
+
+									game_cfg_field1 = (void *) &config;
+
+									if (cios == 249 || cios == cios_list[2]) 
+										game_cfg_field1->ios_selected |= 1;
+									if (cios == cios_list[1]) 
+										game_cfg_field1->ios_selected |= 2;
+
+									game_cfg_field1->modevideo      |= forcevideo;
+									game_cfg_field1->language       |= langsel;
+									game_cfg_field1->nand_mode      |= nand_mode;
+									game_cfg_field1->skip_boot      |= ((force_ingame_ios != 0) & 1);
+									game_cfg_field1->game_locked    |= ((game_locked_cfg != 0) & 1);
+									game_cfg_field1->bca_mode       |= (bca_mode & 1);
+									game_cfg_field1->hook_selected  |= (hook_selected - 1) & 7;
+									game_cfg_field1->dont_use_diary |= (dont_use_diary != 0);
+
+									//game_cfg_field1->shadow_mload |= (shadow_mload!=0);
+														
+									disc_conf[4] =  config        & 255;
+									disc_conf[5] = (config >>  8) & 255;
+									disc_conf[6] = (config >> 16) & 255;
+									disc_conf[7] = (config >> 24) & 255;
+								}
+
+								game_datas[game_mode - 1].config = disc_conf[4]      + (disc_conf[5] <<  8) +
+									                          (disc_conf[6]<<16) + (disc_conf[7] << 24);
+								select_game_bar = 0;
+								make_rumble_off();
+								if(select_game_bar != 11) {
+									if(!mode_disc)
+										global_SetProfileDatas(discid, disc_conf);
+									else 
+										dol_SetProfileDatas(discid, disc_conf);
+								}
+							}
+
+							if (select_game_bar >= 100 && select_game_bar <= 111) {
+								langsel = select_game_bar - 100;
+								snd_fx_yes();
+							}
+
+							if (select_game_bar >= 200 && select_game_bar <= 203) {
+								forcevideo = select_game_bar - 200;
+								snd_fx_yes();
+							}
+
+							if(select_game_bar == 210) {
+								game_locked_cfg = (game_locked_cfg == 0);
+								snd_fx_yes();
+								usleep(250);
+							}
+
+							if (select_game_bar >= 400 && select_game_bar <= 402) {
+								switch(select_game_bar - 400) {
+								case 0:
+									cios = cios_list[0];
+									break;
+								case 1:
+									cios = cios_list[1];
+									break;
+								case 2:
+#ifndef DONT_USE_IOS249
+									cios = 249;
+#else
+									cios = cios_list[2];
+#endif
+									break;
+								}
+								//cios = (select_game_bar - 300) ? 249 : 222;
+								snd_fx_yes();
+							}
+							if (select_game_bar == 403) {
+								force_ingame_ios = (force_ingame_ios == 0);
+								snd_fx_yes();
+							}
+						}
 					} // q
-						
 				}
 
-					
-				if(new_pad & WPAD_BUTTON_B)
-				{
+				if (new_pad & WPAD_BUTTON_B) {
 						
 					int n;
-
 					direct_launch=0;
-						
-					if(parental_mode)
-					{
-						for(n=0;n<4;n++) parental_str[n]=0;
+					if (parental_mode) {
+						for (n = 0;n < 4; n++) 
+							parental_str[n] = 0;
 						snd_fx_no();
-						if(parental_mode==1) go_home=1;
-						parental_mode=0;
+						if (parental_mode == 1)
+							go_home = 1;
+						parental_mode = 0;
 					}
-					if(cheat_mode)
-					{
-					}
-					else
-						if(edit_cfg)
-						{// return from config (no saving)
+					if (cheat_mode) {
+					} else if(edit_cfg) { // return from config (no saving)
+						if (edit_cfg>1) {
+								if (edit_cfg >= 300)
+									snd_fx_yes();
+								else 
+									snd_fx_no();
 
-							if(edit_cfg>1) 
-							{
-								if(edit_cfg>=300) snd_fx_yes();
-								else snd_fx_no();
-
-								if(edit2_mode) edit2_mode=0;
-								else edit_cfg=1;
-								
-							}
-							else
-							{
-								edit_cfg=0;
+								if (edit2_mode) 
+									edit2_mode = 0;
+								else 
+									edit_cfg = 1;
+							} else {
+								edit_cfg = 0;
 								snd_fx_yes();
 							
 							
 								// si no existe crea uno
-								if(!(disc_conf[0]=='H' && disc_conf[1]=='D' && disc_conf[2]=='R'))
-								{
-									disc_conf[0]='H'; disc_conf[1]='D'; disc_conf[2]='R';disc_conf[3]=0;
-									disc_conf[4]=disc_conf[5]=disc_conf[6]=disc_conf[7]=0;
-									disc_conf[8]=disc_conf[9]=disc_conf[10]=disc_conf[11]=0;
+								if (!(disc_conf[0] == 'H' && 
+								      disc_conf[1] == 'D' && 
+								      disc_conf[2] == 'R'))   {
+									disc_conf[0] = 'H'; 
+									disc_conf[1] = 'D'; 
+									disc_conf[2] = 'R';
+									disc_conf[3] = 0;
+									disc_conf[4] = disc_conf[5] = disc_conf[ 6] = disc_conf[ 7] = 0;
+									disc_conf[8] = disc_conf[9] = disc_conf[10] = disc_conf[11] = 0;
 								}
 								
-								disc_conf[4]=game_datas[game_mode-1].config & 255;
-								disc_conf[5]=(game_datas[game_mode-1].config>>8) & 255;
-								disc_conf[6]=(game_datas[game_mode-1].config>>16) & 255;
-								disc_conf[7]=(game_datas[game_mode-1].config>>24) & 255;
+								disc_conf[4] =  game_datas[game_mode - 1].config &        255;
+								disc_conf[5] = (game_datas[game_mode - 1].config >>  8) & 255;
+								disc_conf[6] = (game_datas[game_mode - 1].config >> 16) & 255;
+								disc_conf[7] = (game_datas[game_mode - 1].config >> 24) & 255;
 
 								/*
-								
-								  disc_conf[4]=disc_conf[5]=disc_conf[6]=disc_conf[7]=0;
-								  if(cios==249 || cios==224) disc_conf[4]|=1;
-								  if(cios==223) disc_conf[4]|=2;
-								  disc_conf[4]|=(forcevideo & 3)<<2;
-								  disc_conf[4]|=(langsel & 15)<<4;
-								  disc_conf[5]|=(nand_mode & 31);
-								  disc_conf[7]|=((force_ingame_ios!=0) & 1)<<7;
-								  disc_conf[7]|=((game_locked_cfg!=0) & 1)<<6;
-								  disc_conf[7]|=(bca_mode & 1)<<5;
-								  disc_conf[7]|= (hook_selected-1) & 7;
+								  disc_conf[4] = disc_conf[5] = disc_conf[6] = disc_conf[7] = 0;
+								  if (cios==249 || cios==224) 
+									  disc_conf[4] |= 1;
+								  if (cios == 223) 
+									  disc_conf[4] |= 2;
+								  disc_conf[4] |= (forcevideo & 3) << 2;
+								  disc_conf[4] |= (langsel & 15) << 4;
+								  disc_conf[5] |= (nand_mode & 31);
+								  disc_conf[7] |= ((force_ingame_ios != 0) & 1) << 7;
+								  disc_conf[7] |= ((game_locked_cfg != 0) & 1) << 6;
+								  disc_conf[7] |= (bca_mode & 1) << 5;
+								  disc_conf[7] |= (hook_selected - 1) & 7;
 								*/
 
-								game_datas[game_mode-1].config=disc_conf[4]+(disc_conf[5]<<8)+(disc_conf[6]<<16)+(disc_conf[7]<<24);
+								game_datas[game_mode-1].config = disc_conf[4] + (disc_conf[5] << 8) + 
+									                        (disc_conf[6] << 16) + (disc_conf[7] << 24);
 								/*
-								  if(!mode_disc || is_fat)
-								  global_SetProfileDatas(discid, disc_conf);
+								  if (!mode_disc || is_fat)
+									  global_SetProfileDatas(discid, disc_conf);
 								  else
-								  dol_SetProfileDatas(discid, disc_conf);*/
+									  dol_SetProfileDatas(discid, disc_conf);
+								*/
 							}
-						}
-						else
-						{
-							if((!(mode_disc & 1024) || it_have_fat) && remote_DVD_disc_status!=1)
-							{
-								int f_j=0;
+						} else {
+							if ((!(mode_disc & 1024) || it_have_fat) && remote_DVD_disc_status != 1) {
+								int f_j = 0;
 
-								if(mode_disc && game_mode && !edit_cfg) 
-								{
-									remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
-									//mode_disc=0;f_j=1;parental_control_on=1;parental_mode=0;
-									mode_disc&=~1;f_j=1;parental_control_on=1;parental_mode=0;
-									if(dvd_only) is_fat=it_have_fat;
-									//is_fat=it_have_fat;
+								if (mode_disc && game_mode && !edit_cfg) {
+									remote_call_abort();
+									while(remote_ret() == REMOTE_BUSY)
+										usleep(1000*50);
+									/*
+									mode_disc = 0;
+									f_j = 1;
+									parental_control_on = 1;
+									parental_mode = 0;
+									*/
+									mode_disc &= ~1;
+									f_j = 1;
+									parental_control_on = 1;
+									parental_mode = 0;
+									if (dvd_only) 
+										is_fat = it_have_fat;
+									//is_fat = it_have_fat;
 								}
-								if(!mode_disc && game_mode && !edit_cfg) parental_mode=0;
+								if (!mode_disc && game_mode && !edit_cfg)
+									parental_mode = 0;
 
-								
-
-								if(game_mode)
-								{
+								if (game_mode) {
 									snd_fx_no();
-									for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
+									for (n = 0; n < 15; n++) {
+										if (game_datas[n].png_bmp) 
+											free(game_datas[n].png_bmp);
+										game_datas[n].png_bmp = NULL;}
 														   
-									load_png=1;
+									load_png = 1;
 								}
-								else
-									if(insert_favorite) snd_fx_no();
+								else if(insert_favorite) 
+									snd_fx_no();
 								
-								if(is_favorite)
-								{
-									int flag=0,g;
+								if (is_favorite) {
+									int flag = 0;
+									int g;
 
-									if(gameList)
-										for(n=0;n<15;n++)
-										{
-											if(config_file.id[n][0]!=0)	
-											{
-												for(g=0;g<gameCnt;g++)
-												{
+									if (gameList)
+										for (n = 0;n < 15; n++) {
+											if (config_file.id[n][0] != 0) {
+												for (g = 0;g < gameCnt; g++) {
 													struct discHdr *header = &gameList[g];
-													if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
-													{
-														flag=1;break;
+													if (strncmp((char *) header->id, 
+														    (char *) &config_file.id[n][0], 6) == 0) {
+														flag = 1;
+														break;
 													}
 												}
 											}
 										}
 									
-									if(!flag) 
-									{is_favorite=0;
-										for(n=0;n<15;n++) {game_datas[n+16].ind=game_datas[n].ind;game_datas[n+16].png_bmp=NULL;}
-										load_png=1;
+									if (!flag) {
+										is_favorite = 0;
+										for (n = 0; n < 15; n++) {
+											game_datas[n + 16].ind = game_datas[n].ind;
+											game_datas[n + 16].png_bmp = NULL;
+										}
+										load_png = 1;
 									}
 								}
-					
-                               
-								game_mode=0;edit_cfg=0;
-								insert_favorite=0;if(mem_move_chan) free(mem_move_chan);mem_move_chan=NULL;
+								
+								game_mode = 0;
+								edit_cfg = 0;
+								insert_favorite = 0;
+								if (mem_move_chan)
+									free(mem_move_chan);
+								mem_move_chan = NULL;
 
-								if(f_j) {Screen_flip();save_cfg(1);goto get_games;}
+								if (f_j) {
+									Screen_flip();
+									save_cfg(1);
+									goto get_games;
+								}
 							}
-						}
+					}
 				}
-               
-				if((new_pad & WPAD_BUTTON_1) && parental_mode==0 && !mode_disc && game_mode==0) // swap favorites/page
+				
+				if ((new_pad & WPAD_BUTTON_1) && 
+				    parental_mode == 0 && 
+				    !mode_disc && game_mode == 0) // swap favorites/page
 				{
 					int n;
+					scroll_text = -20;
 
-					scroll_text=-20;
-
-					if(!mode_disc && !insert_favorite)
-					{
-						if(is_favorite)
-						{
-							is_favorite=0;if(last_game>=0) {actual_game=last_game;last_game=-1;}
+					if (!mode_disc && !insert_favorite) {
+						if(is_favorite) {
+							is_favorite=0;
+							if(last_game >= 0) {
+								actual_game = last_game;
+								last_game = -1;
+							}
+						} else {
+							last_game = actual_game;
+							is_favorite = 1;
 						}
-						else
-						{
-							last_game=actual_game;is_favorite=1;
-						}
-						for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-												   
-						load_png=1;
-					}
 						
+						for (n = 0; n < 15; n++) {
+							if (game_datas[n].png_bmp) 
+								free(game_datas[n].png_bmp);
+							game_datas[n].png_bmp = NULL;
+						}
+						load_png = 1;
+					}
 				}
 				// launch pintor game
-				if((new_pad & WPAD_BUTTON_2) && (game_mode==0 || (game_mode!=0 && mode_disc && !edit_cfg)) && insert_favorite==0 && scroll_mode==0 && parental_mode==0) go_game=1;
+				if ((new_pad & WPAD_BUTTON_2) && 
+				    (game_mode == 0 || (game_mode != 0 && mode_disc && !edit_cfg)) && 
+				    insert_favorite == 0 && scroll_mode == 0 && parental_mode == 0) 
+					go_game = 1;
 
-				if((new_pad & WPAD_BUTTON_HOME) && (game_mode==0 || (game_mode!=0 && mode_disc && (disc_header || (!disc_header && remote_DVD_disc_status==0)) && !edit_cfg)) && insert_favorite==0 && scroll_mode==0 && parental_mode==0) 
-				{//go_home=1;
-					temp_home=-1;
-					if(parental_control_on)
-					{
-						parental_mode=1; if(game_mode==0) temp_home=temp_sel;
+				if ((new_pad & WPAD_BUTTON_HOME) && 
+				    (game_mode == 0 || (game_mode != 0 && mode_disc && (disc_header || (!disc_header && remote_DVD_disc_status == 0)) && !edit_cfg)) && 
+				    insert_favorite == 0 && scroll_mode == 0 && parental_mode == 0) {
+					//go_home = 1;
+					temp_home = -1;
+					if (parental_control_on) {
+						parental_mode = 1; 
+						if (game_mode == 0) 
+							temp_home = temp_sel;
+					} else {
+						go_home = 1; 
+						if (game_mode == 0) 
+							temp_home = temp_sel;
 					}
-					else {go_home=1; if(game_mode==0) temp_home=temp_sel;}
 				}
-							
-			
-			} 
-			else {px=-100;py=-100;}
+			} else {
+				px = -100;
+				py = -100;
+			}
 		}
 
-		if(direct_launch && game_mode==1 && gameList!=NULL) 
-		{
+		if (direct_launch && game_mode == 1 && gameList != NULL) {
+			if (launch_counter <= 0) {
+				struct discHdr *header = &gameList[game_datas[game_mode - 1].ind];
 
-			if(launch_counter<=0)
-			{
-				struct discHdr *header = &gameList[game_datas[game_mode-1].ind];
-
-				if(((nand_mode & 1) && !sd_ok) || ((nand_mode & 2) && !ud_ok)) 
-				{
-					warning_osd=1;
+				if (((nand_mode & 1) && !sd_ok) || ((nand_mode & 2) && !ud_ok)) {
+					warning_osd = 1;
 					snd_fx_no();
-					direct_launch=0;
+					direct_launch = 0;
 					goto ignore_all2;
 				}
-													
-
 				snd_fx_yes();
 
-				if(is_fat && (header->version & 2)) cheats_for_wiiware=1; else cheats_for_wiiware=0;
+				if (is_fat && (header->version & 2)) 
+					cheats_for_wiiware = 1; 
+				else 
+					cheats_for_wiiware = 0;
 
-				memcpy(discid,header->id,6); discid[6]=0;
+				memcpy(discid, header->id, 6);
+				discid[6] = 0;
 														
-				if(load_cheats(discid)) cheat_mode=1;
+				if (load_cheats(discid)) 
+					cheat_mode = 1;
 
 				set_cheats_list(discid);
 				create_cheats();
@@ -7001,358 +7201,403 @@ get_games:
 				//ret=load_game_routine(discid, game_mode);
 
 				// is VC title
-				if(is_fat && (header->version & 2)) 
-				{
-					game_mode|= 0x400000;
-					if(header->version & 1) nand_mode|=1; else nand_mode|=2;
+				if (is_fat && (header->version & 2)) {
+					game_mode |= 0x400000;
+					if (header->version & 1)
+						nand_mode |= 1;
+					else 
+						nand_mode |= 2;
 				}
 
 				ret=load_game_routine(discid, game_mode);
 
-				remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);
+				remote_call_abort();
+				while(remote_ret() == REMOTE_BUSY) 
+					usleep(1000*50);
 
 				draw_background();
 
 
 				SelectFontTexture(1); // selecciona la fuente de letra extra
 
-				letter_size(8,32);
+				letter_size(8, 32);
 					
-				PX=0; PY= SCR_HEIGHT/2; color= INK0; bkcolor=0;
+				PX = 0;
+				PY = SCR_HEIGHT/2;
+				color = INK0;
+				bkcolor = 0;
 					
-				bkcolor=0;
-				autocenter=1;
+				bkcolor = 0;
+				autocenter = 1;
 				SetTexture(NULL);
 
-				DrawRoundFillBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 0xa00000ff);
-				DrawRoundBox((SCR_WIDTH-540)/2, SCR_HEIGHT/2-16, 540, 64, 999, 4, 0xa0000000);
+				DrawRoundFillBox((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16, 540, 64, 999, 0xa00000ff);
+				DrawRoundBox    ((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16, 540, 64, 999, 4, 0xa0000000);
 
 				display_loader_error(ret);
 
 				Screen_flip();
 				sleep(3);
 
-
 				//////////////////////////////////
 				break;
 			}
 		ignore_all2: ;
 			//
-		}
-		else direct_launch=0;
+		} else 
+			direct_launch = 0;
 
-		if(scroll_mode) // scroll mode
-		{
-			if(scroll_mode==-1 || scroll_mode==1)
-			{
-				int n,g;
-				if(scroll_mode<0)
-				{
-					if(is_favorite) {is_favorite=0;actual_game=0;if(last_game>=0) {actual_game=last_game;last_game=-1;}} 
-					else {actual_game+=15;if(actual_game>=gameCnt) {actual_game=0;is_favorite=1;}}
-					if(is_favorite)
-					{
-						int flag=0;
-						for(n=0;n<15;n++)
-							if(config_file.id[n][0]!=0)	
-							{
-								for(g=0;g<gameCnt;g++)
-								{
+		if (scroll_mode) {// scroll mode
+			if (scroll_mode == -1 || scroll_mode == 1) {
+				int n, g;
+				if (scroll_mode < 0) {
+					if (is_favorite) {
+						is_favorite = 0;
+						actual_game = 0;
+						if (last_game >= 0) {
+							actual_game = last_game;
+							last_game = -1;
+						}
+					} else {
+						actual_game += 15;
+						if (actual_game >= gameCnt) {
+							actual_game = 0;
+							is_favorite = 1;
+						}
+					}
+					if (is_favorite) {
+						int flag = 0;
+						for (n = 0; n < 15; n++)
+							if (config_file.id[n][0] != 0) {
+								for (g = 0;g < gameCnt; g++) {
 									struct discHdr *header = &gameList[g];
-									if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
+									if (strncmp((char *) header->id, (char *) &config_file.id[n][0], 6) == 0)
 									{
-										flag=1;break;
+										flag = 1;
+										break;
 									}
 								}
 							}
-						if(!flag) {is_favorite=0;}
+						if (!flag) {
+							is_favorite = 0;
+						}
 					}
 				}
-				if(scroll_mode>0)
-				{
-				
-					if(!is_favorite)
-					{
-						actual_game-=15; 
-						if(actual_game<0) 
-						{
-							int flag=0;
-							last_game=-1;is_favorite=1;actual_game=0;
-							for(n=0;n<15;n++)
-								if(config_file.id[n][0]!=0)	
-								{
-									for(g=0;g<gameCnt;g++)
-									{
+				if (scroll_mode > 0) {
+					if (!is_favorite) {
+						actual_game -= 15; 
+						if(actual_game < 0) {
+							int flag = 0;
+							last_game = -1;
+							is_favorite = 1;
+							actual_game = 0;
+							for (n = 0; n < 15; n++)
+								if (config_file.id[n][0] != 0) {
+									for (g = 0;g < gameCnt; g++) {
 										struct discHdr *header = &gameList[g];
-										if(strncmp((char *) header->id, (char *) &config_file.id[n][0],6)==0)
-										{
-											flag=1;break;
+										if (strncmp((char *) header->id, (char *) &config_file.id[n][0], 6) == 0) {
+											flag = 1;
+											break;
 										}
 									}
 								}
-							if(!flag) {actual_game=((gameCnt-1)/15)*15;is_favorite=0;}
+							if (!flag) {
+								actual_game = ((gameCnt - 1)/15)*15;
+								is_favorite = 0;
+							}
 						}
+					} else {
+						actual_game = ((gameCnt - 1)/15)*15;
+						is_favorite = 0;
 					}
-					else {actual_game=((gameCnt-1)/15)*15;is_favorite=0;}
 				}
 
-				//scroll_mode=0;
-				scroll_text=-20;
+				//scroll_mode = 0;
+				scroll_text = -20;
 
-				//for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);game_datas[n].png_bmp=NULL;}
-				for(n=0;n<15;n++) {game_datas[n+16].ind=game_datas[n].ind;game_datas[n+16].png_bmp=NULL;}
-				load_png=1;
+				/*
+				for (n = 0; n < 15; n++) {
+					if (game_datas[n].png_bmp) 
+						free(game_datas[n].png_bmp);
+					game_datas[n].png_bmp = NULL;
+				}
+				*/
+				for (n = 0; n < 15; n++) {
+					game_datas[n + 16].ind = game_datas[n].ind;
+					game_datas[n + 16].png_bmp = NULL;
+				}
+				load_png = 1;
 			}
 
-			if(scroll_mode<0) scroll_mode-=32;
-			if(scroll_mode>0) scroll_mode+=32;
+			if (scroll_mode < 0)
+				scroll_mode -= 32;
+			if (scroll_mode > 0) 
+				scroll_mode += 32;
 
-			if((scroll_mode & 64)==0) snd_fx_scroll();//usleep(1000*100);
+			if ((scroll_mode & 64) == 0)
+				snd_fx_scroll();//usleep(1000*100);
 
-			if(scroll_mode<-639 || scroll_mode>639)
-			{
-				scroll_mode=0;
-				for(n=0;n<15;n++) {if(game_datas[n].png_bmp) free(game_datas[n].png_bmp);
-					/*game_datas[n].png_bmp=NULL;*/
-					game_datas[n+16].ind=-1;
-					game_datas[n].png_bmp=game_datas[n+16].png_bmp;
-					game_datas[n].is_png=game_datas[n+16].is_png;
-					game_datas[n].texture=game_datas[n+16].texture;
-					game_datas[n].config=game_datas[n+16].config;
-					game_datas[n+16].png_bmp=NULL;
+			if (scroll_mode < -639 || scroll_mode > 639) {
+				scroll_mode = 0;
+				for (n = 0; n < 15; n++) {
+					if (game_datas[n].png_bmp) 
+						free(game_datas[n].png_bmp);
+					/*game_datas[n].png_bmp = NULL;*/
+					game_datas[n].png_bmp = game_datas[n+16].png_bmp;
+					game_datas[n].is_png  = game_datas[n+16].is_png;
+					game_datas[n].texture = game_datas[n+16].texture;
+					game_datas[n].config  = game_datas[n+16].config;
+					game_datas[n + 16].png_bmp = NULL;
+					game_datas[n + 16].ind     = -1;
 				}
 			}
 		}
 
-		if(load_png)
-		{
+		if (load_png) {
 #ifndef ALTERNATIVE_VERSION
 			SelectFontTexture(0); // selecciona la fuente de letra normal
-
-			letter_size(32,64);
+			letter_size(32, 64);
 #else
-
 			SelectFontTexture(1); // selecciona la fuente de letra normal
-
-			letter_size(16,32);
-
+			letter_size(16, 32);
 #endif
+
+			PX = 0; 
+			PY = SCR_HEIGHT/2 - 32;
+			color = 0xcf000000; 
+			bkcolor = 0;
 															
-			PX=0; PY= SCR_HEIGHT/2-32; color= 0xcf000000; bkcolor=0;
-															
-			autocenter=1;
+			autocenter = 1;
 			SetTexture(NULL);
 
 #ifndef ALTERNATIVE_VERSION
-			DrawRoundFillBox((SCR_WIDTH-320)/2, SCR_HEIGHT/2-40, 320, 80, 0, 0xcf00ff00);
-			DrawRoundBox((SCR_WIDTH-320)/2, SCR_HEIGHT/2-40, 320, 80, 0, 4, 0xcf000000);
+			DrawRoundFillBox((SCR_WIDTH - 320)/2, SCR_HEIGHT/2 - 40, 320, 80, 0, 0xcf00ff00);
+			DrawRoundBox    ((SCR_WIDTH - 320)/2, SCR_HEIGHT/2 - 40, 320, 80, 0, 4, 0xcf000000);
 #else
-			DrawRoundFillBox(SCR_WIDTH-400, SCR_HEIGHT/2-40, 160, 48, 0, 0xcf3399ff);
-			DrawRoundBox(SCR_WIDTH-400, SCR_HEIGHT/2-40, 160, 48, 0, 4, 0xcf000000);
+			DrawRoundFillBox(SCR_WIDTH - 400, SCR_HEIGHT/2-40, 160, 48, 0, 0xcf3399ff);
+			DrawRoundBox    (SCR_WIDTH - 400, SCR_HEIGHT/2-40, 160, 48, 0, 4, 0xcf000000);
 #endif
 
 			s_printf("Loading");
-			autocenter=0;
+			autocenter = 0;
 			draw_snow();
 			Screen_flip();
 
 			//make_rumble_off();
 			
 			SelectFontTexture(0);
-			if(scroll_mode) {volume_osd=0;rumble_off_osd=0;icon_osd=0;warning_osd=0;}
-		}
-		else
-		{
+			if (scroll_mode) {
+				volume_osd = 0;
+				rumble_off_osd = 0;
+				icon_osd = 0;
+				warning_osd = 0;
+			}
+		} else {
+			if (scroll_mode) {
+				volume_osd = 0;
+				rumble_off_osd = 0;
+				icon_osd = 0;
+				warning_osd = 0;
+			}
 
-			if(scroll_mode) {volume_osd=0;rumble_off_osd=0;icon_osd=0;warning_osd=0;}
-
-			if(warning_osd)
-			{
+			if (warning_osd) {
 				letter_size(10, 32);
 				
 				warning_osd++;												
-				if(warning_osd>60) warning_osd=0;
+				if(warning_osd > 60)
+					warning_osd = 0;
 				
 				SetTexture(NULL);
-				DrawRoundFillBox((SCR_WIDTH-620)/2, SCR_HEIGHT/2-30, 620 , 40, 0, 0xcfffffff);
-				PX=0; PY= SCR_HEIGHT/2-30+4; color= INK0; bkcolor=0x0;
-				autocenter=1;
-				if(nand_mode & 1)
+				DrawRoundFillBox((SCR_WIDTH - 620)/2, SCR_HEIGHT/2 - 30, 620 , 40, 0, 0xcfffffff);
+				PX = 0;
+				PY = SCR_HEIGHT/2 - 30 + 4;
+				color = INK0;
+				bkcolor = 0x0;
+				autocenter = 1;
+				if (nand_mode & 1)
 					s_printf("You Have Selected Emulation of NAND From SD without One!!!");
+				else if(nand_mode & 2)
+					s_printf("You Have Selected Emulation of NAND From USB without One!!!");
 				else
-					if(nand_mode & 2)
-						s_printf("You Have Selected Emulation of NAND From USB without One!!!");
-					else s_printf("You Have Selected One Shit!!!");
+					s_printf("You Have Selected One Shit!!!");
+				autocenter = 0;
+				bkcolor = 0;
+				DrawRoundBox((SCR_WIDTH - 620)/2, SCR_HEIGHT/2 - 30, 620 , 40, 0, 2, 0xcf000000);
+			} else if(rumble_off_osd) {
+				rumble_off_osd++;
+				if (rumble_off_osd > 60)
+					rumble_off_osd = 0;
+				letter_size(8, 16);
+																
+				SetTexture(NULL);
+				DrawRoundFillBox((SCR_WIDTH - 240)/2, SCR_HEIGHT/2 - 8, 240 , 16, 0, 0xcfffffff);
+				PX = 0;
+				PY = SCR_HEIGHT/2 - 8;
+				color = INK0;
+				bkcolor = 0x0;
+				autocenter = 1;
+				if (config_file.rumble_off) 
+					s_printf("Rumble Off");
+				else 
+					s_printf("Rumble On");
+				autocenter = 0;
+				bkcolor = 0;
+				DrawRoundBox((SCR_WIDTH - 248)/2, SCR_HEIGHT/2 - 12, 248, 24, 0, 2, 0xcf000000);
+			} else if (icon_osd) {
+				icon_osd++;
+				if (icon_osd > 60)
+					icon_osd = 0;
+				letter_size(8, 16);
+				
+				
+				SetTexture(NULL);
+				DrawRoundFillBox((SCR_WIDTH - 240)/2, SCR_HEIGHT/2 - 8, 240 , 16, 0, 0xcfffffff);
+				PX = 0;
+				PY = SCR_HEIGHT/2 - 8;
+				color = INK0; 
+				bkcolor = 0x0;
+				autocenter = 1;
+				s_printf("Icon Changed");
 				autocenter=0;
 				bkcolor=0;
-				DrawRoundBox((SCR_WIDTH-620)/2, SCR_HEIGHT/2-30, 620 , 40, 0, 2, 0xcf000000);
+				DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
+			} else if (volume_osd) {
+				volume_osd++;
+				if (volume_osd > 60)
+					volume_osd = 0;
+				letter_size(8,16);
+				
+				
+				SetTexture(NULL);
+				DrawRoundFillBox((SCR_WIDTH - 240)/2, SCR_HEIGHT/2 - 8, 240 , 16, 0, 0xcfffffff);
+				DrawRoundFillBox((SCR_WIDTH - 240)/2, SCR_HEIGHT/2 - 8, 240 * (config_file.music_mod & 15)/15, 16, 0, 0xcf0000ff);
+				PX = 0; 
+				PY = SCR_HEIGHT/2 - 8;
+				color = INK0;
+				bkcolor = 0x0;
+				autocenter = 1;
+				s_printf("Volume");
+				autocenter = 0;
+				bkcolor = 0;
+				DrawRoundBox((SCR_WIDTH - 248)/2, SCR_HEIGHT/2 - 12, 248, 24, 0, 2, 0xcf000000);
 			}
-			else
-				if(rumble_off_osd)
-				{
-					rumble_off_osd++;
-					if(rumble_off_osd>60) rumble_off_osd=0;
-					letter_size(8,16);
-																
-				
-					SetTexture(NULL);
-					DrawRoundFillBox((SCR_WIDTH-240)/2, SCR_HEIGHT/2-8, 240 , 16, 0, 0xcfffffff);
-					PX=0; PY= SCR_HEIGHT/2-8; color= INK0; bkcolor=0x0;
-					autocenter=1;
-					if(config_file.rumble_off) s_printf("Rumble Off"); else s_printf("Rumble On");
-					autocenter=0;
-					bkcolor=0;
-					DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
-				}
-				else
-					if(icon_osd)
-					{
-						icon_osd++;
-						if(icon_osd>60) icon_osd=0;
-						letter_size(8,16);
-																
-				
-						SetTexture(NULL);
-						DrawRoundFillBox((SCR_WIDTH-240)/2, SCR_HEIGHT/2-8, 240 , 16, 0, 0xcfffffff);
-						PX=0; PY= SCR_HEIGHT/2-8; color= INK0; bkcolor=0x0;
-						autocenter=1;
-						s_printf("Icon Changed");
-						autocenter=0;
-						bkcolor=0;
-						DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
-					}
-					else
-						if(volume_osd)
-						{
-							volume_osd++;
-							if(volume_osd>60) volume_osd=0;
-							letter_size(8,16);
-																
-				
-							SetTexture(NULL);
-							DrawRoundFillBox((SCR_WIDTH-240)/2, SCR_HEIGHT/2-8, 240 , 16, 0, 0xcfffffff);
-							DrawRoundFillBox((SCR_WIDTH-240)/2, SCR_HEIGHT/2-8, 240 * (config_file.music_mod & 15)/15, 16, 0, 0xcf0000ff);
-							PX=0; PY= SCR_HEIGHT/2-8; color= INK0; bkcolor=0x0;
-							autocenter=1;
-							s_printf("Volume");
-							autocenter=0;
-							bkcolor=0;
-							DrawRoundBox((SCR_WIDTH-248)/2, SCR_HEIGHT/2-12, 248, 24, 0, 2, 0xcf000000);
-						}
-
 			draw_snow();
 			Screen_flip();
 		}
 
-		if(go_game)
-		{
-			rumble=0;
+		if (go_game) {
+			rumble = 0;
 	
-			hiscore=config_file.hi_score;
+			hiscore = config_file.hi_score;
 			guMtxIdentity(modelView);
-			GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
+			GX_LoadPosMtxImm(modelView, GX_PNMTX0); // carga la matriz mundial como identidad
 			GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
 
-
-
-			if(is_16_9)
-			{
-				ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,848,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
+			if (is_16_9) {
+				ChangeProjection(0, SCR_HEIGHT <= 480 ? -12: 0, 848, SCR_HEIGHT + (SCR_HEIGHT <= 480 ? 16: 0));
 				guMtxIdentity(modelView);
 
 				GX_SetCurrentMtx(GX_PNMTX0); // selecciona la matriz
 				guMtxTrans(modelView, 104.0f, 0.0f, 0.0f);
-				GX_LoadPosMtxImm(modelView,	GX_PNMTX0); // carga la matriz mundial como identidad
-			
-			}
-			else
-				ChangeProjection(0,SCR_HEIGHT<=480 ? -12: 0,SCR_WIDTH,SCR_HEIGHT+(SCR_HEIGHT<=480 ? 16: 0));
-		
-			pintor();
-			config_file.hi_score=hiscore;
-		
-			if(!mode_disc) save_cfg(0); else save_cfg(1);
+				GX_LoadPosMtxImm(modelView, GX_PNMTX0); // carga la matriz mundial como identidad
+			} else
+				ChangeProjection(0, SCR_HEIGHT <= 480 ? -12: 0, SCR_WIDTH, SCR_HEIGHT + (SCR_HEIGHT <= 480 ? 16: 0));
 
-			go_game=0;
+			pintor();
+
+			config_file.hi_score = hiscore;
+			if (!mode_disc) 
+				save_cfg(0); 
+			else 
+				save_cfg(1);
+
+			go_game = 0;
 		}
 
-		if(go_home)
-		{
+		if (go_home) {
 			struct discHdr *header =NULL;
-
-			if(!mode_disc)
-			{
-				if(temp_home>=0)
-				{//
+			
+			if (!mode_disc) {
+				if (temp_home>=0) {//
 					int g;
 
-					g=game_datas[temp_home].ind;
-					if(g>=0)
-					{
+					g = game_datas[temp_home].ind;
+					if(g >= 0) {
 						header = &gameList[g];
 					}
-
 				}//
+			} else
+				header = disc_header;
+
+			if (mode_disc) {
+				remote_call_abort();
+				while (remote_ret() == REMOTE_BUSY) 
+					usleep(1000*50);
 			}
-			else header=disc_header;
 
-			if(mode_disc) {remote_call_abort();while(remote_ret()==REMOTE_BUSY) usleep(1000*50);}
+			if (header && is_fat && (header->version & 128))
+				header = NULL;
 
-			if(header && is_fat && (header->version & 128)) header=NULL;
+			n = home_menu(header);
 
-			n=home_menu(header);
+			if (mode_disc) {
+				remote_call(remote_DVD_disc);
+				usleep(1000*50);
+			}
 
-			if(mode_disc) {remote_call(remote_DVD_disc);usleep(1000*50);}
-
-			if(n==0)
-			{
-				if(parental_control_on)
-				{
-					for(n=0;n<4;n++) parental_str[n]=0;
-					parental_control_on=1;
+			if (n == 0) {
+				if (parental_control_on) {
+					for(n = 0; n < 4; n++)
+						parental_str[n] = 0;
+					parental_control_on = 1;
 				}
 			}
-			if(n==1) {exit_by_reset=return_reset;break;}
-			if(!mode_disc)
-			{
-				if(n==2) {Screen_flip();goto get_games;}
-				if(n==3) {load_png=1;}
+			if (n == 1) {
+				exit_by_reset = return_reset;
+				break;
 			}
-			go_home=0;
+			if (!mode_disc) {
+				if (n == 2) {
+					Screen_flip();
+					goto get_games;
+				}
+				if (n == 3) {
+					load_png = 1;
+				}
+			}
+			go_home = 0;
 		}
 
-		if(exit_by_reset)  
-		{	
+		if (exit_by_reset) {	
 			break;
 		}
 
-		if(!sd_ok)
-		{
-		
-			if(__io_wiisd.startup())
-			{
+		if (!sd_ok) {
+
+			if (__io_wiisd.startup()) {
 				sd_ok = fatMountSimple("sd", &__io_wiisd);
-				if(!sd_ok) __io_wiisd.shutdown();
+				if (!sd_ok) 
+					__io_wiisd.shutdown();
 			}
-			//if(sd_ok) break;
+			//if(sd_ok) 
+			//        break;
 			//usleep(50000);
-		}
-		else 
-		{
-			if(!__io_wiisd.isInserted())
-			{
-				sd_ok=0;
+		} else {
+			if (!__io_wiisd.isInserted()) {
+				sd_ok = 0;
 				fatUnmount("sd");
 				__io_wiisd.shutdown();
 			}
 		}
-
 	}// while
+
 	return 0;
+
 exit_ok:
 	return 1;
+
 error_w:
 	return 2;
 
-	return 0;
+	//return 0;
 }
