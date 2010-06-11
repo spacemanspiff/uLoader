@@ -21,8 +21,8 @@
 #define IOCTL_DI_DISABLERESET	0xF6
 
 // for compability with olders cIOS222
-#define DI_SETWBFSMODE	0xfe
-#define DI_SETOFFSETBASE 0xf1
+#define DI_SETWBFSMODE	        0xfe
+#define DI_SETOFFSETBASE        0xf1
 
 /* Variables */
 static u32 inbuf[8]  ATTRIBUTE_ALIGN(32);
@@ -72,6 +72,7 @@ s32 WDVD_Reset(void)
 	inbuf[1] = 1;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_RESET, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
+
 	if (ret < 0)
 		return ret;
 
@@ -107,16 +108,15 @@ s32 WDVD_Seek(u64 offset)
 
 	/* Drive seek */
 	inbuf[0] = IOCTL_DI_SEEK << 24;
-	inbuf[1] = (u32)(offset >> 2);
+	inbuf[1] = (u32) (offset >> 2);
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_SEEK, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
-	if(ret!=1)
-		{
-	    // Try old cIOS 222
+	if(ret!=1) {
+		// Try old cIOS 222
 		/* Drive seek */
 		inbuf[0] = DI_SETOFFSETBASE << 24;
 		ret = IOS_Ioctl(di_fd, DI_SETOFFSETBASE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
-		}
+	}
 
 	if (ret < 0)
 		return ret;
@@ -178,7 +178,7 @@ s32 WDVD_StopMotor(void)
 
 s32 WDVD_OpenPartition(u64 offset, void* Ticket, void* Certificate, unsigned int Cert_Len, void* Out)
 {
-	static ioctlv	Vectors[5]		__attribute__((aligned(0x20)));
+	static ioctlv	Vectors[5] __attribute__((aligned(0x20)));
 	s32 ret;
 
 	inbuf[0] = IOCTL_DI_OPENPART << 24;
@@ -346,20 +346,19 @@ s32 WDVD_SetUSBMode(u8 *id, s32 partition)
 	
 
 	/* Copy ID */
-	if (id)
-		{
+	if (id) {
 		memcpy(&inbuf[2], id, 6);
 		inbuf[5] = partition;
-		}
-	else if(partition) inbuf[5] = partition;
+	} else if(partition) 
+		inbuf[5] = partition;
 
 	ret = IOS_Ioctl(di_fd, IOCTL_DI_SETUSBMODE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));
-	if(ret!=1)
-		{ // Try old cIOS 222
+	if (ret != 1) { 
+		// Try old cIOS 222
 		/* Set USB mode */
 		inbuf[0] = DI_SETWBFSMODE << 24;
 		ret = IOS_Ioctl(di_fd, DI_SETWBFSMODE, inbuf, sizeof(inbuf), outbuf, sizeof(outbuf));	
-		}
+	}
 
 	if (ret < 0)
 		return ret;
