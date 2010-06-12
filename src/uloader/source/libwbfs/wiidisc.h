@@ -4,14 +4,16 @@
 #include "libwbfs_os.h" // this file is provided by the project wanting to compile libwbfs and wiidisc
 
 #ifdef __cplusplus
-   extern "C" {
+extern "C" {
 #endif /* __cplusplus */
+
 #if 0 //removes extra automatic indentation by editors
-   }
+}
 #endif
+
 // callback definition. Return 1 on fatal error (callback is supposed to make retries until no hopes..)
 // offset points 32bit words, count counts bytes
-typedef int (*read_wiidisc_callback_t)(void*fp,u32 offset,u32 count,void*iobuf);
+typedef int (*read_wiidisc_callback_t) (void*fp, u32 offset, u32 count, void*iobuf);
 
 typedef enum{
         UPDATE_PARTITION_TYPE=0,
@@ -21,7 +23,7 @@ typedef enum{
         ALL_PARTITIONS=0xffffffff-3,
         REMOVE_UPDATE_PARTITION, // keeps game + channel installers
         ONLY_GAME_PARTITION,
-}partition_selector_t;
+} partition_selector_t;
 
 typedef struct wiidisc_s
 {
@@ -45,7 +47,7 @@ typedef struct wiidisc_s
 
         char *extract_pathname;
         u8  *extracted_buffer;
-		int extracted_size;
+	int extracted_size;
 }wiidisc_t;
 
 wiidisc_t *wd_open_disc(read_wiidisc_callback_t read,void*fp);
