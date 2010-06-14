@@ -31,7 +31,7 @@ static u8 size_to_shift(u32 size)
 }
 
 
-u32 WBFS_part_list[4]={0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
+u32 WBFS_part_list[4] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
 
 
 u32 wbfs_get_partition_LBA(int index)
