@@ -86,16 +86,13 @@ bool __usbstorage_Read_Write(u32 sector, u32 numSectors, void *buffer, int write
 
 	os_sync_after_write(vector, sizeof(ioctlv) * 3);
 
-	if(!write)
-		{
+	if(!write) {
 		/* Read data */
 		ret = os_ioctlv(fd, USB_IOCTL_UMS_READ_SECTORS, 2, 1, vector);
-		}
-	else
-		{
+	} else {
 		/* Write data */
-	ret = os_ioctlv(fd, USB_IOCTL_UMS_WRITE_SECTORS, 3, 0, vector);
-		}
+		ret = os_ioctlv(fd, USB_IOCTL_UMS_WRITE_SECTORS, 3, 0, vector);
+	}
 	if (ret < 0)
 		return false;
 
@@ -231,12 +228,12 @@ bool usbstorage_ReadSectors(u32 sector, u32 numSectors, void *buffer)
 
 #else 
 	ret = __usbstorage_Read(sector, numSectors, buffer);
-		if (!ret)
-			return false;
+	if (!ret)
+		return false;
 
 #endif
 	
-return true;
+	return true;
 }
 
 bool usbstorage_WriteSectors(u32 sector, u32 numSectors, void *buffer)
@@ -269,7 +266,7 @@ bool usbstorage_WriteSectors(u32 sector, u32 numSectors, void *buffer)
 #else
 	ret=__usbstorage_Write(sector, numSectors, buffer);
 	if (!ret)
-			return false;
+		return false;
 #endif
 	return true;
 }

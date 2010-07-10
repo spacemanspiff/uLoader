@@ -65,7 +65,6 @@ void Timer_Sleep(u32 time)
 			break;
 	}
 
-	
 	os_message_queue_receive(queuehandle, (void *)&message, 0);
 
 	/* Stop timer */

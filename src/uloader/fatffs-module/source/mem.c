@@ -48,37 +48,42 @@ s32 Mem_Init(void)
 
 void *Mem_Alloc(u32 size)
 {
-void *p;
+	void *p;
 
 	/* Allocate memory */
-	p= os_heap_alloc_aligned(hid, size, 32);
-    if(!p)
-		{
-		while(1) {swi_mload(128,0,0,0);Timer_Sleep(500*1000);swi_mload(129,0,0,0);Timer_Sleep(500*1000);}
+	p = os_heap_alloc_aligned(hid, size, 32);
+	if (!p) {
+		while (1) {
+			swi_mload(128,0,0,0);
+			Timer_Sleep(500*1000);
+			swi_mload(129,0,0,0);
+			Timer_Sleep(500*1000);
 		}
-
-return p;
+	}
+	return p;
 
 }
 
 void *Mem_Alloc0(u32 size)
 {
-void *p;
+	void *p;
 
 	/* Allocate memory */
-	p= os_heap_alloc_aligned(0, size, 32);
-    if(!p)
-		{
-		while(1) {swi_mload(128,0,0,0);Timer_Sleep(500*1000);swi_mload(129,0,0,0);Timer_Sleep(500*1000);}
+	p = os_heap_alloc_aligned(0, size, 32);
+	if (!p) {
+		while(1) {
+			swi_mload(128,0,0,0);
+			Timer_Sleep(500*1000);
+			swi_mload(129,0,0,0);
+			Timer_Sleep(500*1000);
 		}
-
-return p;
+	}
+	return p;
 
 }
 
 void Mem_Free(void *ptr)
 {
-
 	/* Free memory */
 	os_heap_free(hid, ptr);
 }

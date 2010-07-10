@@ -50,10 +50,9 @@ s32 __FAT_OpenDir(const char *dirpath, DIR_ITER *dir)
 
 	/* Allocate memory */
 	state = Mem_Alloc(sizeof(DIR_STATE_STRUCT));
-	if (!state)
-		{
+	if (!state) {
 		return IPC_ENOMEM;
-		}
+	}
 	/* Clear buffer */
 	memset(state, 0, sizeof(DIR_STATE_STRUCT));
 
@@ -96,19 +95,20 @@ s32 FAT_Open(const char *path, u32 mode)
 	int n;
 	s32 ret;
 
-	if(!global_fs)
-	{
-	/* Allocate memory */
+	if (!global_fs) {
+		/* Allocate memory */
 		global_fs = Mem_Alloc(sizeof(FILE_STRUCT)*MAX_FAT_FILES);
 		if(!global_fs) return IPC_ENOMEM;
 
-	/* Clean memory */
+		/* Clean memory */
 		memset(global_fs, 0, sizeof(FILE_STRUCT)*MAX_FAT_FILES);
 	}
 
-	for(n=0;n<MAX_FAT_FILES;n++)
-	{
-		if(global_fs[n].inUse==0) {fs=&global_fs[n];break;}
+	for(n = 0; n < MAX_FAT_FILES; n++) {
+		if(global_fs[n].inUse == 0) {
+			fs = &global_fs[n];
+			break;
+		}
 	}
 	if (!fs)
 		return ENFILE;
@@ -129,20 +129,20 @@ s32 FAT_Open(const char *path, u32 mode)
 // NOTE: don't use
 
 	// search for file alredy opened
-	for(n=0;n<MAX_FAT_FILES;n++)
-	{
-		if(global_fs[n].inUse==0 || fs==&global_fs[n]) continue;
+	for(n = 0; n < MAX_FAT_FILES; n++) {
+		if (global_fs[n].inUse == 0 || fs==&global_fs[n])
+			continue;
 
-		if(global_fs[n].dirEntryStart.cluster==fs->dirEntryStart.cluster && 
-		   global_fs[n].dirEntryStart.sector==fs->dirEntryStart.sector &&
-		   global_fs[n].dirEntryStart.offset==fs->dirEntryStart.offset) break;
+		if(global_fs[n].dirEntryStart.cluster == fs->dirEntryStart.cluster && 
+		   global_fs[n].dirEntryStart.sector == fs->dirEntryStart.sector &&
+		   global_fs[n].dirEntryStart.offset == fs->dirEntryStart.offset) 
+			break;
 	}
 
-	if(n!=MAX_FAT_FILES) // meec!
-	{
+	if(n!=MAX_FAT_FILES) {// meec!
 		_FAT_close_r(&fReent, (s32) fs);//close file
-
-	return FDALREADYOPENED;
+		
+		return FDALREADYOPENED;
 	}
 #endif
 
@@ -151,7 +151,8 @@ s32 FAT_Open(const char *path, u32 mode)
 
 s32 FAT_Close(s32 fd)
 {
-s32 ret;
+	s32 ret;
+
 	/* Close file */
 	ret=_FAT_close_r(&fReent, fd);
 
@@ -162,13 +163,14 @@ s32 FAT_Read(s32 fd, void *buffer, u32 len)
 {
 	s32 ret;
 
-		/* Clear error code */
-		fReent._errno = 0;
+	/* Clear error code */
+	fReent._errno = 0;
 		
-		/* Read file */
-		ret = _FAT_read_r(&fReent, fd, buffer, len);
-		if (ret < 0)
-			{ret = __FAT_GetError();}
+	/* Read file */
+	ret = _FAT_read_r(&fReent, fd, buffer, len);
+	if (ret < 0) {
+		ret = __FAT_GetError();
+	}
 
 	return ret;
 }
@@ -184,7 +186,7 @@ s32 FAT_Write(s32 fd, void *buffer, u32 len)
 	ret = _FAT_write_r(&fReent, fd, buffer, len);
 	if (ret < 0)
 		ret = __FAT_GetError();
-	if(len>=16384)
+	if(len >= 16384)
 		_FAT_syncToDisc ((FILE_STRUCT*) fd);
 	return ret;
 }
@@ -216,9 +218,8 @@ s32 FAT_CreateDir(const char *dirpath)
 	ret = _FAT_mkdir_r(&fReent, dirpath, 0);
 	if (ret < 0)
 		ret = __FAT_GetError();
-	else
-	{
-	ret=0;
+	else {
+		ret = 0;
 	}
 
 	return ret;
@@ -233,9 +234,10 @@ s32 FAT_CreateFile(const char *filepath)
 	/* Clear error code */
 	fReent._errno = 0;
 	
-	ret=FAT_Open(filepath, O_CREAT | O_RDWR);
+	ret = FAT_Open(filepath, O_CREAT | O_RDWR);
 	
-	if (ret < 0) return ret;
+	if (ret < 0)
+		return ret;
 	
 	FAT_Close(ret);
 	
@@ -249,7 +251,7 @@ s32 FAT_ReadDir(const char *dirpath, char *outbuf, u32 *outlen, u32 maxlen)
 	u32 cnt = 0, pos = 0;
 	s32 ret;
    
-   fReent._errno = 0;
+	fReent._errno = 0;
 	/* Open directory */
 	ret = __FAT_OpenDir(dirpath, &dir);
 	if (ret < 0)
@@ -261,8 +263,6 @@ s32 FAT_ReadDir(const char *dirpath, char *outbuf, u32 *outlen, u32 maxlen)
 		char namefile[256];
 		char *filename = outbuf + pos;
 
-		
-
 		/* Read entry */
 		if (_FAT_dirnext_r(&fReent, &dir, namefile, NULL)!=0)
 			break;
@@ -271,11 +271,11 @@ s32 FAT_ReadDir(const char *dirpath, char *outbuf, u32 *outlen, u32 maxlen)
 		if (namefile[0]=='.' || namefile[0]=='#')
 			continue;
 		
-		if(outbuf)
-		    {
-			int len=strlen(namefile);
-			memcpy(filename, namefile, len); filename[len]=0;
-			}
+		if(outbuf) {
+			int len = strlen(namefile);
+			memcpy(filename, namefile, len);
+			filename[len] = 0;
+		}
 
 		/* Increase counter */
 		cnt++;
@@ -287,7 +287,8 @@ s32 FAT_ReadDir(const char *dirpath, char *outbuf, u32 *outlen, u32 maxlen)
 	/* Output values */
 	*outlen = cnt;
 
-	if(outbuf) os_sync_after_write(outbuf, pos);
+	if (outbuf) 
+		os_sync_after_write(outbuf, pos);
 
 	/* Close directory */
 	__FAT_CloseDir(&dir);
@@ -302,54 +303,51 @@ s32 FAT_ReadDir_short(const char *dirpath, char *outbuf, u32 *outlen, u32 maxlen
 	u32 cnt = 0, pos = 0;
 	s32 ret;
 	int len;
-    char *temp_buffer=NULL;
+	char *temp_buffer=NULL;
 	
 	if(outbuf) temp_buffer=Mem_Alloc(13 * *outlen +32);
 
 	if(!temp_buffer) temp_buffer=outbuf;
 
-	if(outbuf) 
-	  {
-	  memset(temp_buffer, 0, 13);
-		  
-	  }
+	if(outbuf) {
+		memset(temp_buffer, 0, 13);
+	}
 
-    fReent._errno = 0;
+	fReent._errno = 0;
 	/* Open directory */
 	ret = __FAT_OpenDir(dirpath, &dir);
 	
-	if (ret < 0)
-		{
-		if(outbuf && outbuf!=temp_buffer)
-			{
+	if (ret < 0) {
+		if(outbuf && outbuf != temp_buffer) {
 			Mem_Free(temp_buffer);
-			}
-		return ret;
 		}
+		return ret;
+	}
    
 
 	/* Read entries */
 	while (!outbuf || /*!maxlen || */(maxlen > cnt)) {
-		 char namefile[96];
-		 fReent._errno = 0;
+		char namefile[96];
+		fReent._errno = 0;
 		/* Read entry */
 		if (_FAT_dirnext_r(&fReent, &dir, namefile, NULL)!=0)
 			break;
 
 		/* Non valid entry */
-		if (namefile[0]=='.' || namefile[0]=='#')
+		if (namefile[0] == '.' || namefile[0] == '#')
 			continue;
 		
-		if(outbuf)
-		    {
+		if(outbuf) {
 			
-			len=strlen(namefile); if(len>12) continue; // ignore invalid filename len>12 //len=12;
+			len = strlen(namefile); 
+			if (len > 12) 
+				continue; // ignore invalid filename len>12 //len=12;
 			
-			strcpy(temp_buffer+pos, namefile);
+			strcpy(temp_buffer + pos, namefile);
 			
 			/* Update position */
 			pos += len + 1;
-			}
+		}
 
 		/* Increase counter */
 		cnt++;
@@ -359,22 +357,22 @@ s32 FAT_ReadDir_short(const char *dirpath, char *outbuf, u32 *outlen, u32 maxlen
 	/* Output values */
 	*outlen = cnt;
 
-	if(outbuf) 
-	  {
-	  if(outbuf!=temp_buffer)
-		  {
-		  if(pos!=0)
-		  memcpy(outbuf, temp_buffer, pos);
-		  Mem_Free(temp_buffer);
-		  }
-	  os_sync_after_write(outbuf, pos);
-	  }
+	if(outbuf) {
+		if (outbuf != temp_buffer) {
+			if(pos != 0)
+				memcpy(outbuf, temp_buffer, pos);
+			Mem_Free(temp_buffer);
+		}
+		os_sync_after_write(outbuf, pos);
+	}
 
 	/* Close directory */
 	__FAT_CloseDir(&dir);
 
-	//if(cnt==0) return ENOENT;
-
+	/*
+	  if (cnt == 0)
+		return ENOENT;
+	*/
 	return 0;
 }
 
@@ -432,7 +430,8 @@ s32 FAT_DeleteDir(const char *dirpath)
 		if (filestat.st_mode & S_IFDIR)
 			ret=FAT_DeleteDir(newpath);
 
-		if(ret<0) break;
+		if(ret<0) 
+			break;
         
 		/* Delete object */
 		ret = FAT_Delete(newpath);
@@ -499,15 +498,15 @@ s32 FAT_GetFileStats(s32 fd, fstats *stats)
 {
 	FILE_STRUCT *fs = (FILE_STRUCT *)fd;
 
-	if ((u32)fs>=(u32) global_fs &&  (u32)fs<(u32) (global_fs+sizeof(FILE_STRUCT)*MAX_FAT_FILES) && fs->inUse) {
+	if ((u32)fs >= (u32) global_fs &&  
+	    (u32)fs <  (u32) (global_fs + sizeof(FILE_STRUCT)*MAX_FAT_FILES) && 
+	    fs->inUse) {
 
 		/* Fill file stats */
 		stats->file_length = fs->filesize;
 		stats->file_pos    = fs->currentPosition;
-
 		return 0;
 	}
-
 	return EINVAL;
 }
 
@@ -520,12 +519,12 @@ s32 FAT_GetUsage(const char *dirpath, u64 *size, u32 *files)
 	u32 totalCnt = 0;
 	s32 ret;
 
-	
 	/* Open directory */
 	ret = __FAT_OpenDir(dirpath, &dir);
 	if (ret < 0)
 		return ret;
-    totalCnt++;
+
+	totalCnt++;
 	totalSz += 0x4000;
 
 	/* Read entries */
@@ -543,7 +542,8 @@ s32 FAT_GetUsage(const char *dirpath, u64 *size, u32 *files)
 		if (filename[0]=='.' || filename[0]=='#')
 			continue;
 
-		if(strlen(filename)>12) continue; // prevent large names
+		if(strlen(filename) > 12)
+			continue; // prevent large names
 
 		/* Generate directory path */
 
