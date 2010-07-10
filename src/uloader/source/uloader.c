@@ -1377,7 +1377,7 @@ void remote_DVD_disc()
 										
 										p += (0x26 + disc_buffer[n + p + 0x13] + 3) & ~3;
 									} else
-										multi_ciso[n].len = 0;
+										multi_ciso[m].len = 0;
 								}
 								
 								if (m < 8) // bad UDF format
