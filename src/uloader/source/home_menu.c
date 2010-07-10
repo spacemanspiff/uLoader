@@ -5,6 +5,8 @@
 
 #include "wiimote.h"
 
+#include "sfx.h"
+
 extern int frames2;
 
 extern int abort_signal;

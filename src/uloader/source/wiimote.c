@@ -38,7 +38,6 @@ extern int time_sleep;
 extern int frames2;
 extern int is_16_9;
 
-
 unsigned temp_pad = 0,
 	new_pad = 0,
 	old_pad = 0;
@@ -84,7 +83,7 @@ void make_rumble_off()
 	rumble = 0;
 
 	for(n = 0; n < 3; n++) {
-		usleep(30*1000);
+		usleep(30 * 1000);
 		wiimote_rumble(0);
 		WPAD_Flush(w_index);
 		WPAD_ScanPads();
@@ -323,4 +322,3 @@ void wiimote_classic()
 		old_pad |= WPAD_BUTTON_MINUS;
 
 }
-
