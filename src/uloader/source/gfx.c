@@ -86,7 +86,7 @@ void splash_scr()
 	DrawRoundBox((SCR_WIDTH-260)/2, 16, 260, 64, 0, 4, INK0);
 
 	SelectFontTexture(0);
-	PY+ =8 0;
+	PY += 80;
 	letter_size(16,32);
 	s_printf("%s", "\251 2009, Hermes (www.elotrolado.net)");
 	PY += 40;
@@ -242,9 +242,8 @@ static float PerlinNoise(float x,float y,int width,int octaves,int seed){
 	}
 
 	for (s = 0; s < octaves; s++) {
-
 		amplitud >>= 1;
-		periodo> >= 1;
+		periodo  >>= 1;
 		freq = 1/(float) (periodo);
 		num_pasos = (int)(width*freq);
 		pasox = (int)(x*freq);
@@ -255,7 +254,6 @@ static float PerlinNoise(float x,float y,int width,int octaves,int seed){
 		a = InterPol(IntNoise(casilla + seed), IntNoise(casilla + 1 + seed), cachox);
 		b = InterPol(IntNoise(casilla + num_pasos + seed), IntNoise(casilla + 1 + num_pasos + seed), cachox);
 		valor += InterPol(a, b, cachoy)*amplitud;
-
 	}
 
 	return valor;
@@ -643,9 +641,9 @@ void * create_png_texture(GXTexObj *texture, void *png, int repeat)
     
 	if (repeat & 32) {
 		texture_buff = (void *) SYS_AllocArena2MemLo(imgProp.imgWidth * imgProp.imgHeight *4 + 2048, 32);
-		repeat& = ~32;
+		repeat &= ~32;
 	} else
-		texture_buff = memalign(32, imgProp.imgWidth * imgProp.imgHeight *4 + 2048);
+		texture_buff = memalign(32, imgProp.imgWidth * imgProp.imgHeight * 4 + 2048);
 
 	if (!texture_buff) {
 		return NULL;
