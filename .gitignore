@@ -3,4 +3,8 @@ boot.dol
 cios_installer.dol
 forwarder.dol
 uloader_alt.dol
+uloader.dol
+uloader_alt.elf
+uloader.elf
 isotociso.exe
+build
