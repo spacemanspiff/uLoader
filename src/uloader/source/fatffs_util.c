@@ -21,12 +21,12 @@
 
 
 #include "fatffs_util.h"
-#include "gfx.h"
 #include <sys/dir.h>
 #include <sys/stat.h>
 
 #include "lz77.h"
 
+#include "gfx.h"
 
 extern int time_sleep; // screen sleep
 

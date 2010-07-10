@@ -26,6 +26,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "gfx.h"
+#include "wiimote.h"
 
 extern Mtx modelView;
 
@@ -619,6 +620,42 @@ int Draw_button2(int x, int y, char *cad, int selected)
 }
 
 extern void* SYS_AllocArena2MemLo(u32 size,u32 align);
+
+
+void * create_png_texture_from_file(GXTexObj *texture, const char *png_file_name, int repeat)
+{
+	void *mem_png = 0;
+	int len_png;
+
+	FILE *fp = fopen(png_file_name, "r");
+	if (fp != 0){
+		fseek(fp, 0, SEEK_END);
+		len_png = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		if (len_png < (200 * 1024 - 8)) {
+			mem_png = malloc(len_png + 128);
+			if(mem_png) {
+				int n = fread(mem_png, 1, len_png, fp);
+				if(n < 0) {
+					len_png = 0;
+					free(mem_png);
+					mem_png = 0;
+				} else 
+					len_png = n;
+			}
+		} else 
+			len_png = 0;
+		fclose(fp);
+	} else 
+		len_png = 0;
+
+	if (mem_png) {
+		create_png_texture(texture, mem_png, repeat);
+		free(mem_png);
+	}
+	return texture;
+}
+
 
 void * create_png_texture(GXTexObj *texture, void *png, int repeat)
 {

@@ -3,6 +3,8 @@
 #include "http.h"
 #include "ehcmodule.h"
 
+#include "wiimote.h"
+
 extern int frames2;
 
 extern int abort_signal;
@@ -4211,7 +4213,6 @@ void select_file(int flag, struct discHdr *header)
 				} 
                
 				if (signal) {
-					FILE *fp = NULL;
 					signal = 0;
 
 					if (mem_png != NULL)
@@ -4223,31 +4224,7 @@ void select_file(int flag, struct discHdr *header)
 					texture_png = NULL;
 
 					if (!files[posfile].is_directory) {
-						fp = fopen(files[posfile].name, "r");
-						if (fp != 0){
-							fseek(fp, 0, SEEK_END);
-							len_png = ftell(fp);
-							fseek(fp, 0, SEEK_SET);
-							if (len_png < (200*1024 - 8)) {
-								mem_png = malloc(len_png+128);
-								if(mem_png) {
-									n = fread(mem_png, 1, len_png, fp);
-									if(n < 0) {
-										len_png = 0;
-										free(mem_png);
-										mem_png = 0;
-									} else 
-										len_png = n;
-								}
-							} else 
-								len_png = 0;
-							fclose(fp);
-						} else 
-							len_png = 0;
-
-						if (mem_png)
-							texture_png = create_png_texture(&png_texture, 
-											 mem_png, 0);
+						create_png_texture_from_file(&png_texture, files[posfile].name, 0);
 					}
 				}
 			} // mode==0
@@ -4264,10 +4241,8 @@ void select_file(int flag, struct discHdr *header)
 	Screen_flip();
 	if (mem_png != NULL) 
 		free(mem_png);
-	mem_png = NULL;
 
 	if (texture_png != NULL) 
 		free(texture_png);
-	texture_png = NULL;
 }
 

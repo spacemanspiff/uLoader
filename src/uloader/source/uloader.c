@@ -63,8 +63,7 @@
 
 #include "dolmenu.h"
 
-
-
+#include "wiimote.h"
 
 char uloader_version[5] = "5.1D"; // yes, you can change here the current version of the application
 
@@ -92,7 +91,7 @@ typedef struct
 	u32 skip_boot	    :1; // skip boot content in Wiiwares. Old skip ios option
 	u32 game_locked     :1; // parental control
 	u32 bca_mode	    :1; // bca mode  0:-> from disc 1-> from data base
-	u32 pad3	        :2;
+	u32 pad3            :2;
 	u32 hook_selected   :3; // hooktype option for cheats
 
         // byte 1
@@ -517,294 +516,6 @@ s32 __Menu_EntryCmp(const void *a, const void *b)
 
 	/* Compare strings */
 	return strcmp(hdr1->title, hdr2->title);
-}
-//---------------------------------------------------------------------------------
-/* Wiimote's routines */
-//---------------------------------------------------------------------------------
-
-unsigned temp_pad = 0,
-	new_pad = 0,
-	old_pad = 0;
-
-WPADData * wmote_datas = NULL;
-
-// wiimote position (temp)
-int px = -100;
-int py = -100;
-
-// wiimote position emulated for Guitar
-int guitar_pos_x,guitar_pos_y;
-
-static int w_index = -1;
-
-int rumble = 0;
-
-void wiimote_rumble(int status)
-{
-	if (config_file.rumble_off)
-		status = 0;
-	
-	/*
-	if(status == 0)
-		rumble = 0;
-	*/
-	
-	if(w_index < 0) {
-		if (status == 0) {
-			WPAD_Rumble(0, status);
-			WPAD_Rumble(1, status);
-			WPAD_Rumble(2, status);
-			WPAD_Rumble(3, status);
-		}
-		return;
-	}
-	WPAD_Rumble(w_index, status);
-}
-
-void make_rumble_off()
-{
-	int n;
-	rumble = 0;
-
-	for(n = 0; n < 3; n++) {
-		usleep(30*1000);
-		wiimote_rumble(0);
-		WPAD_Flush(w_index);
-		WPAD_ScanPads();
-	}
-}
-
-unsigned wiimote_read()
-{
-	int n;
-
-	int ret=-1;
-
-	unsigned type=0;
-	unsigned butt=0;
-
-	wmote_datas=NULL;
-	w_index=-1;
-	for (n = 0; n < 4; n++) { // busca el primer wiimote encendido y usa ese
-		ret = WPAD_Probe(n, &type);
-
-		if(ret >= 0) {
-			
-			butt = WPAD_ButtonsHeld(n);
-			wmote_datas = WPAD_Data(n);
-			w_index = n;
-			break;
-		}
-	}
-
-	if (n == 4)
-		butt = 0;
-
-	temp_pad = butt;
-
-	new_pad = temp_pad & (~old_pad);
-	old_pad = temp_pad;
-
-	if (new_pad) {
-		time_sleep = TIME_SLEEP_SCR;
-		SetVideoSleep(0);
-	}
-
-	return butt;
-}
-
-
-void wiimote_ir()
-{
-	px = wmote_datas->ir.x-104*is_16_9;
-	py = wmote_datas->ir.y;
-	angle_icon = wmote_datas->orient.roll;
-
-	time_sleep = TIME_SLEEP_SCR;
-	SetVideoSleep(0);
-	
-	SetTexture(NULL);
-	DrawIcon(px, py, frames2);
-}
-
-void wiimote_guitar()
-{
-	angle_icon=0.0f;
-
-	if (wmote_datas->exp.gh3.js.pos.x>=wmote_datas->exp.gh3.js.center.x + 8) {
-		guitar_pos_x += 8;
-		if (guitar_pos_x > (SCR_WIDTH+104*is_16_9-16)) 
-			guitar_pos_x = (SCR_WIDTH+104*is_16_9-16);
-	}
-
-	if (wmote_datas->exp.gh3.js.pos.x <= wmote_datas->exp.gh3.js.center.x - 8) {
-		guitar_pos_x -= 8;
-		if (guitar_pos_x<16-104*is_16_9) 
-			guitar_pos_x = 16-104*is_16_9;
-	}
-		
-	if (wmote_datas->exp.gh3.js.pos.y >= wmote_datas->exp.gh3.js.center.y + 8) {
-		guitar_pos_y -= 8;
-		if (guitar_pos_y < 16)
-			guitar_pos_y = 16;
-	}
-	if (wmote_datas->exp.gh3.js.pos.y <= wmote_datas->exp.gh3.js.center.y - 8) {
-		guitar_pos_y += 8;
-		if (guitar_pos_y > (SCR_HEIGHT-16)) 
-			guitar_pos_y = (SCR_HEIGHT-16);
-	}
-
-	if (guitar_pos_x < -104*is_16_9) 
-		guitar_pos_x = 104*is_16_9;
-
-	if (guitar_pos_x > (SCR_WIDTH - 16 + 104 * is_16_9)) 
-		guitar_pos_x = (SCR_WIDTH - 16 + 104 * is_16_9);
-
-	if (guitar_pos_y < 0) 
-		guitar_pos_y = 0;
-	if (guitar_pos_y > (SCR_HEIGHT-16)) 
-		guitar_pos_y = SCR_HEIGHT-16;
-
-	if(px != guitar_pos_x || py != guitar_pos_y) {
-		time_sleep = TIME_SLEEP_SCR;
-		SetVideoSleep(0);
-	}
-
-	px = guitar_pos_x; 
-	py = guitar_pos_y;
-
-	SetTexture(NULL);
-	DrawIcon(px, py, frames2);
-
-	if (new_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN) 
-		new_pad |= WPAD_BUTTON_A;
-	if (old_pad & WPAD_GUITAR_HERO_3_BUTTON_GREEN)
-		old_pad |= WPAD_BUTTON_A;
-
-	if (new_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) 
-		new_pad |= WPAD_BUTTON_B;
-	if (old_pad & WPAD_GUITAR_HERO_3_BUTTON_RED) 
-		old_pad |= WPAD_BUTTON_B;
-
-	if (new_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW)
-		new_pad |= WPAD_BUTTON_1;
-	if (old_pad & WPAD_GUITAR_HERO_3_BUTTON_YELLOW) 
-		old_pad |= WPAD_BUTTON_1;
-
-	if (new_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS)
-		new_pad |= WPAD_BUTTON_MINUS;
-	if (old_pad & WPAD_GUITAR_HERO_3_BUTTON_MINUS)
-		old_pad |= WPAD_BUTTON_MINUS;
-
-	if (new_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) 
-		new_pad |= WPAD_BUTTON_PLUS;
-	if (old_pad & WPAD_GUITAR_HERO_3_BUTTON_PLUS) 
-		old_pad |= WPAD_BUTTON_PLUS;
-}
-
-
-void wiimote_classic()
-{
-	angle_icon = 0.0f;
-
-	if (wmote_datas->exp.classic.ljs.pos.x >= wmote_datas->exp.classic.ljs.center.x + 8) {
-		guitar_pos_x += 8;
-		if (guitar_pos_x > (SCR_WIDTH+104*is_16_9-16)) 
-			guitar_pos_x = (SCR_WIDTH + 104*is_16_9 - 16);
-	}
-	if (wmote_datas->exp.classic.ljs.pos.x <= wmote_datas->exp.classic.ljs.center.x - 8) {
-		guitar_pos_x -= 8;
-		if (guitar_pos_x < 16 - 104*is_16_9) 
-			guitar_pos_x = 16 - 104*is_16_9;
-	}
-		
-	if (wmote_datas->exp.classic.ljs.pos.y >= wmote_datas->exp.classic.ljs.center.y + 8) {
-		guitar_pos_y -= 8;
-		if (guitar_pos_y < 16)
-			guitar_pos_y = 16;
-	}
-	if (wmote_datas->exp.classic.ljs.pos.y <= wmote_datas->exp.classic.ljs.center.y - 8) {
-		guitar_pos_y += 8;
-		if (guitar_pos_y > (SCR_HEIGHT - 16))
-			guitar_pos_y = (SCR_HEIGHT - 16);
-	}
- 
-	if (guitar_pos_x < -104*is_16_9) 
-		guitar_pos_x = 104 * is_16_9;
-	if (guitar_pos_x > (SCR_WIDTH-16+104*is_16_9))
-		guitar_pos_x = (SCR_WIDTH - 16 + 104*is_16_9);
-	if (guitar_pos_y < 0)
-		guitar_pos_y = 0;
-	if (guitar_pos_y > (SCR_HEIGHT - 16))
-		guitar_pos_y = SCR_HEIGHT - 16;
-
-	if (px != guitar_pos_x || py != guitar_pos_y) {
-		time_sleep = TIME_SLEEP_SCR;
-		SetVideoSleep(0);
-	}
-
-	px = guitar_pos_x; 
-	py = guitar_pos_y;
-
-
-	SetTexture(NULL);
-	DrawIcon(px, py, frames2);
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_UP)
-		new_pad |= WPAD_BUTTON_UP;
-	if (old_pad & WPAD_CLASSIC_BUTTON_UP) 
-		old_pad |= WPAD_BUTTON_UP;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_DOWN) 
-		new_pad |= WPAD_BUTTON_DOWN;
-	if (old_pad & WPAD_CLASSIC_BUTTON_DOWN)
-		old_pad |= WPAD_BUTTON_DOWN;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_LEFT)
-		new_pad |= WPAD_BUTTON_LEFT;
-	if (old_pad & WPAD_CLASSIC_BUTTON_LEFT) 
-		old_pad |= WPAD_BUTTON_LEFT;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_RIGHT) 
-		new_pad |= WPAD_BUTTON_RIGHT;
-	if (old_pad & WPAD_CLASSIC_BUTTON_RIGHT) 
-		old_pad |= WPAD_BUTTON_RIGHT;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_A) 
-		new_pad |= WPAD_BUTTON_A;
-	if (old_pad & WPAD_CLASSIC_BUTTON_A) 
-		old_pad |= WPAD_BUTTON_A;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_B) 
-		new_pad |= WPAD_BUTTON_B;
-	if (old_pad & WPAD_CLASSIC_BUTTON_B) 
-		old_pad |= WPAD_BUTTON_B;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_X) 
-		new_pad |= WPAD_BUTTON_1;
-	if (old_pad & WPAD_CLASSIC_BUTTON_X)
-		old_pad |= WPAD_BUTTON_1;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_Y) 
-		new_pad |= WPAD_BUTTON_2;
-	if (old_pad & WPAD_CLASSIC_BUTTON_Y)
-		old_pad |= WPAD_BUTTON_2;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_HOME) 
-		new_pad |= WPAD_BUTTON_HOME;
-	if (old_pad & WPAD_CLASSIC_BUTTON_HOME)
-		old_pad |= WPAD_BUTTON_HOME;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_PLUS)
-		new_pad |= WPAD_BUTTON_PLUS;
-	if (old_pad & WPAD_CLASSIC_BUTTON_PLUS)
-		old_pad |= WPAD_BUTTON_PLUS;
-
-	if (new_pad & WPAD_CLASSIC_BUTTON_MINUS)
-		new_pad |= WPAD_BUTTON_MINUS;
-	if (old_pad & WPAD_CLASSIC_BUTTON_MINUS)
-		old_pad |= WPAD_BUTTON_MINUS;
-
 }
 
 //---------------------------------------------------------------------------------
@@ -1603,9 +1314,9 @@ int main(int argc, char **argv) {
 		create_background_text(670, 128, 128, t);
 		CreateTexture(&text_background[0], TILE_SRGBA8 , t, 128, 128, 1);
 		create_background_text(663, 128, 128, t+128*128*1);
-		CreateTexture(&text_background[1], TILE_SRGBA8 , t+128*128*1, 128, 128, 1);
+		CreateTexture(&text_background[1], TILE_SRGBA8 , t + 128*128*1, 128, 128, 1);
 		create_background_text(663*2, 128, 128, t+128*128*2);
-		CreateTexture(&text_background[2], TILE_SRGBA8 , t+128*128*2, 128, 128, 1);
+		CreateTexture(&text_background[2], TILE_SRGBA8 , t + 128*128*2, 128, 128, 1);
 	
 
 		GX_InitTexObj(&text_background2, t, 128, 128, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);	
@@ -1642,7 +1353,7 @@ int main(int argc, char **argv) {
 		global_mount |= 64;
 	
 
-	if (ret!=0) {
+	if (ret != 0) {
 		remote_call_abort();
 		while(remote_ret() == REMOTE_BUSY) 
 			usleep(1000*50);
@@ -1674,10 +1385,10 @@ int main(int argc, char **argv) {
 		goto error;
 	}
 
-	temp_data = memalign(32,256*1024);
-	disc_conf = memalign(32,256*1024);
+	temp_data = memalign(32, 256*1024);
+	disc_conf = memalign(32, 256*1024);
 	// texture of white-noise animation generated here
-	game_empty = memalign(32,128*64*3*4);
+	game_empty = memalign(32, 128*64*3*4);
 
 
 	test_and_patch_for_port1();
@@ -1694,7 +1405,7 @@ int main(int argc, char **argv) {
 			splash_scr();
 			SelectFontTexture(1); // selecciona la fuente de letra extra
 
-			letter_size(8,32);
+			letter_size(8, 32);
 					
 			PX = 0;
 			PY = SCR_HEIGHT/2 + 32;
@@ -1748,7 +1459,7 @@ int main(int argc, char **argv) {
 	}
 		
 	remote_call_abort();
-	while (remote_ret()==REMOTE_BUSY) 
+	while (remote_ret() == REMOTE_BUSY) 
 		usleep(1000 * 50);
 	ret2 = REMOTE_BUSY;
 
@@ -1902,7 +1613,7 @@ int main(int argc, char **argv) {
 				  ret2 = 0; // mode disc
 				*/
 
-			} else if(ret2 == -101) {
+			} else if (ret2 == -101) {
 				n=0;
 				DrawRoundFillBox((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16 + 32, 540, 64, 999, 0xa00000ff);
 				DrawRoundBox    ((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16 + 32, 540, 64, 999, 4, 0xa0000000);
@@ -1914,12 +1625,12 @@ int main(int argc, char **argv) {
 				
 				PY += 80;
 
-				if(!use_port1)
+				if (!use_port1)
 					s_printf("Maybe you need plug the device on USB port 0...");
 				else
 					s_printf("Maybe you need plug the device on USB port 1...");
 				
-			} else if(ret2 == -122) {
+			} else if (ret2 == -122) {
 				DrawRoundFillBox((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16 + 32, 540, 64, 999, 0xa00000ff);
 				DrawRoundBox    ((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16 + 32, 540, 64, 999, 4, 0xa0000000);
 
@@ -1931,7 +1642,7 @@ int main(int argc, char **argv) {
 				PY += 80;
 				s_printf("... waiting for Storage or DVD media ...");
 
-			} else if(ret2 < 0)  {
+			} else if (ret2 < 0)  {
 				DrawRoundFillBox((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16 + 32, 540, 64, 999, 0xa00000ff);
 				DrawRoundBox    ((SCR_WIDTH - 540)/2, SCR_HEIGHT/2 - 16 + 32, 540, 64, 999, 4, 0xa0000000);
 

@@ -70,28 +70,6 @@ extern Mtx	modelView;
 
 extern char uloader_version[5];
 
-/*************************************/
-#include <wiiuse/wpad.h>
-
-extern unsigned temp_pad,new_pad,old_pad;
-
-extern WPADData * wmote_datas;
-
-extern int rumble;
-
-void wiimote_rumble(int status);
-void make_rumble_off();
-
-unsigned wiimote_read();
-
-void wiimote_ir();
-
-void wiimote_guitar();
-void wiimote_classic();
-
-
-/*************************************/
-
 /*-----------------------------------------------------------------------------------------------------------------------------------*/
 
 extern void *background_png;
@@ -157,6 +135,7 @@ int Draw_button(int x,int y,char *cad);
 int Draw_button2(int x,int y,char *cad, int selected);
 
 void * create_png_texture(GXTexObj *texture, void *png, int repeat);
+void * create_png_texture_from_file(GXTexObj *texture, const char *png, int repeat);
 
 void draw_background();
 
