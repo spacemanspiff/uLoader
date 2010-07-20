@@ -1106,14 +1106,14 @@ u8 part_table[16*4];
 int ret;
 u8 *ptr;
 int i;
-int n_sectors;
+u32 n_sectors;
 
 	num_partitions=0;
 	memset(partition_type, 0, sizeof(partition_type));
 
 
-	n_sectors = USBStorage2_GetCapacity(&sector_size);
-	if(n_sectors<0) return -1;
+	USBStorage2_GetCapacity(&sector_size, &n_sectors);
+	if(n_sectors==0) return -1;
 
 	n_sectors+=1; 
     

@@ -33,14 +33,14 @@ LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -T../../rvl.ld
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	../../lib/libfat.a -lasnd -lmodplay -lscreen -lpng -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
+LIBS	:=	../../lib/libfat.a ../../lib/libpng.a -lasnd -lmodplay -lscreen -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
 
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(DEVKITPPC)/lib $(CURDIR)/..
+LIBDIRS	:= $(DEVKITPPC)/lib $(DEVKITPRO)/portlibs/ppc $(CURDIR)/..
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -83,14 +83,14 @@ export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 #---------------------------------------------------------------------------------
 export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD) \
+					-I$(CURDIR)/$(BUILD) -I$(DEVKITPRO)/portlibs/ppc/include \
 					-I$(LIBOGC_INC)
 
 #---------------------------------------------------------------------------------
 # build a list of library paths
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
-					-L$(LIBOGC_LIB)
+					-L$(LIBOGC_LIB) 
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 .PHONY: $(BUILD) clean

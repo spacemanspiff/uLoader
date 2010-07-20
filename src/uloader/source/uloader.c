@@ -914,10 +914,10 @@ void display_loader_error(int ret)
 
 void usb_test()
 {
-static int n_sectors=0,errores=0;
-static u32 sector=0, sector_size;
+static int errores=0;
+static u32 n_sectors=0,sector=0, sector_size;
 
-static u32 err_time=0,ok_time=0;
+static u64 err_time=0,ok_time=0;
 static u32 first_time=0, curr_time=0,start_time=0;
 static int err=2;
 static u32 addr=0,dat,dat2=0,dat3=0,bytes_readed=0,dat4=0, flag=0;
@@ -942,7 +942,7 @@ if(addr==0)
 			
 
     if(n_sectors==0)
-			n_sectors = USBStorage2_GetCapacity(&sector_size);
+			 USBStorage2_GetCapacity(&sector_size, &n_sectors);
 
 	dat=0;
 	
@@ -963,7 +963,7 @@ if(dat2!=0x1805) dat3=dat2;
 		{
 		if(err) 
 			{first_time=time(NULL);ok_time=gettick();err=0;}
-		sprintf(cabecera2_str,"OK %i %u Last T: %u Time %u", errores, ticks_to_msecs(ok_time-err_time), curr_time, (u32) (time(NULL)-start_time)); 
+		sprintf(cabecera2_str,"OK %i %u Last T: %u Time %u", errores, ticks_to_msecs(ok_time-err_time), (u32)curr_time, (u32) (time(NULL)-start_time)); 
 		bytes_readed+=64*512;
 		}
 
@@ -1004,6 +1004,7 @@ void save_log()
 {
 FILE *fp;
 int len;
+u32 level;
 if(!sd_ok) return;
 
 	mload_init();
@@ -1014,13 +1015,13 @@ if(!sd_ok) return;
 	mload_close();
 
 	if(len<=0) return;
+	for(len=0;len<4096;len++)
+		{
+		if(temp_data[len]==0) break;
+		}
 
 	if(sd_ok )
 		{
-		for(len=0;len<4096;len++)
-			{
-			if(temp_data[len]==0) break;
-			}
 
 		fp=fopen("sd:/log_ehc.txt","wb");
 
@@ -1031,6 +1032,15 @@ if(!sd_ok) return;
 			fclose(fp);
 			}
 		}
+	usleep(2000);
+	if (usb_isgeckoalive(1)) 
+	{
+		level = IRQ_Disable();
+		usb_sendbuffer(1, temp_data, len);
+		IRQ_Restore(level);
+	}
+	usleep(2000);
+	
 }
 #endif
 

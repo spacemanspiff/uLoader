@@ -116,10 +116,10 @@ bool __usbstorage_Write(u32 sector, u32 numSectors, void *buffer)
 	return __usbstorage_Read_Write(sector, numSectors, buffer, 1);
 }
 
-s32 __usbstorage_GetCapacity(u32 *_sectorSz)
+s32 __usbstorage_GetCapacity(u32 *_sectorSz, u32 *_n_sectors)
 {
-	STACK_ALIGN(ioctlv, vector, 1, 32);
-	STACK_ALIGN(u32,    buffer, 1, 32);
+	STACK_ALIGN(ioctlv, vector, 2, 32);
+	STACK_ALIGN(u32,    buffer, 2, 32);
 
 	if (fd >= 0) {
 		s32 ret;
@@ -131,15 +131,19 @@ s32 __usbstorage_GetCapacity(u32 *_sectorSz)
 		os_sync_after_write(vector, sizeof(ioctlv));
 
 		/* Get capacity */
-		ret = os_ioctlv(fd, USB_IOCTL_UMS_GET_CAPACITY, 0, 1, vector);
+		ret = os_ioctlv(fd, USB_IOCTL_UMS_GET_CAPACITY, 0, 2, vector);
 
-		os_sync_after_write(buffer, sizeof(u32));
+		os_sync_after_write(buffer, sizeof(buffer));
 
 		/* Set sector size */
 		sectorSz = buffer[0];
+		
 
-		if (ret && _sectorSz)
+		if (ret && _sectorSz && _n_sectors)
+		{
 			*_sectorSz = sectorSz;
+			*_n_sectors = buffer[1];
+		}
 
 		return ret;
 	}
@@ -165,7 +169,7 @@ bool usbstorage_Init(void)
 	os_ioctlv(fd, USB_IOCTL_UMS_INIT, 0, 0, NULL);
 
 	/* Get device capacity */
-	ret = __usbstorage_GetCapacity(NULL);
+	ret = __usbstorage_GetCapacity(NULL, NULL);
 	if (ret <= 0)
 		goto err;
 
@@ -196,7 +200,7 @@ bool usbstorage_IsInserted(void)
 	s32 ret;
 
 	/* Get device capacity */
-	ret = __usbstorage_GetCapacity(NULL);
+	ret = __usbstorage_GetCapacity(NULL, NULL);
 
 	return (ret > 0);
 }

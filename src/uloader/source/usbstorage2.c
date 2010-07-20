@@ -108,15 +108,19 @@ inline s32 __USBStorage2_isMEM2Buffer(const void *buffer)
 }
 
 
-s32 USBStorage2_GetCapacity(u32 *_sector_size)
+s32 USBStorage2_GetCapacity(u32 *_sector_size, u32 *_n_sectors)
 {
 	if (fd >= 0) {
 		s32 ret;
+		u32 n_sectors;
 
-		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_GET_CAPACITY, ":i", &sector_size);
+		ret = IOS_IoctlvFormat(hid, fd, USB_IOCTL_UMS_GET_CAPACITY, ":ii", &sector_size, &n_sectors);
 
-		if (ret && _sector_size)
+		if (ret && _sector_size && _n_sectors)
+		{
 			*_sector_size = sector_size;
+			*_n_sectors = n_sectors;
+		}
 
 		return ret;
 	}
@@ -136,7 +140,7 @@ s32 USBStorage2_EHC_Off(void)
 s32 USBStorage2_Init(void)
 {
 	s32 ret,ret2;
-	static u32 sector_size=0;
+	static u32 sector_size=0,n_sectors=0;
 
 	/* Already open */
 	if (fd >= 0)
@@ -162,8 +166,7 @@ s32 USBStorage2_Init(void)
 	ret2=ret;
 
 	/* Get device capacity */
-	ret = USBStorage2_GetCapacity(&sector_size);
-	if (!ret)
+	if (USBStorage2_GetCapacity(&sector_size,&n_sectors)==0)
 		{
 		ret=-1;
 		goto err;
@@ -282,7 +285,7 @@ return USBStorage2_Init()==0;
 
 static bool __usbstorage_IsInserted(void)
 {
-	return ( USBStorage2_GetCapacity(NULL)>=0);
+	return ( USBStorage2_GetCapacity(NULL,NULL)>0);
 }
 
 static bool __usbstorage_ReadSectors(u32 sector, u32 numSectors, void *buffer)

@@ -1,3 +1,3 @@
-#define size_fatffs_module 62632
+#define size_fatffs_module 63672
 
-extern unsigned char fatffs_module[62632];
+extern unsigned char fatffs_module[63672];

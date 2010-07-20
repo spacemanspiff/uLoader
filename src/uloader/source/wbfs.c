@@ -197,8 +197,8 @@ s32 WBFS_Init(void)
 		return ret;
 
 	/* Get USB capacity */
-	nb_sectors = USBStorage2_GetCapacity(&sector_size);
-	if (!nb_sectors)
+	USBStorage2_GetCapacity(&sector_size, &nb_sectors);
+	if (nb_sectors==0)
 		return -1;
 
 	return 0;

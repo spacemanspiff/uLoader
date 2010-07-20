@@ -4,7 +4,7 @@
 #include "ogc/disc_io.h"
 
 /* Prototypes */
-s32  USBStorage2_GetCapacity(u32 *);
+s32  USBStorage2_GetCapacity(u32 *, u32 *);
 s32  USBStorage2_Init(void);
 void USBStorage2_Deinit(void);
 s32 USBStorage2_Umount(void);

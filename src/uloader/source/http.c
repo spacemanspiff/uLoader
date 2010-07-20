@@ -208,7 +208,7 @@ struct header_block
     u8 *data;
 };
 
-#define HTTP_BUFFER_SIZE 1024*5
+#define HTTP_BUFFER_SIZE 1024*32
 
 #define HTTP_MAX_BUFFER 2*1024*1024
 
@@ -259,6 +259,7 @@ struct header_block * read_block(s32 s)
 			}
 		
 		offset += bytes_read;
+		usleep(300);
                           
         }
 
