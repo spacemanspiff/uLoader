@@ -66,7 +66,7 @@
 
 
 
-char uloader_version[5]="5.1D"; // yes, you can change here the current version of the application
+char uloader_version[5]="5.1E"; // yes, you can change here the current version of the application
 
 char *str_trace=NULL;
 
@@ -1217,7 +1217,7 @@ if(remote_DVD_disc_status==3)
 										
 										p+=(0x26+disc_buffer[n+p+0x13]+3) & ~3;
 										}
-									else multi_ciso[n].len=0;
+									else multi_ciso[m].len=0;
 									
 									}
 
@@ -1352,6 +1352,7 @@ int rel_time;
 	ret2=-1;
 	
 	cios=cios_list[0];
+
 
     if(uhack_settings0 & 2) 
 		{

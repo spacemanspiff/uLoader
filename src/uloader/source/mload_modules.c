@@ -432,7 +432,8 @@ u8 * ehc_data=search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
 	if(ehc_data)
 		{
 		ehc_data+=12;
-		use_port1=ehc_data[0]=0; // fixed to 0
+		use_port1=ehc_data[0];//=0; // fixed to 0
+		
 		DCFlushRange((void *) (((u32)ehc_data[0]) & ~31), 32);
 		
 		}
