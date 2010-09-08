@@ -63,6 +63,7 @@
 
 #include "dolmenu.h"
 
+#include "http.h"
 
 
 
@@ -2481,6 +2482,30 @@ static u64 titleid=0;
 	cabecera2("Reading The Title ...");
 
 	ret=FAT_get_title(titleid, &title_dol, str_id, force_ingame_ios);
+
+	//WiinnerTag
+	char url[200];
+	char *url_base = "http://www.wiinnertag.com/wiinnertag_scripts/update_sign.php";
+	char key[50];
+	
+	FILE *fp;
+	fp = fopen("sd:/apps/uloader/wiinnertag.key", "r");
+	if(fp)
+	{
+		fgets(key, sizeof(key) ,fp);
+		fclose(fp);
+
+		u8 *temp_buf=NULL;
+		u32 temp_size = 0;
+		
+		snprintf(url, 200, "%s?key=%s&game_id=%s", url_base, key, discid);
+		if(download_file(url, &temp_buf, &temp_size) != 0)
+		{
+			cabecera2("Error updating WiinnerTag, booting in 10 secs");
+			usleep(10000*1000);
+			//Some error treat in the future, maybe...
+		}
+	}
 	
 	if(ret<0) return ret;
 	
