@@ -46,6 +46,7 @@
 #include <wiiuse/wpad.h>
 #include <sdcard/wiisd_io.h>
 
+#include "wiinnertag.h"
 
 #include "wdvd.h"
 #include "disc.h"
@@ -2223,6 +2224,11 @@ int load_game_routine(u8 *discid, int game_mode)
 			return ret;
 	
 		//discid = (void *) str_id;
+		if (!updateWiinnerTag(discid)) {
+			cabecera2("Error updating WiinnerTag, booting in 2 secs");
+			usleep(2000*1000);
+		}
+
 	}
 #if 1
 	if (!titleid) {
