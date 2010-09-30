@@ -441,7 +441,7 @@ void test_and_patch_for_port1()
 	
 	if(ehc_data) {
 		ehc_data += 12;
-		use_port1 = ehc_data[0] = 0; // fixed to 0
+		use_port1 = ehc_data[0]; // = 0; // fixed to 0
 		DCFlushRange((void *) (((u32)ehc_data[0]) & ~31), 32);
 	}
 	

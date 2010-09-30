@@ -156,8 +156,8 @@ int home_menu(struct discHdr *header)
 			memcpy(buff+(56 - strlen(punt)) / 2, 
 			       punt, strlen(punt));
 
-			if (Draw_button2(30+48, 
-					 ylev+32+64*n, 
+			if (Draw_button2(30 + 48, 
+					 ylev + 32 + 64*n, 
 					 buff,
 					 ((!header && !mode_disc && (m == 2 || m == 3 || m == 6 || m == 7 || m == 9 ))  
 					  || (parental_control_on && m != 0 && m != 5)
@@ -3036,8 +3036,9 @@ int uloader_hacks(void)
 
 				memcpy(buff+(56-strlen(punt))/2, punt, strlen(punt));
 
-				if (Draw_button2(30+48, ylev+32+64*n, buff,
-						(n + index) == 0 ? -1 : temp_hacks[m]))
+				if (Draw_button2(30 + 48, ylev + 32 + 64*n, buff,
+						/*(n + index) == 0 ? -1 :*/
+						temp_hacks[m]))
 					select_game_bar = 100 + m;
 				//
 			}

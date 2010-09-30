@@ -69,7 +69,7 @@
 
 #include "test.h"
 
-char uloader_version[5] = "5.1D"; // yes, you can change here the current version of the application
+char uloader_version[5] = "5.1E"; // yes, you can change here the current version of the application
 
 char *str_trace = NULL;
 
