@@ -2224,10 +2224,6 @@ int load_game_routine(u8 *discid, int game_mode)
 			return ret;
 	
 		//discid = (void *) str_id;
-		if (!updateWiinnerTag(discid)) {
-			cabecera2("Error updating WiinnerTag, booting in 2 secs");
-			usleep(2000*1000);
-		}
 
 	}
 #if 1
@@ -2278,6 +2274,12 @@ int load_game_routine(u8 *discid, int game_mode)
 				title_banner = NULL;
 			}
 		}
+	}
+
+	// WinnerTag Support
+	if (!updateWiinnerTag(discid)) {
+		cabecera2("Error updating WiinnerTag, booting in 2 secs");
+		usleep(2000*1000);
 	}
 
 	ASND_StopVoice(0);
