@@ -1,7 +1,7 @@
 #include "gfx.h"
 #include "global.h"
 #include "http.h"
-#include "ehcmodule.h"
+#include "modules/ehcmodule.h"
 
 #include "wiimote.h"
 

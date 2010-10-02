@@ -17,7 +17,7 @@ include $(DEVKITPPC)/wii_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	../source ../source/libpng/pngu ../source/libwbfs ../source/resources_alt
+SOURCES		:=	../source ../source/libwbfs ../source/resources_alt ../source/modules
 DATA		:=	../data  
 INCLUDES	:=
 
@@ -33,14 +33,14 @@ LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -T../../rvl.ld
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	../../lib/libfat.a -lasnd -lmodplay -lscreen -lpng -lwiiuse -lbte  -logc -lm -lz ../../tremor/libtremor.a
+LIBS	:=	-lfat-hermes -lasnd -lmodplay -lscreen -lpngu -lpng -lwiiuse -lbte  -logc -lm -lz -ltremor
 
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(DEVKITPPC)/lib $(CURDIR)/.. $(PORTLIBS)
+LIBDIRS	:= $(CURDIR)/../../libs $(DEVKITPPC)/lib $(CURDIR)/.. $(PORTLIBS)  
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

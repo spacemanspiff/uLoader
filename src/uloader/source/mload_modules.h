@@ -2,11 +2,11 @@
 #define _MLOAD_MODULES_H_
 
 #include "global.h"
-#include "ehcmodule.h"
+#include "modules/ehcmodule.h"
 
-#include "dip_plugin.h"
+#include "modules/dip_plugin.h"
 #include "mload.h"
-#include "fatffs_module.h"
+#include "modules/fatffs_module.h"
 
 
 extern void *external_ehcmodule;

@@ -1,1 +1,45 @@
  - Reestructurar los directorios
+ - Librerias
+ 	- libscreen
+	- libfat - mod
+	- libtremor
+		- memfile -> Agregado por Hermes
+	- libpng
+	- pngu (http://wiibrew.org/wiki/PNGU - http://frontier.development.googlepages.com/pngu02b.zip)
+ - Recursos graficos y sonido
+ - Modulos / parches
+ - Unificar el makefile de la vers. oficial y la alt
+
+---------------
+
+--- uloader/Makefile	2010-09-30 18:06:12.020000026 -0300
++++ uloader_alt/Makefile	2010-09-30 18:06:12.020000026 -0300
+@@ -17,15 +17,15 @@
+ #---------------------------------------------------------------------------------
+ TARGET		:=	$(notdir $(CURDIR))
+ BUILD		:=	build
+-SOURCES		:=	../source ../source/libpng/pngu ../source/libwbfs ../source/resources
++SOURCES		:=	../source ../source/libpng/pngu ../source/libwbfs ../source/resources_alt
+ DATA		:=	../data  
+-INCLUDES	:=	
++INCLUDES	:=
+ 
+ #---------------------------------------------------------------------------------
+ # options for code generation
+ #---------------------------------------------------------------------------------
+ 
+-CFLAGS	= -g -Os -mrvl -Wall $(MACHDEP) $(INCLUDE) $(DEBUG)
++CFLAGS	= -DALTERNATIVE_VERSION -g -Os -mrvl -Wall $(MACHDEP) $(INCLUDE) $(DEBUG)
+ CXXFLAGS	=	$(CFLAGS)
+ 
+ LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -T../../rvl.ld
+@@ -33,7 +33,7 @@
+ #---------------------------------------------------------------------------------
+ # any extra libraries we wish to link with the project
+ #---------------------------------------------------------------------------------
+-LIBS	:=	../../lib/libfat.a -lasnd -lmodplay -lscreen -lpng -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
++LIBS	:=	../../lib/libfat.a -lasnd -lmodplay -lscreen -lpng -lwiiuse -lbte  -logc -lm -lz ../../tremor/libtremor.a
+ 
+ 
+ #---------------------------------------------------------------------------------
+

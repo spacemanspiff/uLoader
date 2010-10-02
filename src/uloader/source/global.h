@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "libpng/pngu/pngu.h"
+#include <libpng/pngu/pngu.h>
 #include "libwbfs/libwbfs.h"
 #include "libwbfs/wiiscrubber.h"
 #include "wbfs.h"

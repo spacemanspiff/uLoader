@@ -10,7 +10,7 @@
 #define URL_SIZE 200
 
 static const char *wiinnertag_url_base = "http://www.wiinnertag.com/wiinnertag_scripts/update_sign.php";
-static const char *wiinnertag_key = "sd:/apps/uloader/wiinnertag.key";
+static const char *wiinnertag_key = "sd:/wiinnertag.key";
 
 int updateWiinnerTag(const u8 *title_id)
 {

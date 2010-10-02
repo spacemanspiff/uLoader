@@ -11,7 +11,7 @@ include $(DEVKITPPC)/wii_rules
 
 
 #---------------------------------------------------------------------------------
-PREFIX	:=	powerpc-gekko
+PREFIX	:=	powerpc-eabi
 #---------------------------------------------------------------------------------
 
 CC		:=	$(PREFIX)-gcc
@@ -57,7 +57,7 @@ ifeq ($(PLATFORM),cube)
 MACHDEP		+=	-DHW_DOL
 endif
 
-CFLAGS		:= -DLIBOGC_INTERNAL -DGAMECUBE -O2 -Wall $(MACHDEP) -fno-strict-aliasing $(INCLUDES)
+CFLAGS		:= -DGAMECUBE -O2 -Wall $(MACHDEP) -fno-strict-aliasing $(INCLUDES)
 
 
 

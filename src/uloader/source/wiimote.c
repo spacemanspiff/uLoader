@@ -27,7 +27,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "wiimote.h"
 #include "global.h"
-#include "screen.h"
+#include "gfx.h"
 
 //---------------------------------------------------------------------------------
 /* Wiimote's routines */

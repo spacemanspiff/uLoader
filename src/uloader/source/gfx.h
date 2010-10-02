@@ -32,9 +32,9 @@ extern "C" {
 #endif
 
 
-#include "screen.h"
+#include <screen.h>
 #include <unistd.h>
-#include "libpng/pngu/pngu.h"
+#include <libpng/pngu/pngu.h>
 #include "remote.h"
 
 

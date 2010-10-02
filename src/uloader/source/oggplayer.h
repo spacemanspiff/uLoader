@@ -30,8 +30,8 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //BBB
 #include "asndlib.h"       // sound library
 
-#include "../tremor/ivorbiscodec.h"
-#include "../tremor/ivorbisfile.h"
+#include <tremor/ivorbiscodec.h>
+#include <tremor/ivorbisfile.h>
 
 #ifdef __cplusplus
 extern "C" {
