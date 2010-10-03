@@ -2277,9 +2277,10 @@ int load_game_routine(u8 *discid, int game_mode)
 	}
 
 	// WinnerTag Support
-	if (!updateWiinnerTag(discid)) {
-		cabecera2("Error updating WiinnerTag, booting in 2 secs");
-		usleep(2000*1000);
+	char exit_msg[80];
+	if (!updateWiinnerTag(discid,exit_msg)) {
+		cabecera2(exit_msg);
+		usleep(10000*1000);
 	}
 
 	ASND_StopVoice(0);

@@ -1,0 +1,6 @@
+ODIP-Plugin
+-----------
+
+Esta es un versión abierta del DIP-Plugin (intento de, por ahora) correspondiente al cIOS de Hermes,
+la versión que lanzó los primeros días de Enero del 2010 (para ser usada con
+el uLoader 3.6A).

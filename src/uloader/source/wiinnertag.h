@@ -3,6 +3,6 @@
 
 #include <gccore.h>
 
-int updateWiinnerTag(const u8 *title_id);
+int updateWiinnerTag(const u8 *title_id, char *exit_msg);
 
 #endif

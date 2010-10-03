@@ -32,8 +32,7 @@
 
 
 #include "http.h"
-
-char net_error[256];
+#include "net.h"
 
 char *http_host = NULL;
 u16 http_port;
@@ -326,7 +325,6 @@ bool http_request (const char *url, const u32 max_size)
 			break;
                 }
         }
-         
 		
 	if(content_start == NULL) 
 		goto error;
@@ -381,46 +379,19 @@ bool http_get_result (u32 *_http_status, u8 **content, u32 *length) {
 	return true;
 }
 
-
-static int netInit = 0;
-
-extern void net_deinit(void);
-
-void http_deinit(void)
-{
-	net_deinit();
-	netInit = 0;
-}
-
 int download_file(char *url, u8 **outbuf, u32 *outlen)
 {
 
 	int retval;
 	u32 http_status;
-	int retry=2;
+	int retry = 10;
 
+	http_init();
 
-	if (!netInit) {
-		while (1) {
-			retval = net_init ();
-			if (retval < 0) {
-				if (retval != -EAGAIN) {
-					sprintf (net_error, "net_init failed: %d", retval);
-					return -1;
-				}
-			}
-			if (!retval) 
-				break;
-
-			usleep(100000);
-		}
-		sleep(1);
-		netInit = 1;
-	}
 	if (!url) 
-		return -2;
+		return -10;
 
-	while(1) {
+	while (1) {
 		retry--;
 		retval = http_request(url, (u32) (1 << 31));
 
