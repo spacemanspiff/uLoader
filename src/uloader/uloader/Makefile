@@ -9,6 +9,12 @@ endif
 
 include $(DEVKITPPC)/wii_rules
 
+define module2o
+	bin2s -a 32 $< | $(AS) -o $(@)
+	echo "extern u8" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"_end[];" > `(echo $(<F) | tr . _)`.h
+	echo "extern u8" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(<F) | tr . _)`.h
+	echo "extern u32" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_size";" >> `(echo $(<F) | tr . _)`.h
+endef
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -17,8 +23,8 @@ include $(DEVKITPPC)/wii_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	../source ../source/libwbfs ../source/resources ../source/modules
-DATA		:=	../data  
+SOURCES		:=	../source ../source/libwbfs ../source/resources
+DATA		:=	../data ../resources_modules 
 INCLUDES	:=	
 
 #---------------------------------------------------------------------------------
@@ -132,7 +138,11 @@ $(OUTPUT).elf: $(OFILES)
 %.bin.o	:	%.bin
 #---------------------------------------------------------------------------------
 	@echo $(notdir $<)
-	$(bin2o)
+	$(module2o)
+
+%.elf.o : %.elf
+	@echo $(notdir $<)
+	$(module2o)
 
 -include $(DEPENDS)
 

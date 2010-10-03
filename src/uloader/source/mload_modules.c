@@ -1,6 +1,5 @@
 #include "mload_modules.h"
 
-
 static u32 ios_36[16] ATTRIBUTE_ALIGN(32)= {
 	0, // DI_EmulateCmd
 	0,
@@ -125,7 +124,7 @@ int load_ehc_module()
 	if (!external_ehcmodule) {
 		if (mload_init() < 0) 
 			return -1;
-		mload_elf((void *) ehcmodule, &my_data_elf);
+		mload_elf((void *) ehcmodule_elf, &my_data_elf);
 		my_thread_id = mload_run_thread(my_data_elf.start, 
 						my_data_elf.stack, 
 						my_data_elf.size_stack, 
@@ -133,7 +132,7 @@ int load_ehc_module()
 		if (my_thread_id < 0)
 			return -1;
 		/*
-		if (mload_module(ehcmodule, size_ehcmodule) < 0)
+		if (mload_module(ehcmodule_elf, size_ehcmodule) < 0)
 			return -1;
 		*/
 	} else {
@@ -165,11 +164,11 @@ int load_ehc_module()
 	switch(is_ios) {
 	case 36:
 	
-		memcpy(ios_36, dip_plugin, 4);		// copy the entry_point
-		memcpy(dip_plugin, ios_36, 4*10);	// copy the adresses from the array
+		memcpy(ios_36, odip_plugin_bin, 4);		// copy the entry_point
+		memcpy(odip_plugin_bin, ios_36, 4*10);	// copy the adresses from the array
 			
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
+		mload_seek(0x1377E000, SEEK_SET);	// copy odip_plugin_bin in the starlet
+		mload_write(odip_plugin_bin,odip_plugin_bin_size);
 
 		// enables DIP plugin
 		mload_seek(0x20209040, SEEK_SET);
@@ -177,11 +176,11 @@ int load_ehc_module()
 		break;
 		 
 	case 37:
-		memcpy(ios_37, dip_plugin, 4);	    // copy the entry_point
-		memcpy(dip_plugin, ios_37, 4*10);   // copy the adresses from the array
+		memcpy(ios_37, odip_plugin_bin, 4);	    // copy the entry_point
+		memcpy(odip_plugin_bin, ios_37, 4*10);   // copy the adresses from the array
 			
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
+		mload_seek(0x1377E000, SEEK_SET);	// copy odip_plugin_bin in the starlet
+		mload_write(odip_plugin_bin,odip_plugin_bin_size);
 
 		// enables DIP plugin
 		mload_seek(0x20209030, SEEK_SET);
@@ -189,11 +188,11 @@ int load_ehc_module()
 		break;
 
 	case 38:
-		memcpy(ios_38, dip_plugin, 4);	    // copy the entry_point
-		memcpy(dip_plugin, ios_38, 4*10);   // copy the adresses from the array
+		memcpy(ios_38, odip_plugin_bin, 4);	    // copy the entry_point
+		memcpy(odip_plugin_bin, ios_38, 4*10);   // copy the adresses from the array
 			
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
+		mload_seek(0x1377E000, SEEK_SET);	// copy odip_plugin_bin in the starlet
+		mload_write(odip_plugin_bin,odip_plugin_bin_size);
 
 		// enables DIP plugin
 		mload_seek(0x20208030, SEEK_SET);
@@ -201,11 +200,11 @@ int load_ehc_module()
 		break;
 
 	case 57:
-		memcpy(ios_57, dip_plugin, 4);	    // copy the entry_point
-		memcpy(dip_plugin, ios_57, 4*10);   // copy the adresses from the array
+		memcpy(ios_57, odip_plugin_bin, 4);	    // copy the entry_point
+		memcpy(odip_plugin_bin, ios_57, 4*10);   // copy the adresses from the array
 			
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
+		mload_seek(0x1377E000, SEEK_SET);	// copy odip_plugin_bin in the starlet
+		mload_write(odip_plugin_bin,odip_plugin_bin_size);
 
 		// enables DIP plugin
 		mload_seek(0x20208030, SEEK_SET);
@@ -213,11 +212,11 @@ int load_ehc_module()
 		break;
 		
 	case 60:
-		memcpy(ios_60, dip_plugin, 4);	    // copy the entry_point
-		memcpy(dip_plugin, ios_60, 4*10);   // copy the adresses from the array
+		memcpy(ios_60, odip_plugin_bin, 4);	    // copy the entry_point
+		memcpy(odip_plugin_bin, ios_60, 4*10);   // copy the adresses from the array
 			
-		mload_seek(0x1377E000, SEEK_SET);	// copy dip_plugin in the starlet
-		mload_write(dip_plugin,size_dip_plugin);
+		mload_seek(0x1377E000, SEEK_SET);	// copy odip_plugin_bin in the starlet
+		mload_write(odip_plugin_bin,odip_plugin_bin_size);
 
 		// enables DIP plugin
 		mload_seek(0x20208030, SEEK_SET);
@@ -240,7 +239,7 @@ int load_ehc_module()
 void disable_ffs_patch(void)
 {
 	
-	u8 * ffs_data = search_for_ehcmodule_cfg((void *) fatffs_module, size_fatffs_module);
+	u8 * ffs_data = search_for_ehcmodule_cfg((void *) fatffs_module_elf, fatffs_module_elf_size);
 	
 	if (ffs_data) {
 		ffs_data   += 12;
@@ -265,7 +264,7 @@ int load_fatffs_module(u8 *discid)
 	if (mload_init() < 0)
 		return -1;
 
-	mload_elf((void *) fatffs_module, &my_data_elf);
+	mload_elf((void *) fatffs_module_elf, &my_data_elf);
 	my_thread_id = mload_run_thread(my_data_elf.start, 
 					my_data_elf.stack, 
 					my_data_elf.size_stack, 
@@ -301,8 +300,8 @@ int load_fatffs_module(u8 *discid)
 			memcpy(file_name, (void *) p, 256);
 		}
 
-		// copy filename to dip_plugin filename area
-		mload_seek(*((u32 *) (dip_plugin+14*4)), SEEK_SET);	// offset 14 (filename Address - 256 bytes)
+		// copy filename to odip_plugin_bin filename area
+		mload_seek(*((u32 *) (odip_plugin_bin+14*4)), SEEK_SET);	// offset 14 (filename Address - 256 bytes)
 		mload_write(file_name, sizeof(file_name));
 		mload_close();
 	} else {
@@ -421,14 +420,14 @@ int enable_ffs(int mode)
 
 void enable_ES_ioctlv_vector(void)
 {
-	patch_datas[0] = *((u32 *) (dip_plugin+16*4));
+	patch_datas[0] = *((u32 *) (odip_plugin_bin+16*4));
 	mload_set_ES_ioctlv_vector((void *) patch_datas[0]);
 }
 
 void Set_DIP_BCA_Datas(u8 *bca_data)
 {
-	// write in dip_plugin bca data area
-	mload_seek(*((u32 *) (dip_plugin+15*4)), SEEK_SET);	// offset 15 (bca_data area)
+	// write in odip_plugin_bin bca data area
+	mload_seek(*((u32 *) (odip_plugin_bin+15*4)), SEEK_SET);	// offset 15 (bca_data area)
 	mload_write(bca_data, 64);
 	mload_close();
 }
@@ -437,7 +436,7 @@ void Set_DIP_BCA_Datas(u8 *bca_data)
 void test_and_patch_for_port1()
 {
         // test for port 1
-	u8 * ehc_data = search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
+	u8 * ehc_data = search_for_ehcmodule_cfg((void *) ehcmodule_elf, ehcmodule_elf);
 	
 	if(ehc_data) {
 		ehc_data += 12;

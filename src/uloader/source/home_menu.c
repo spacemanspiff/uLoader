@@ -1,7 +1,7 @@
 #include "gfx.h"
 #include "global.h"
 #include "http.h"
-#include "modules/ehcmodule.h"
+#include "ehcmodule_elf.h"
 
 #include "wiimote.h"
 
@@ -2780,7 +2780,7 @@ int uloader_update()
 
 			// PATCH FOR PORT
 			u8 *ehc_data        = search_for_ehcmodule_cfg((void *) temp_buf, temp_size);
-			u8 *ehc_data_old    = search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
+			u8 *ehc_data_old    = search_for_ehcmodule_cfg((void *) ehcmodule_elf, ehcmodule_elf_size);
 			u8 * uload_data     = search_for_uloader_cfg((void *) temp_buf, temp_size);
 			u8 * uload_data_old = (u8*) &ulo_cfg;
 
@@ -2961,7 +2961,7 @@ int uloader_hacks(void)
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	};
 
-	u8 *ehc_data   = search_for_ehcmodule_cfg((void *) ehcmodule, size_ehcmodule);
+	u8 *ehc_data   = search_for_ehcmodule_cfg((void *) ehcmodule_elf, ehcmodule_elf_size);
 	u8 *uload_data = (u8*) &ulo_cfg;
 
 	if (ehc_data) {
