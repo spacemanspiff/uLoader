@@ -1,0 +1,19 @@
+Formato del archivo spf:
+
+- Firma: 4 Bytes - SPF1
+- Formato Paleta: ? - 4 bytes - 
+	8 en el ejemplo:
+		Luego 4 bytes: x cada color de la paleta RGBA. En el caso de formato 8, 256 colores.
+
+Luego 4 bytes: cantidad de sprites
+
+X cada sprite:
+    4 bytes: Largo
+    4 bytes: Alto
+    largo x alto bytes: colores de la paleta
+
+La paleta se optimiza:
+    - Se revisan que colores se estan usando
+    - Se crea una paleta solo con los colores usados
+    - Se usa esa paleta
+
