@@ -9,3 +9,5 @@ uloader.elf
 isotociso.exe
 build
 *~
+*.o
+spf2o
