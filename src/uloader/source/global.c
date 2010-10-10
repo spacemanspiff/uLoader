@@ -650,12 +650,13 @@ int list_fat(char *device)
 							void *app;
 							int size_app;
 							void *tpl_1;	
-							
+							u32 *appNumber = (u32 *) fat_disc[m].unused2;	
+
 							sprintf(filename, 
 								"%s%s/content/%08x.app", 
 								nand_path, 
 								namefile, 
-								*((u32 *)fat_disc[m].unused2));
+								*appNumber);
 								
 							if (FAT_read_file(filename, &app, &size_app) == 0) {
 								void parse_banner_tpl(void *banner, void *tpl_1);
