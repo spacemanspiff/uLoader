@@ -15,6 +15,11 @@ define module2o
 	echo "extern u8" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(<F) | tr . _)`.h
 	echo "extern u32" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_size";" >> `(echo $(<F) | tr . _)`.h
 endef
+
+define spf2o
+	../../../buildtools/spf2o/spf2o $< $(<F)
+	$(CC) -c -o $(@) $(<F).c
+endef
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -24,7 +29,7 @@ endef
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	../source ../source/libwbfs ../source/resources
-DATA		:=	../data ../resources_modules 
+DATA		:=	../data ../resources_modules ../resources
 INCLUDES	:=	
 
 #---------------------------------------------------------------------------------
@@ -143,6 +148,22 @@ $(OUTPUT).elf: $(OFILES)
 %.elf.o : %.elf
 	@echo $(notdir $<)
 	$(module2o)
+
+%.mod.o : %.mod
+	@echo $(notdir $<)
+	$(bin2o)
+
+%.png.o : %.png
+	@echo $(notdir $<)
+	$(bin2o)
+
+%.raw.o : %.raw
+	@echo $(notdir $<)
+	$(bin2o)
+
+%.spf.o : %.spf
+	@echo $(notdir $<)
+	$(spf2o)
 
 -include $(DEPENDS)
 

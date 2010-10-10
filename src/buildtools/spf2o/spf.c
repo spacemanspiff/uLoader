@@ -152,13 +152,13 @@ struct SPF *cargarSPF(const char *archivo)
 	return spf;
 }
 
-int generaSalidaSPF(struct SPF *spf, const char *prefijo)
+int generaSalidaSPF(struct SPF *spf, const char *salida, const char *prefijo)
 {
 	char archivo_c[256];
 	char archivo_h[256];
 
-	snprintf(archivo_h,256,"%s.h", prefijo);
-	snprintf(archivo_c,256,"%s.c", prefijo);
+	snprintf(archivo_h,256,"%s.h", salida);
+	snprintf(archivo_c,256,"%s.c", salida);
 
 	printf("Generando: %s\n", archivo_h);
 	FILE *fph = fopen(archivo_h, "w");
@@ -166,7 +166,7 @@ int generaSalidaSPF(struct SPF *spf, const char *prefijo)
 		return 0;
 	}
 	fprintf(fph, "#ifndef __%s_H__\n",prefijo);	
-	fprintf(fph, "#ifndef __%s_H__\n",prefijo);	
+	fprintf(fph, "#define __%s_H__\n",prefijo);	
 	fprintf(fph, "\n\n");	
 	fprintf(fph, "#ifdef __cplusplus\n");	
 	fprintf(fph, "extern \"C\" {\n");	
@@ -206,6 +206,50 @@ int generaSalidaSPF(struct SPF *spf, const char *prefijo)
 	fprintf(fph, "#endif\n",prefijo);	
 
 	fclose(fph);
+
+	printf("Generando: %s\n", archivo_c);
+	FILE *fpc = fopen(archivo_c, "w");
+	if (!fpc) {
+		return 0;
+	}
+
+	fprintf(fpc, "/* Sprite_gen (c) 2007-2008 Hermes/www.elotrolado.net */\n\n\n");
+	fprintf(fpc, "#include \"%s\"\n\n\n", archivo_h);
+	fprintf(fpc, "unsigned short icon_palette[%d] __attribute__ ((aligned (32)))={\n", spf->num_colores);
+
+	i = 0;
+	while (i < spf->num_colores) {
+		unsigned int color = PNGU_RGB8_TO_RGB5A3(
+			spf->paleta[i].red,
+			spf->paleta[i].green,
+			spf->paleta[i].blue,
+			spf->paleta[i].alpha);
+		fprintf(fpc, "0x%04x /*%d*/%s", color, i, (i != spf->num_colores-1)?", ":"");
+		if (i % 16 == 15 && (i < spf->num_colores)) 
+			fputc('\n', fpc);
+		i++;
+	}
+	fprintf(fpc,"};\n\n");
+
+	for (i = 0; i < spf->num_sprites; i++) {
+		int bytes = spf->sprites[i].largo * spf->sprites[i].alto;
+		unsigned char *ptr = spf->sprites[i].bitmap;
+		fprintf(fpc, "unsigned char %s_sprite_%d[%d] __attribute__ ((aligned (32)))={\n", prefijo, i+1, bytes);
+		int j = 0;
+		while (j++ < bytes) {
+			fprintf(fpc, "0x%02x%s", *(ptr++), (j < bytes)?", ":"");
+			if (j % 32 == 0 && (j < bytes)) 
+				fputc('\n', fpc);
+		}
+		fprintf(fpc,"};\n\n");
+	}
+
+	
+	fprintf(fpc, "type_sprite_list_icon icon_sprites[%d]={ // Sprite List\n", spf->num_sprites);
+	for (i = 0; i < spf->num_sprites; i++) {
+		fprintf(fpc, "{(void *) icon_sprite_%d,%d,%d},\n",i+1,spf->sprites[i].largo,spf->sprites[i].alto);
+	}
+	fprintf(fpc,"\n};\n\n\n");
 	return 1;
 }
 

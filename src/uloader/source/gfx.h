@@ -134,7 +134,7 @@ int Draw_button(int x,int y,char *cad);
 
 int Draw_button2(int x,int y,char *cad, int selected);
 
-void * create_png_texture(GXTexObj *texture, void *png, int repeat);
+void * create_png_texture(GXTexObj *texture, const void *png, int repeat);
 void * create_png_texture_from_file(GXTexObj *texture, const char *png, int repeat);
 
 void draw_background();

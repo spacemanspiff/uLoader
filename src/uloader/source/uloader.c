@@ -166,29 +166,19 @@ u32 load_wip_code(u8 *gameid);
 
 #include "gfx.h"
 
-#ifndef ALTERNATIVE_VERSION
+#include "defpng_png.h"
+#include "defpng2_png.h"
+#include "button1_png.h"
+#include "button2_png.h"
+#include "button3_png.h"
 
-#include "resources/defpng.h"
-#include "resources/defpng2.h"
-#include "resources/button1.h"
-#include "resources/button2.h"
-#include "resources/button3.h"
+#include "icono.spf.h"
 
-#include "resources/icon.h"
+#include "sound_raw.h"
 
-#include "resources/sound.h"
+#ifdef ALTERNATIVE_VERSION
 
-#else
-
-#include "resources_alt/defpng.h"
-#include "resources_alt/defpng2.h"
-#include "resources_alt/button1.h"
-#include "resources_alt/button2.h"
-#include "resources_alt/button3.h"
-
-#include "resources_alt/icon.h"
-
-#include "resources_alt/sound.h"
+#include "bg_music_ogg.h"
 
 #endif
 
@@ -244,7 +234,6 @@ int ud_ok = 0;
 #ifdef ALTERNATIVE_VERSION
 
 #include "oggplayer.h"
-#include "resources_alt/bg_music.h"
 
 #else
 
@@ -253,7 +242,7 @@ int ud_ok = 0;
 
 MODPlay mod_track;
 
-#include "resources/lotus3_2.h" 
+#include "lotus3_2_mod.h" 
 #endif
 
 #endif
@@ -1692,13 +1681,13 @@ int main(int argc, char **argv) {
 	   
 	screen_fx=memalign(32, 128*128*4);
 
-	create_png_texture(&text_button[0], button1, 32);
-	create_png_texture(&text_button[1], button2, 32);
-	create_png_texture(&text_button[2], button3, 32);
+	create_png_texture(&text_button[0], button1_png, 32);
+	create_png_texture(&text_button[1], button2_png, 32);
+	create_png_texture(&text_button[2], button3_png, 32);
 	text_button[3] = text_button[1];
 
-	create_png_texture(&default_game_texture,  defpng,  32);
-	create_png_texture(&default_game_texture2, defpng2, 32);
+	create_png_texture(&default_game_texture,  defpng_png,  32);
+	create_png_texture(&default_game_texture2, defpng2_png, 32);
 
         
 	if (sd_ok && (uhack_settings0 & 1)) {
@@ -1842,7 +1831,7 @@ int main(int argc, char **argv) {
 		}
 	}
         if (n < 0)
-		n = MODPlay_SetMOD(&mod_track, lotus3_2);
+		n = MODPlay_SetMOD(&mod_track, lotus3_2_mod);
 
 	if (n < 0 ) {// set the MOD song
 		MODPlay_Unload(&mod_track);   
@@ -1876,9 +1865,9 @@ int main(int argc, char **argv) {
          
 			fclose(fp); // cierra el fichero
 		} else 
-			PlayOgg(mem_open((void *) bg_music, size_bg_music), 0, OGG_INFINITE_TIME);
+			PlayOgg(mem_open((void *) bg_music_ogg, bg_music_ogg_size), 0, OGG_INFINITE_TIME);
 	} else 
-		PlayOgg(mem_open((void *) bg_music, size_bg_music), 0, OGG_INFINITE_TIME);
+		PlayOgg(mem_open((void *) bg_music_ogg, bg_music_ogg_size), 0, OGG_INFINITE_TIME);
 #endif
 		
 #endif
@@ -2502,7 +2491,7 @@ void snd_explo(int voice, int pos)
 		l = ((pos - SCR_WIDTH/2) < 100) ? 127 : 64;
 		r = ((pos - SCR_WIDTH/2) > -100) ? 127 : 64;
 
-		ASND_SetVoice(2+voice, VOICE_MONO_8BIT, 22050,40, sound, size_sound, l, r, NULL);
+		ASND_SetVoice(2+voice, VOICE_MONO_8BIT, 22050,40, (void *) sound_raw, sound_raw_size, l, r, NULL);
 	}
 #endif
 }

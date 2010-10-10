@@ -7,8 +7,9 @@
 
 int main(int argc, char **argv)
 {
-	const char *entrada = "icono.spf";
-	const char *salida = "icon";
+	const char *entrada = argv[1];
+	const char *prefijo = "icon";
+	const char *salida = argv[2];
 
 	struct SPF *sprites = cargarSPF(entrada);
 
@@ -17,7 +18,7 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-	int res = generaSalidaSPF(sprites, salida);
+	int res = generaSalidaSPF(sprites, salida, prefijo);
 	liberaSPF(sprites);
 
 	if (!res) {

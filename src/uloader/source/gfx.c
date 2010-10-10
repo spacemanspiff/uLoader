@@ -657,7 +657,7 @@ void * create_png_texture_from_file(GXTexObj *texture, const char *png_file_name
 }
 
 
-void * create_png_texture(GXTexObj *texture, void *png, int repeat)
+void * create_png_texture(GXTexObj *texture, const void *png, int repeat)
 {
 	PNGUPROP imgProp;
 	IMGCTX ctx;

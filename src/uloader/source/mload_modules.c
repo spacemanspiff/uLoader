@@ -436,7 +436,7 @@ void Set_DIP_BCA_Datas(u8 *bca_data)
 void test_and_patch_for_port1()
 {
         // test for port 1
-	u8 * ehc_data = search_for_ehcmodule_cfg((void *) ehcmodule_elf, ehcmodule_elf);
+	u8 * ehc_data = search_for_ehcmodule_cfg((void *) ehcmodule_elf, ehcmodule_elf_size);
 	
 	if(ehc_data) {
 		ehc_data += 12;
