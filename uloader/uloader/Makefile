@@ -28,7 +28,7 @@ endef
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	../source ../source/libwbfs ../source/resources
+SOURCES		:=	../source ../source/libwbfs ../source/resources ../source/pintor
 DATA		:=	../data ../resources_modules ../resources
 INCLUDES	:=	
 

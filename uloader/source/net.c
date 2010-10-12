@@ -19,8 +19,6 @@ char net_error[256];
 
 static int netInit = 0;
 
-extern void net_deinit(void);
-
 void http_deinit(void)
 {
 	net_deinit();

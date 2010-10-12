@@ -190,8 +190,7 @@ extern int home_menu(struct discHdr *header);
 
 extern int call_home_menu(struct discHdr *header, int function);
 
-extern unsigned hiscore;
-extern int pintor();
+#include "pintor/pintor.h"
 
 static syswd_t scr_poweroff;
 
