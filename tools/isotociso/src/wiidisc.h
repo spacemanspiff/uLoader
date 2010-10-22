@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include "libwbfs_os.h" // this file is provided by the project wanting to compile libwbfs and wiidisc
+#include "os.h"
 
 #ifdef __cplusplus
    extern "C" {
@@ -12,7 +13,7 @@
 #endif
 // callback definition. Return 1 on fatal error (callback is supposed to make retries until no hopes..)
 // offset points 32bit words, count counts bytes
-typedef int (*read_wiidisc_callback_t)(void*fp,u32 offset,u32 count,void*iobuf);
+typedef int (*read_wiidisc_callback_t)(HANDLE_TYPE handle,u32 offset,u32 count,void *iobuf);
 
 typedef enum{
         UPDATE_PARTITION_TYPE=0,
@@ -27,7 +28,7 @@ typedef enum{
 typedef struct wiidisc_s
 {
         read_wiidisc_callback_t read;
-        void *fp;
+	HANDLE_TYPE fp;
         u8 *sector_usage_table;
 
         // everything points 32bit words.
@@ -48,7 +49,8 @@ typedef struct wiidisc_s
         u8  *extracted_buffer;
 }wiidisc_t;
 
-wiidisc_t *wd_open_disc(read_wiidisc_callback_t read,void*fp);
+wiidisc_t *wd_open_disc(read_wiidisc_callback_t read,HANDLE_TYPE fp);
+
 void wd_close_disc(wiidisc_t *);
 // returns a buffer allocated with wbfs_ioalloc() or NULL if not found of alloc error
 u8 * wd_extract_file(wiidisc_t *d, partition_selector_t partition_type, char *pathname);

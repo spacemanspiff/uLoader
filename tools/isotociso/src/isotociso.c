@@ -3,14 +3,24 @@
 // Licensed under the terms of the GNU GPL, version 2
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
+#ifdef WIN32
 #include <windows.h>
 #include "commdlg.h"
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
+
+#include "os.h"
+
 #include <stdio.h>     /* for printf */
 #include <stdlib.h>    /* for exit */
+#ifdef WIN32
 #include "xgetopt.h"
-#include <sys/stat.h>
-
 #include <conio.h>
+#endif
+#include <sys/stat.h>
 
 #ifdef WIN32
 #include <direct.h>
@@ -22,11 +32,6 @@
 #include "tools.h"
 #include "libwbfs.h"
 
-#ifdef WIN32
-#define snprintf _snprintf
-#endif
-
-
 #define ERR(x) do {wbfs_error(x);goto error;}while(0)
 #define ALIGN_LBA(x) (((x)+p->hd_sec_sz-1)&(~(p->hd_sec_sz-1)))
 
@@ -34,32 +39,26 @@
 
 
 
-int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
+int read_wii_disc_sector(HANDLE_TYPE handle, u32 _offset, u32 count, void *buf)
 {
-	HANDLE *handle = (HANDLE *)_handle;
-	LARGE_INTEGER large;
-	DWORD read;
+	DWORD readBytes;
 	u64 offset = _offset;
 	
 	offset <<= 2L;
 	
-
-    large.QuadPart = offset;
-
-	if (SetFilePointerEx(handle, large, NULL, FILE_BEGIN) == FALSE)
+	if (!os_seek(handle, offset))
 	{
 		wbfs_error("error seeking in disc file");
 		return 1;
 	}
 	
-	read = 0;
-	if (ReadFile(handle, buf, count, &read, NULL) == FALSE)
+	if (!os_read(handle, buf, count, &readBytes))
 	{
 		wbfs_error("error reading wii disc sector");
 		return 1;
 	}
 
-	if (read != count)
+	if ((u32) readBytes != count)
 	{
 		wbfs_error("error reading wii disc sector (size mismatch)");
 		return 1;
@@ -70,31 +69,28 @@ int read_wii_disc_sector(void *_handle, u32 _offset, u32 count, void *buf)
 
 
 
-int write_wii_disc_sector(void *_handle, u32 lba, u32 count, void *buf)
+int write_wii_disc_sector(HANDLE_TYPE handle, u32 lba, u32 count, void *buf)
 {
-	HANDLE *handle = (HANDLE *)_handle;
-	LARGE_INTEGER large;
 	DWORD written;
 	u64 offset = lba;
 	
 	offset *= 0x8000;
-	large.QuadPart = offset;
-	
-	if (SetFilePointerEx(handle, large, NULL, FILE_BEGIN) == FALSE)
+
+	if (! os_seek(handle, offset))
 	{
-		fprintf(stderr,"\n\n%lld %p\n", offset, handle);
+		fprintf(stderr,"\n\n%"FORMAT64BITS"d\n", offset);
 		wbfs_error("error seeking in wii disc sector (write)");
 		return 1;
 	}
 	
-	written = 0;
-	if (WriteFile(handle, buf, count * 0x8000, &written, NULL) == FALSE)
+	if (! os_write(handle, buf, count * 0x8000, &written))
 	{
 		wbfs_error("error writing wii disc sector");
+		printf("written %"DWORDFORMAT" bytes on handle %"HANDLEFORMAT", count= %u\n", written,handle, count);
 		return 1;
 	}
 
-	if (written != count * 0x8000)
+	if ((u32) written != count * 0x8000)
 	{
 		wbfs_error("error writing wii disc sector (size mismatch)");
 		return 1;
@@ -138,9 +134,9 @@ static int block_used(u8 *used,u32 i,u32 wblk_sz)
 
 u32 wbfs_iso_to_ciso
 	(
-		void *write_hand,
+		HANDLE_TYPE write_hand,
 		read_wiidisc_callback_t read_src_wii_disc,
-		void *callback_data,
+		HANDLE_TYPE callback_data,
 		progress_callback_t spinner,
 		partition_selector_t sel
 	)
@@ -206,7 +202,7 @@ u32 wbfs_iso_to_ciso
 			}
 		}
 
-	write_wii_disc_sector((void *) write_hand, 0, 1, copy_buffer);
+	write_wii_disc_sector(write_hand, 0, 1, copy_buffer);
 	
 	tot = 0;
 	cur = 0;
@@ -243,7 +239,7 @@ u32 wbfs_iso_to_ciso
 				wd_fix_partition_table(d, sel, copy_buffer + (0x40000 & (wbfs_sec_sz - 1)));
 			}
 
-			write_wii_disc_sector((void *) write_hand, offset, wbfs_sec_sz/32768, copy_buffer);
+			write_wii_disc_sector(write_hand, offset, wbfs_sec_sz/32768, copy_buffer);
 			
 			offset+=wbfs_sec_sz/32768;
 			
@@ -274,9 +270,9 @@ error:
 
 u32 wbfs_ciso_to_iso
 	(
-		void *write_hand,
+		HANDLE_TYPE write_hand,
 		read_wiidisc_callback_t read_src_wii_disc,
-		void *callback_data,
+		HANDLE_TYPE callback_data,
 		progress_callback_t spinner
 	)
 {
@@ -347,7 +343,7 @@ u32 wbfs_ciso_to_iso
 			offset+=(wbfs_sec_sz >> 2);
 		
 
-			write_wii_disc_sector((void *) write_hand, i * write_blocks, write_blocks, copy_buffer);
+			write_wii_disc_sector(write_hand, i * write_blocks, write_blocks, copy_buffer);
 			
 			if (spinner)
 			{
@@ -374,6 +370,7 @@ error:
 
 void wbfs_isotociso(char *argv)
 {
+	HANDLE_TYPE handle;
 	int n,m;
 	u8 discinfo[7];
 	char fileName[1024]="";
@@ -407,75 +404,60 @@ void wbfs_isotociso(char *argv)
 		fprintf(stderr, "disc file must be .iso or .ciso\n"); return;
 		}
 
-
-	HANDLE *handle = CreateFile(argv, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
-	
+	handle = os_open(argv, FILE_READ);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		fprintf(stderr, "unable to open disc file\n");return;
 	}
 	else
 	{
-		DWORD read = 0;
-		
-		LARGE_INTEGER large;
-		large.QuadPart = 0;
-		
-		SetFilePointerEx(handle, large, NULL, FILE_BEGIN);
-
-		LARGE_INTEGER large2;
-
-	  
-		
-		ReadFile(handle, discinfo, 6, &read, NULL);
+		DWORD readBytes = 0;
+		os_seek(handle, 0);
+		os_read(handle, discinfo, 6, &readBytes);
         
 		if(discinfo[0]=='C' && discinfo[1]=='I' && discinfo[2]=='S' && discinfo[3]=='O')
 			{
 			
+			HANDLE_TYPE handle2;
 			// force ISO
 
 			memcpy(fileName,argv,m);
 			memcpy(&fileName[m],".iso",5);
 			
-
-			HANDLE *handle2 = CreateFile(fileName, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL);
+			handle2 = os_open(fileName, FILE_WRITE);
 
 			if (handle2 == INVALID_HANDLE_VALUE)
 				{
 				fprintf(stderr, "unable to create .iso file (maybe it exists)\n");
-				CloseHandle(handle);return;
+				os_close(handle);
+				return;
 				}
 
 			printf("Making .CISO to .ISO ...\n\n");
-
-			large2.QuadPart = ((u64) (143432*2 / 2)) * 0x8000ULL;
-			SetFilePointerEx(handle2, large2, NULL, FILE_BEGIN);
-			SetEndOfFile(handle2);
-
-			wbfs_ciso_to_iso((void *) handle2, read_wii_disc_sector, handle, _spinner);
+			os_truncate(handle2, 143432 * 0x8000ULL);
+			wbfs_ciso_to_iso(handle2, read_wii_disc_sector, handle, _spinner);
 			
-			CloseHandle(handle2);
+			os_close(handle2);
 			}
 		else
 			{
-
-			HANDLE *handle2 = CreateFile(fileName, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL);
+			HANDLE_TYPE handle2 = os_open(fileName, FILE_WRITE);
 
 			if (handle2 == INVALID_HANDLE_VALUE)
 				{
 				fprintf(stderr, "unable to create .ciso file (maybe it exists)\n");
-				CloseHandle(handle);return;
+				os_close(handle);return;
 				}
 
 			printf("Making .ISO to .CISO ...\n\n");
 		
-			wbfs_iso_to_ciso((void *) handle2, read_wii_disc_sector, handle, _spinner, ONLY_GAME_PARTITION);
+			wbfs_iso_to_ciso(handle2, read_wii_disc_sector, handle, _spinner, ONLY_GAME_PARTITION);
 			
-			CloseHandle(handle2);
+			os_close(handle2);
 			}
         
 
-		CloseHandle(handle);
+		os_close(handle);
 	}
 }
 
@@ -493,7 +475,7 @@ int main(int argc, char *argv[])
 		{
 		fprintf(stderr, "isotociso (c) 2010, Hermes\n\n");
 		}
-	
+#ifdef WIN32
      if(argc<=1)
 		{
 		OPENFILENAME ofn;
@@ -520,6 +502,9 @@ int main(int argc, char *argv[])
 			}
 		}
 	else
+#else
+	if (argc == 2)
+#endif
 		{
 		wbfs_isotociso(argv[1]);
 
@@ -527,6 +512,11 @@ int main(int argc, char *argv[])
 		while(1) {if(!kbhit()) break; getch();}
 		getch();*/
 		}
+#ifndef WIN32
+	else {
+		fprintf(stderr, "falta parametro necesario\n\n");
+	}
+#endif
 
 	chdir(current_directory);
 	
