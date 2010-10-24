@@ -29,7 +29,7 @@ endef
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	../source ../source/libwbfs ../source/resources ../source/pintor
-DATA		:=	../data ../resources_modules ../resources
+DATA		:=	../resources_modules ../resources
 INCLUDES	:=	
 
 #---------------------------------------------------------------------------------
@@ -44,14 +44,14 @@ LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -T../../rvl.ld
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lfat-hermes -lasnd -lmodplay -lscreen -lpngu -lpng -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
+LIBS	:=	-lfat-hermes -lasnd -lmodplay -laesnd -lscreen -lpngu -lpng -lwiiuse -lbte  -logc -lm -lz #../../tremor/libtremor.a
 
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(CURDIR)/../../libs $(DEVKITPPC)/lib $(CURDIR)/.. $(PORTLIBS) 
+LIBDIRS	:= $(CURDIR)/../../libs $(PORTLIBS) 
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
