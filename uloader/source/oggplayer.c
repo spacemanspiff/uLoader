@@ -24,6 +24,8 @@ STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef ALTERNATIVE_VERSION
+
 #include "oggplayer.h"
 
 #include <gccore.h>
@@ -328,3 +330,4 @@ void SetTimeOgg(s32 time_pos)
 		private_ogg.seek_time = time_pos;
 }
 
+#endif

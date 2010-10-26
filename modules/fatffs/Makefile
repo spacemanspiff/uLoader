@@ -19,7 +19,7 @@ INCLUDES	:=	include
 SCRIPTDIR	:=	scripts
 BIN		:=	bin
 
-STRIPIOS	:=	../stripios/stripios.exe
+STRIPIOS	:=	../../buildtools/stripios/stripios.exe
 
 LIBS		:=
 LIBDIRS		:=

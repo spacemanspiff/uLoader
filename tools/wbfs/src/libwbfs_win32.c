@@ -1,5 +1,4 @@
 #ifdef WIN32
-
 #include <windows.h>
 #include <winioctl.h>
 #include <setupapi.h>
@@ -171,6 +170,4 @@ wbfs_t *wbfs_try_open(char *disc, char *partition, int reset)
 
 	return p;
 }
-
 #endif
-

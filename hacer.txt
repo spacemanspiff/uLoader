@@ -9,6 +9,12 @@
  - Recursos graficos y sonido
  - Modulos / parches
  - Unificar el makefile de la vers. oficial y la alt
+ - Actualziar los modulos a las versiones actuales
+ - Proveer metodo para compilar todo
+
+ - Agregar cios_installer
+ - Agregar mload
+
 
 ---------------
 

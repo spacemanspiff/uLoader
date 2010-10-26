@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <app>
-	<name> uLoader </name>
-	<coder>Hermes</coder>
+	<name> uLoaderMod </name>
+	<coder>Hermes y otros</coder>
 	<version>5.1E</version>
 <short_description>USB Loader</short_description>
 <long_description>Loader based on the work of Kwiirk and Waninkoko with Ocarina, video and language forced</long_description>
