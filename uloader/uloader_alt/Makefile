@@ -17,7 +17,7 @@ define module2o
 endef
 
 define spf2o
-	../../../buildtools/spf2o/spf2o $< $(<F)
+	../../../buildtools/bin/spf2o $< $(<F)
 	$(CC) -c -o $(@) $(<F).c
 endef
 #---------------------------------------------------------------------------------

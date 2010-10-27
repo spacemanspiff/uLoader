@@ -23,6 +23,7 @@
 #include <math.h>
 #include <time.h>
 #include <gccore.h>
+#include <ogcsys.h>
 #include <malloc.h>
 #include <stdlib.h>
 #include <unistd.h>

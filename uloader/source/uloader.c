@@ -47,6 +47,7 @@
 #include <sdcard/wiisd_io.h>
 
 #include "wiinnertag.h"
+#include "net.h"
 
 #include "wdvd.h"
 #include "disc.h"
@@ -1154,6 +1155,7 @@ int main(int argc, char **argv) {
 	bkcolor = 0;
 	remote_call(splash_scr_send);
 
+	http_init();
 	WPAD_Init();
 	WPAD_SetIdleTimeout(60*5); // 5 minutes 
 
@@ -2268,8 +2270,10 @@ int load_game_routine(u8 *discid, int game_mode)
 	char exit_msg[80];
 	if (!updateWiinnerTag(discid,exit_msg)) {
 		cabecera2(exit_msg);
-		usleep(10000*1000);
+		usleep(5000*1000);
 	}
+	http_deinit();
+	usleep(2000*1000);
 
 	ASND_StopVoice(0);
 #ifdef USE_MODPLAYER

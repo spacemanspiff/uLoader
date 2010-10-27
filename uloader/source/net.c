@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <ogcsys.h>
+#include <sys/stat.h>
 
 #include <ogcsys.h>
 #include <network.h>
@@ -18,12 +21,7 @@
 char net_error[256];
 
 static int netInit = 0;
-
-void http_deinit(void)
-{
-	net_deinit();
-	netInit = 0;
-}
+static int net_top = -1;
 
 int http_init(void) 
 {
@@ -45,8 +43,17 @@ int http_init(void)
 		}
 		sleep(1);
 		netInit = 1;
+		net_top = retval;
 	}
 	return 1;
 
 }
+
+void http_deinit(void)
+{
+	net_wc24cleanup();
+	net_deinit();
+	netInit = 0;
+}
+
 

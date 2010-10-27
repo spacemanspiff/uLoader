@@ -104,8 +104,8 @@ dist-bin:
 	@tar --exclude=.svn --exclude=*CVS* -cvjf $(TOPDIR)/distribute/$(VERSTRING)/libfat-ogc-$(VERSTRING).tar.bz2 include lib
 
 install:
-	cp lib/wii/libfat.a $(TOPDIR)/../lib/libfat.a
-	cp include/fat.h $(TOPDIR)/../source
+	cp lib/wii/libfat.a $(TOPDIR)/../lib/libfat-hermes.a
+	cp include/fat.h $(TOPDIR)/../include
 
 #---------------------------------------------------------------------------------
 else
