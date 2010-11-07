@@ -1,6 +1,7 @@
 wbfs_win.exe
 boot.dol
 cios_installer.dol
+cios_installer.elf
 forwarder.dol
 uloader_alt.dol
 uloader.dol
@@ -10,4 +11,5 @@ isotociso.exe
 build
 *~
 *.o
+*.d
 spf2o

@@ -39,6 +39,7 @@
 #include "debug.h"
 #include "http.h"
 #include "haxx_certs.h"
+#include "runtime_ios_patch.h"
 
 //#define  _DEBUG_PRINTF_H_ 1
 
@@ -903,6 +904,14 @@ int main(int argc, char **argv) {
 	SYS_SetResetCallback(reset_call);
 	sleep(2);
 
+	if (HAVE_AHBPROT) {
+		printf("Found AHBProtected IOS!\n");
+		printf("\n");
+		printf("Applying patches... ");
+		IOSPATCH_Apply();
+		printf("done!\n");
+
+	} else {
 #if 1
 
 	if(get_title_list()!=0)
@@ -973,6 +982,7 @@ int main(int argc, char **argv) {
 
 	WPAD_Init();
 	selected=1;
+}
 
 	while(1)
 	{
@@ -982,6 +992,7 @@ int main(int argc, char **argv) {
 	printf("     %sInstall Custom IOS 222 v%d (Default)  \33[40m\n\n", (selected==1 && (tick_counter & 32)) ? ">\33[44m" : " \33[40m", OUTPUT_VERSION);
 	printf("     %sInstall Custom IOS 223 v%d            \33[40m\n\n", (selected==2 && (tick_counter & 32)) ? ">\33[44m" : " \33[40m", OUTPUT_VERSION);
 	printf("     %sInstall Custom IOS 224 v%d            \33[40m\n\n", (selected==3 && (tick_counter & 32)) ? ">\33[44m" : " \33[40m", OUTPUT_VERSION);
+	printf("     %sInstall Custom IOS 225 v%d            \33[40m\n\n", (selected==4 && (tick_counter & 32)) ? ">\33[44m" : " \33[40m", OUTPUT_VERSION);
 
 	printf("\n\n     Press A to select or B to Abort\n\n");
 	printf("\33[33m Current IOS: %d v%d\33[37m\n\n", *((volatile u32 *) 0x80003140)>>16, *((volatile u32 *) 0x80003140) & 0xffff);
@@ -1002,7 +1013,7 @@ int main(int argc, char **argv) {
 			} 
 
 			if (pressed == WPAD_BUTTON_DOWN) {
-				selected++;if(selected>3) selected=3;
+				selected++;if(selected>4) selected=4;
 			}
 		}
 		VIDEO_WaitVSync();
@@ -1027,6 +1038,9 @@ int main(int argc, char **argv) {
 		break;
 	case 3:
         OUTPUT_TITLEID_L=224;
+		break;
+	case 4:
+        OUTPUT_TITLEID_L=225;
 		break;
 	}
 

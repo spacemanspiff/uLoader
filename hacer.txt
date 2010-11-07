@@ -1,21 +1,15 @@
- - Reestructurar los directorios
+ - uLoader con las nuevas librerías: no anda la musica de fondo
+ 		- problema de hilos (?)
+		- problemas de libasnd (?)
+
  - Librerias
- 	- libscreen
-	- libfat - mod
-	- libtremor
-		- memfile -> Agregado por Hermes
-	- libpng
-	- pngu (http://wiibrew.org/wiki/PNGU - http://frontier.development.googlepages.com/pngu02b.zip)
- - Recursos graficos y sonido
+	- ver que cambio de libFAT y actualizarla
+		(si vale la pena)
  - Modulos / parches
- - Unificar el makefile de la vers. oficial y la alt
  - Actualziar los modulos a las versiones actuales
- - Proveer metodo para compilar todo
+ - EN CAMINO: Proveer metodo para compilar todo 
 
- - Agregar cios_installer
- - Agregar mload
-
-
+ - Unificar el makefile de la vers. oficial y la alt
 ---------------
 
 --- uloader/Makefile	2010-09-30 18:06:12.020000026 -0300
