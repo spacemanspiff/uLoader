@@ -903,15 +903,21 @@ int main(int argc, char **argv) {
 
 	SYS_SetResetCallback(reset_call);
 	sleep(2);
+	int ahbprot_ok = 0;
 
 	if (HAVE_AHBPROT) {
-		printf("Found AHBProtected IOS!\n");
+		printf("Found IOS with disabled AHB Protection!\n");
 		printf("\n");
 		printf("Applying patches... ");
-		IOSPATCH_Apply();
-		printf("done!\n");
+		if (IOSPATCH_Apply()) {
+			printf("done!\n");
+			ahbprot_ok = 1;
+		} else {
+			printf("something went wrong.\n");
+		}
+	}	
 
-	} else {
+	if (!ahbprot_ok) {
 #if 1
 
 	if(get_title_list()!=0)

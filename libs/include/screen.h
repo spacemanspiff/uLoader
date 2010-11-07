@@ -31,14 +31,15 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+//#include <ogcsys.h>
+#include <gccore.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
 #include <math.h>
 
-#include <ogcsys.h>
-#include <gccore.h>
 #include <stdarg.h>    // for the s_printf function
 
 #define	FIFO_SIZE (1024*1024)

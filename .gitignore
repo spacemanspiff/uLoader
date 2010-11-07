@@ -13,3 +13,8 @@ build
 *.o
 *.d
 spf2o
+buildtools/bin
+libs/lib
+libs/include
+libs/pngu/*.a
+libs/screenlib/*.a
