@@ -384,11 +384,11 @@ FILE *fd;
     
 
 	// NUS Downloader format
-	snprintf(buf, 128, "fat0:/ios/%08x%08xv%d/%s", titleid1, titleid2, version, content);
+	snprintf(buf, 128, "sd:/ios/%08x%08xv%d/%s", titleid1, titleid2, version, content);
 	fd = fopen(buf, "rb");
 	if(!fd)
 	  {
-	  snprintf(buf, 128, "fat0:/%08x/%08x/v%d/%s", titleid1, titleid2, version, content);
+	  snprintf(buf, 128, "sd:/%08x/%08x/v%d/%s", titleid1, titleid2, version, content);
 	  fd = fopen(buf, "rb");
 	  }
 
@@ -460,8 +460,8 @@ FILE *fd;
 		}
 	}
   retval = http_get_result(&http_status, outbuf, outlen);
-	//snprintf(buf, 128, "fat0:/%08x/%08x/v%d/%s", titleid1, titleid2, version, content);	
-	snprintf(buf, 128, "fat0:/ios/%08x%08xv%d/%s", titleid1, titleid2, version, content);
+	//snprintf(buf, 128, "sd:/%08x/%08x/v%d/%s", titleid1, titleid2, version, content);	
+	snprintf(buf, 128, "sd:/ios/%08x%08xv%d/%s", titleid1, titleid2, version, content);
 
 	if (useSd)
 	{
@@ -624,7 +624,7 @@ int get_title_key(signed_blob *s_tik, u8 *key) {
   static u8 iv[16] ATTRIBUTE_ALIGN(0x20);
   static u8 keyin[16] ATTRIBUTE_ALIGN(0x20);
   static u8 keyout[16] ATTRIBUTE_ALIGN(0x20);
-  int retval;
+  int retval = 0;
 
   const tik *p_tik;
   p_tik = (tik*)SIGNATURE_PAYLOAD(s_tik);
@@ -634,8 +634,11 @@ int get_title_key(signed_blob *s_tik, u8 *key) {
   memset(iv, 0, sizeof iv);
   memcpy(iv, &p_tik->titleid, sizeof p_tik->titleid);
   
-  retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
-  if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
+  //retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
+  //if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
+  aes_set_key(ES_KEY_COMMON);
+  aes_decrypt(iv, keyin, keyout, sizeof(keyin));
+
   memcpy(key, keyout, sizeof keyout);
   return retval;
 }
@@ -644,7 +647,7 @@ int change_ticket_title_id(signed_blob *s_tik, u32 titleid1, u32 titleid2) {
 	static u8 iv[16] ATTRIBUTE_ALIGN(0x20);
 	static u8 keyin[16] ATTRIBUTE_ALIGN(0x20);
 	static u8 keyout[16] ATTRIBUTE_ALIGN(0x20);
-	int retval;
+	int retval = 0;
 
 	tik *p_tik;
 	p_tik = (tik*)SIGNATURE_PAYLOAD(s_tik);
@@ -654,13 +657,18 @@ int change_ticket_title_id(signed_blob *s_tik, u32 titleid1, u32 titleid2) {
 	memset(iv, 0, sizeof iv);
 	memcpy(iv, &p_tik->titleid, sizeof p_tik->titleid);
 
-	retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
+	//retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
+  	aes_set_key(ES_KEY_COMMON);
+	aes_decrypt(iv, keyin, keyout, sizeof(keyin));
+
 	p_tik->titleid = (u64)titleid1 << 32 | (u64)titleid2;
 	memset(iv, 0, sizeof iv);
 	memcpy(iv, &p_tik->titleid, sizeof p_tik->titleid);
 	
-	retval = ES_Encrypt(ES_KEY_COMMON, iv, keyout, sizeof keyout, keyin);
-    if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
+	//retval = ES_Encrypt(ES_KEY_COMMON, iv, keyout, sizeof keyout, keyin);
+    	//if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
+	aes_encrypt(iv, keyout, keyin, sizeof(keyout));
+
 	memcpy(enc_key, keyin, sizeof keyin);
 	tik_dirty = 1;
 
@@ -908,13 +916,14 @@ int main(int argc, char **argv) {
 	if (HAVE_AHBPROT) {
 		printf("Found IOS with disabled AHB Protection!\n");
 		printf("\n");
-		printf("Applying patches... ");
+		printf("Applying patches");
 		if (IOSPATCH_Apply()) {
-			printf("done!\n");
+			printf(" done!\n");
 			ahbprot_ok = 1;
 		} else {
 			printf("something went wrong.\n");
 		}
+		sleep(2);
 	}	
 
 	if (!ahbprot_ok) {
@@ -1111,8 +1120,8 @@ int main(int argc, char **argv) {
 	printf("\n\n     Press A to select or B to Abort\n\n");
 
 
-	printf("To install the current selection you need the files in:\n    \33[33mfat0:/ios/%08x%08xv%d\33[37m\n\n", INPUT_TITLEID_H, INPUT_TITLEID_L, INPUT_VERSION);
-	printf("Use the NUS Download application if you cannot access to Internet from the Wii and copy the files to the fat0:/ios/ folder (no wads)\n\n");
+	printf("To install the current selection you need the files in:\n    \33[33msd:/ios/%08x%08xv%d\33[37m\n\n", INPUT_TITLEID_H, INPUT_TITLEID_L, INPUT_VERSION);
+	printf("Use the NUS Download application if you cannot access to Internet from the Wii and copy the files to the sd:/ios/ folder (no wads)\n\n");
 
 
 		WPAD_ScanPads();
@@ -1146,13 +1155,13 @@ int main(int argc, char **argv) {
 	adjust_patch(INPUT_TITLEID_L);
 	
 	if (fatInitDefault()) {
-		chdir ("fat0:/");
+		chdir ("sd:/");
 	}
 	else useSd=0;
 
 	rv = patchmii();
 
-		if(useSd) fatUnmount("fat0");
+		if(useSd) fatUnmount("sd");
 
 	return rv;
 }
@@ -1260,10 +1269,10 @@ FILE *fd;
 
 	if (useSd) 
 		{
-		snprintf(buf, 128, "fat0:/ios");
+		snprintf(buf, 128, "sd:/ios");
 		mkdir(buf,S_IREAD | S_IWRITE);
 		
-		snprintf(buf, 128, "fat0:/ios/%08x%08xv%d", INPUT_TITLEID_H, INPUT_TITLEID_L, INPUT_VERSION);
+		snprintf(buf, 128, "sd:/ios/%08x%08xv%d", INPUT_TITLEID_H, INPUT_TITLEID_L, INPUT_VERSION);
 		mkdir(buf,S_IREAD | S_IWRITE);
 		}
 
@@ -1387,7 +1396,7 @@ FILE *fd;
 
 #if SAVE_DECRYPTED
 
-sprintf(name,"fat0:/modulo_%s.elf",cidstr);
+sprintf(name,"sd:/modulo_%s.elf",cidstr);
 				fd = fopen(name, "wb");
 				if (fd) {
 				fwrite(decrypted_buf, content_size, 1, fd);
