@@ -636,7 +636,7 @@ int get_title_key(signed_blob *s_tik, u8 *key) {
   
   //retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
   //if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
-  aes_set_key(ES_KEY_COMMON);
+  aes_set_key((u8 *) ES_KEY_COMMON);
   aes_decrypt(iv, keyin, keyout, sizeof(keyin));
 
   memcpy(key, keyout, sizeof keyout);
@@ -658,7 +658,7 @@ int change_ticket_title_id(signed_blob *s_tik, u32 titleid1, u32 titleid2) {
 	memcpy(iv, &p_tik->titleid, sizeof p_tik->titleid);
 
 	//retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
-  	aes_set_key(ES_KEY_COMMON);
+  	aes_set_key((u8 *) ES_KEY_COMMON);
 	aes_decrypt(iv, keyin, keyout, sizeof(keyin));
 
 	p_tik->titleid = (u64)titleid1 << 32 | (u64)titleid2;
