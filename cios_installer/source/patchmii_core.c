@@ -70,6 +70,8 @@ int OUTPUT_TITLEID_L=222;
 #define ALIGN(a,b) ((((a)+(b)-1)/(b))*(b))
 #define round_up(x,n) (-(-(x) & -(n)))
 
+static u8 ESCommonKey[16] = { 0xeb, 0xe4, 0x2a, 0x22, 0x5e, 0x85, 0x93, 0xe4, 0x48, 0xd9, 0xc5, 0x45, 0x73, 0x81, 0xaa, 0xf7 };
+
 int http_status = 0;
 int useSd = 1;
 int tmd_dirty = 0, tik_dirty = 0;
@@ -636,7 +638,7 @@ int get_title_key(signed_blob *s_tik, u8 *key) {
   
   //retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
   //if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
-  aes_set_key((u8 *) ES_KEY_COMMON);
+  aes_set_key(ESCommonKey);
   aes_decrypt(iv, keyin, keyout, sizeof(keyin));
 
   memcpy(key, keyout, sizeof keyout);
@@ -658,7 +660,7 @@ int change_ticket_title_id(signed_blob *s_tik, u32 titleid1, u32 titleid2) {
 	memcpy(iv, &p_tik->titleid, sizeof p_tik->titleid);
 
 	//retval = ES_Decrypt(ES_KEY_COMMON, iv, keyin, sizeof keyin, keyout);
-  	aes_set_key((u8 *) ES_KEY_COMMON);
+  	aes_set_key(ESCommonKey);
 	aes_decrypt(iv, keyin, keyout, sizeof(keyin));
 
 	p_tik->titleid = (u64)titleid1 << 32 | (u64)titleid2;
@@ -667,6 +669,7 @@ int change_ticket_title_id(signed_blob *s_tik, u32 titleid1, u32 titleid2) {
 	
 	//retval = ES_Encrypt(ES_KEY_COMMON, iv, keyout, sizeof keyout, keyin);
     	//if (retval) error_debug_printf("ES_Decrypt returned %d", retval);
+  	aes_set_key(ESCommonKey);
 	aes_encrypt(iv, keyout, keyin, sizeof(keyout));
 
 	memcpy(enc_key, keyin, sizeof keyin);
@@ -1554,6 +1557,7 @@ sprintf(name,"sd:/modulo_%s.elf",cidstr);
 		change_ticket_title_id(s_tik, OUTPUT_TITLEID_H, OUTPUT_TITLEID_L);
 		change_tmd_title_id(s_tmd, OUTPUT_TITLEID_H, OUTPUT_TITLEID_L);
 	} 
+	aes_set_key(key);
 
 	if (tmd_dirty) {
     	forge_tmd(s_tmd);

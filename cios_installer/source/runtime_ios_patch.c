@@ -32,6 +32,7 @@ static u32 apply_patch(char *name, const u8 *old, u32 old_size, const u8 *patch,
                 *location++ = patch[i];
             }
             DCFlushRange((u8 *)(((u32)start) >> 5 << 5), (patch_size >> 5 << 5) + 64);
+		ICInvalidateRange((u8 *)(((u32)start) >> 5 << 5), (patch_size >> 5 << 5) + 64);
         }
         ptr++;
     }
@@ -42,7 +43,7 @@ static u32 apply_patch(char *name, const u8 *old, u32 old_size, const u8 *patch,
     }
     return found;
 }
-/*
+
 struct IOS_patch {
 	const char *name;
 	const u8 *old_patch;
@@ -53,12 +54,17 @@ struct IOS_patch {
 };
 
 struct IOS_patch ios_patches[] = {
+{
 	      "di_readlimit",
-		{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46, 0x0A, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x7E, 0xD4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 }, 48,
-		{ 0x7e, 0xd4 }, 2,  
-		12,
+	      (const u8 *) "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+	      "\x00\x01\x40\x00\x00\x00\x00\x00\x46\x0A\x00\x00"
+	      "\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00"
+	      "\x7E\xD4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08", 
+	      48,
+		(const u8 *) "\x7e\xd4", 
+		2,  
+		12}
 };
-*/
 
 static const u8 di_readlimit_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
