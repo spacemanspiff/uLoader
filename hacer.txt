@@ -10,6 +10,14 @@
  - EN CAMINO: Proveer metodo para compilar todo 
 
  - Unificar el makefile de la vers. oficial y la alt
+
+ - Arreglar quilombo libaesnd
+
+
+ - Agregar USB_Deinitialize() . Segun tueidj: wiiuse will implicitly call 
+ 	USB_Initialize() (the bluetooth module is a USB device) but your
+	app is responsible for calling USB_Deinitialize(). 
+	Esto produce el fallo del CoD: BO
 ---------------
 
 --- uloader/Makefile	2010-09-30 18:06:12.020000026 -0300
