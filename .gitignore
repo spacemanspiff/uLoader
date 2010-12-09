@@ -18,3 +18,4 @@ libs/lib
 libs/include
 libs/pngu/*.a
 libs/screenlib/*.a
+*.swp
